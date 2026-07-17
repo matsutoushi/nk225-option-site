@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+# site/ はビルド生成物(GitHub Actionsが毎回作り直す)
+site/
