@@ -2,3 +2,4 @@ yfinance
 matplotlib
 pandas
 requests
+openpyxl

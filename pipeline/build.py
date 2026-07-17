@@ -93,9 +93,16 @@ def chart_pcr(hist: pd.DataFrame) -> str:
     return "img/pcr.png"
 
 
-def chart_n225() -> tuple[str, float | None]:
-    hist = yf.Ticker("^N225").history(period="6mo")
-    spot = float(hist["Close"].iloc[-1]) if len(hist) else None
+def chart_n225() -> tuple[str | None, float | None]:
+    """日経平均チャート。取得失敗(CI環境でのブロック等)でもサイト生成は止めない。"""
+    try:
+        hist = yf.Ticker("^N225").history(period="6mo")
+        if len(hist) == 0:
+            raise RuntimeError("empty history")
+    except Exception as e:
+        print(f"WARN: N225 fetch failed, skipping market chart: {e}")
+        return None, None
+    spot = float(hist["Close"].iloc[-1])
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(hist.index, hist["Close"], color="#1f4e79", linewidth=1.5)
     ax.set_title("日経平均株価(直近6ヶ月)")
@@ -111,6 +118,10 @@ def chart_n225() -> tuple[str, float | None]:
 def render_index(date: str, pcr: dict, charts: dict) -> None:
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+    market_section = (
+        f'<h2 id="market">マーケット概況</h2>\n  <img src="{charts["n225"]}" alt="日経平均チャート">'
+        if charts.get("n225") else ""
+    )
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -152,8 +163,7 @@ def render_index(date: str, pcr: dict, charts: dict) -> None:
   <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。</p>
   <img src="{charts['pcr']}" alt="Put/Callレシオ推移">
 
-  <h2 id="market">マーケット概況</h2>
-  <img src="{charts['n225']}" alt="日経平均チャート">
+  {market_section}
 
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>

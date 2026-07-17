@@ -5,6 +5,8 @@ on:
     # 平日 20:30 JST (= 11:30 UTC)。JPXの日次データ公表後に実行
     - cron: "30 11 * * 1-5"
   workflow_dispatch: {}
+  push:
+    branches: [main]
 
 permissions:
   contents: write
