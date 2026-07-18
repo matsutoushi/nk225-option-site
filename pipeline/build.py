@@ -95,7 +95,9 @@ def nearest_expiry(oi: pd.DataFrame) -> str:
     return sorted(totals.index)[0]
 
 
-def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> str:
+def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
+                          lang: str = "ja") -> str:
+    t = L[lang]
     df = oi[oi["expiry"] == expiry]
     strikes = sorted(df["strike"].unique())
     if spot:
@@ -106,37 +108,40 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> 
     fig, ax = plt.subplots(figsize=(10, 6))
     width = (strikes[1] - strikes[0]) * 0.4 if len(strikes) > 1 else 100
     ax.barh([s - width / 2 for s in strikes], -puts.values, height=width,
-            color=UP, label="プット建玉")
+            color=UP, label=t["put_oi"])
     ax.barh([s + width / 2 for s in strikes], calls.values, height=width,
-            color=DOWN, label="コール建玉")
+            color=DOWN, label=t["call_oi"])
     if spot:
         ax.axhline(spot, color=INK, linestyle="--", linewidth=1,
-                   label=f"日経平均 {spot:,.0f}")
-    ax.set_title(f"日経225オプション 行使価格別建玉分布(20{expiry[:2]}年{int(expiry[2:])}月限)")
-    ax.set_xlabel("建玉残高(枚)  ← プット | コール →")
-    ax.set_ylabel("権利行使価格")
+                   label=t["spot_line"].format(spot=spot))
+    ax.set_title(t["oi_title"].format(exp=_exp_label(expiry, lang)))
+    ax.set_xlabel(t["oi_xlabel"])
+    ax.set_ylabel(t["oi_ylabel"])
     ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
     ax.legend(loc="lower right")
     ax.grid(alpha=0.3)
     fig.tight_layout()
     os.makedirs(IMG, exist_ok=True)
-    fig.savefig(os.path.join(IMG, "oi_dist.png"), dpi=120)
+    name = f"oi_dist{t['suffix']}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
     plt.close(fig)
-    return "img/oi_dist.png"
+    return f"img/{name}"
 
 
-def chart_pcr(hist: pd.DataFrame) -> str:
+def chart_pcr(hist: pd.DataFrame, lang: str = "ja") -> str:
+    t = L[lang]
     fig, ax = plt.subplots(figsize=(10, 4))
     x = pd.to_datetime(hist["date"], format="%Y%m%d")
     ax.plot(x, hist["pcr"], marker="o", color=ACCENT, linewidth=1.5)
     ax.axhline(1.0, color=INK2, linestyle="--", linewidth=1)
-    ax.set_title("日経225オプション Put/Call レシオ(出来高ベース・日次)")
+    ax.set_title(t["pcr_title"])
     ax.grid(alpha=0.3)
     fig.autofmt_xdate()
     fig.tight_layout()
-    fig.savefig(os.path.join(IMG, "pcr.png"), dpi=120)
+    name = f"pcr{t['suffix']}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
     plt.close(fig)
-    return "img/pcr.png"
+    return f"img/{name}"
 
 
 def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
@@ -149,7 +154,8 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
     return rsi
 
 
-def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | None, float | None]:
+def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
+                 lang: str = "ja") -> tuple[str | None, float | None]:
     """ローソク足+価格帯別出来高+最大建玉ライン+MACD+RSI。
 
     価格データは日経公式CSV(基準日まで確定値)。出来高はYahoo(取得できた日のみ)。
@@ -203,9 +209,10 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | N
         axp.axis("off")
 
     # --- オプション最大建玉ライン ---
+    tx = L[lang]
     near = oi[oi["expiry"] == expiry]
     ymin, ymax = l.min() * 0.995, h.max() * 1.005
-    for t, color, label in (("C", DOWN, "コール最大建玉"), ("P", UP, "プット最大建玉")):
+    for t, color, label in (("C", DOWN, tx["max_call"]), ("P", UP, tx["max_put"])):
         sub = near[near["type"] == t]
         if len(sub):
             k = int(sub.loc[sub["oi"].idxmax(), "strike"])
@@ -214,7 +221,7 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | N
                 ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
                          va="bottom", ha="right")
     ax1.set_ylim(ymin, ymax)
-    ax1.set_title("日経平均(日足6ヶ月) + 価格帯別出来高 + オプション最大建玉")
+    ax1.set_title(tx["mkt_title"])
     ax1.grid(alpha=0.3)
     plt.setp(ax1.get_xticklabels(), visible=False)
 
@@ -227,7 +234,7 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | N
     histo = macd - signal
     ax2.bar(x, histo, width=0.65, color=np.where(histo >= 0, UP, DOWN), alpha=0.5)
     ax2.plot(x, macd, color=INK, linewidth=1.2, label="MACD")
-    ax2.plot(x, signal, color=WARN, linewidth=1.2, label="シグナル")
+    ax2.plot(x, signal, color=WARN, linewidth=1.2, label=tx["signal"])
     ax2.axhline(0, color=INK2, linewidth=0.8)
     ax2.legend(loc="upper left", fontsize=8, ncol=2)
     ax2.set_ylabel("MACD")
@@ -249,17 +256,69 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | N
     ax3.set_xticks(ticks)
     ax3.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
 
-    fig.savefig(os.path.join(IMG, "market.png"), dpi=120, bbox_inches="tight")
+    name = f"market{tx['suffix']}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120, bbox_inches="tight")
     plt.close(fig)
-    return "img/market.png", spot
+    return f"img/{name}", spot
 
 
 # ---------------------------------------------------------------------------
 # テーブル生成
 # ---------------------------------------------------------------------------
 
-def _exp_label(exp: str) -> str:
+_EN_MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def _exp_label(exp: str, lang: str = "ja") -> str:
+    if lang == "en":
+        return f"{_EN_MONTHS[int(exp[2:])]} 20{exp[:2]}"
     return f"{exp[:2]}年{int(exp[2:])}月"
+
+
+# チャート・テーブルの文言(日英)
+L = {
+    "ja": {
+        "suffix": "",
+        "oi_title": "日経225オプション 行使価格別建玉分布({exp})",
+        "oi_xlabel": "建玉残高(枚)  ← プット | コール →",
+        "oi_ylabel": "権利行使価格",
+        "put_oi": "プット建玉", "call_oi": "コール建玉",
+        "spot_line": "日経平均 {spot:,.0f}",
+        "pcr_title": "日経225オプション Put/Call レシオ(出来高ベース・日次)",
+        "mkt_title": "日経平均(日足6ヶ月) + 価格帯別出来高 + オプション最大建玉",
+        "max_call": "コール最大建玉", "max_put": "プット最大建玉",
+        "signal": "シグナル",
+        "strike": "行使価格",
+        "tbl_note": "前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。JPXが日次公開する直近3限月分。増減は前日比。",
+        "tbl_caption": "左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)",
+        "spot_marker": "▶ 前営業日終値 {spot:,.0f}",
+        "wk_note": "基準日: {date}(毎週第1営業日に更新される週次データ。前週比は1週間でのネット建玉の増減)",
+        "wk_sellers": "{product} 売超上位", "wk_buyers": "{product} 買超上位",
+        "wk_cols": ["参加者", "ネット建玉", "前週比"],
+        "products": {"日経225先物": "日経225先物", "日経225mini": "日経225mini"},
+    },
+    "en": {
+        "suffix": "_en",
+        "oi_title": "Nikkei 225 Options — Open Interest by Strike ({exp})",
+        "oi_xlabel": "Open Interest (contracts)  ← Put | Call →",
+        "oi_ylabel": "Strike Price",
+        "put_oi": "Put OI", "call_oi": "Call OI",
+        "spot_line": "Nikkei 225: {spot:,.0f}",
+        "pcr_title": "Nikkei 225 Options Put/Call Ratio (volume-based, daily)",
+        "mkt_title": "Nikkei 225 (daily, 6 months) + Volume Profile + Max Option OI",
+        "max_call": "Max Call OI", "max_put": "Max Put OI",
+        "signal": "Signal",
+        "strike": "Strike",
+        "tbl_note": "Strikes within ±3,000 yen of the previous close ({lo:,.0f}–{hi:,.0f}). Nearest 3 expiries published daily by JPX. Change is day-over-day.",
+        "tbl_caption": "Left: Open Interest (green = largest per expiry) / Right: DoD Change (increase = green, decrease = red)",
+        "spot_marker": "▶ Prev. close {spot:,.0f}",
+        "wk_note": "As of {date} (weekly data published on the first business day of each week; WoW = one-week change in net open interest)",
+        "wk_sellers": "{product} — Top Net Sellers", "wk_buyers": "{product} — Top Net Buyers",
+        "wk_cols": ["Participant", "Net OI", "WoW"],
+        "products": {"日経225先物": "Nikkei 225 Futures", "日経225mini": "Nikkei 225 mini Futures"},
+    },
+}
 
 
 def _change_color(v: int, maxabs: float) -> str | None:
@@ -272,8 +331,9 @@ def _change_color(v: int, maxabs: float) -> str | None:
     return f"rgba({rgb}, {alpha:.2f})"
 
 
-def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
-    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±5,000円に限定。"""
+def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
+    """行使価格別建玉テーブル(現在値と増減を横並び)。前営業日終値±3,000円に限定。"""
+    tx = L[lang]
     lo, hi = center - 3000, center + 3000
     oi = oi[(oi["strike"] >= lo) & (oi["strike"] <= hi)]
     expiries = sorted(oi["expiry"].unique())
@@ -295,15 +355,15 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
         ncols = (1 if with_strike else 0) + 2 * len(expiries)
         head1 = "<tr>"
         if with_strike:
-            head1 += "<th rowspan='2'>行使価格</th>"
+            head1 += f"<th rowspan='2'>{tx['strike']}</th>"
         head1 += f"<th colspan='{len(expiries)}'>Call</th><th colspan='{len(expiries)}'>Put</th></tr>"
-        head2 = "<tr>" + "".join(f"<th>{_exp_label(e)}</th>" for e in expiries) * 2 + "</tr>"
+        head2 = "<tr>" + "".join(f"<th>{_exp_label(e, lang)}</th>" for e in expiries) * 2 + "</tr>"
         body = []
         spot_inserted = False
         for s in strikes:
             # 降順リストの中で、終値を最初に下回る行の直前に終値ラインを挿入(両表で同位置)
             if not spot_inserted and s < center:
-                label = f"▶ 前営業日終値 {center:,.0f}" if with_strike else "▶"
+                label = tx["spot_marker"].format(spot=center) if with_strike else "▶"
                 body.append(f"<tr class='spot'><td colspan='{ncols}'>{label}</td></tr>")
                 spot_inserted = True
             tds = [f"<th>{s:,}</th>"] if with_strike else []
@@ -323,23 +383,24 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
             body.append("<tr>" + "".join(tds) + "</tr>")
         return f"<table>{head1}{head2}{''.join(body)}</table>"
 
-    note = (f"<p>前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
-            f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
-    caption = ("<h3>左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)</h3>")
+    note = f"<p>{tx['tbl_note'].format(lo=lo, hi=hi)}</p>"
+    caption = f"<h3>{tx['tbl_caption']}</h3>"
     return (f"{note}{caption}<div class='tbl-duo'>"
             f"{render(cur, False, True)}{render(chg, True, False)}</div>")
 
 
-def weekly_tables_html(weekly: dict) -> str:
+def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
     """参加者別建玉(週次)のテーブル。"""
+    tx = L[lang]
     d = weekly["date"]
     date_label = f"{d[:4]}/{d[4:6]}/{d[6:]}"
-    out = [f"<p>基準日: {date_label}(毎週第1営業日に更新される週次データ。"
-           f"前週比は1週間でのネット建玉の増減)</p>"]
+    out = [f"<p>{tx['wk_note'].format(date=date_label)}</p>"]
+    head = "".join(f"<th>{c}</th>" for c in tx["wk_cols"])
     for product in ("日経225先物", "日経225mini"):
         df = weekly["data"][weekly["data"]["product"] == product]
         if len(df) == 0:
             continue
+        p_label = tx["products"].get(product, product)
         sellers = df[df["net"] < 0].sort_values("net").head(8)
         buyers = df[df["net"] > 0].sort_values("net", ascending=False).head(8)
 
@@ -354,11 +415,11 @@ def weekly_tables_html(weekly: dict) -> str:
 
         out.append(f"""
 <div class='tbl-pair'>
-  <div class='tbl-box'><h3>{product} 売超上位</h3><div class='tbl-scroll'>
-    <table><tr><th>参加者</th><th>ネット建玉</th><th>前週比</th></tr>{rows(sellers)}</table>
+  <div class='tbl-box'><h3>{tx['wk_sellers'].format(product=p_label)}</h3><div class='tbl-scroll'>
+    <table><tr>{head}</tr>{rows(sellers)}</table>
   </div></div>
-  <div class='tbl-box'><h3>{product} 買超上位</h3><div class='tbl-scroll'>
-    <table><tr><th>参加者</th><th>ネット建玉</th><th>前週比</th></tr>{rows(buyers)}</table>
+  <div class='tbl-box'><h3>{tx['wk_buyers'].format(product=p_label)}</h3><div class='tbl-scroll'>
+    <table><tr>{head}</tr>{rows(buyers)}</table>
   </div></div>
 </div>""")
     return "".join(out)
@@ -368,28 +429,79 @@ def weekly_tables_html(weekly: dict) -> str:
 # HTML
 # ---------------------------------------------------------------------------
 
-def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
+# ページ本文の文言(日英)
+PAGE = {
+    "ja": {
+        "title": "日経225オプション データ分析 | 建玉分布・Put/Callレシオ 毎日更新",
+        "desc": "日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。",
+        "h1": "日経225オプション データ分析",
+        "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
+        "nav": ["マーケット", "建玉一覧", "建玉分布", "参加者別建玉", "Put/Callレシオ"],
+        "guide_link": '<a href="guide-start.html">始め方ガイド</a>',
+        "lang_switch": '<a href="en/" lang="en">English</a>',
+        "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
+        "sec_market": "マーケット概況",
+        "sec_oitable": "オプション建玉一覧(限月別)",
+        "sec_oi": "行使価格別 建玉分布",
+        "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)',
+        "sec_weekly": "先物 取引参加者別建玉(週次)",
+        "sec_pcr": "Put/Call レシオの推移",
+        "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)',
+        "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a>',
+        "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
+        "footer_disclaimer": "本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。",
+        "out": "index.html", "prefix": "", "html_lang": "ja",
+    },
+    "en": {
+        "title": "Nikkei 225 Options Data | Open Interest & Put/Call Ratio, Updated Daily",
+        "desc": "Nikkei 225 options open interest by strike, day-over-day changes, put/call ratio, and futures positions by trading participant. Auto-updated every business day from official JPX data.",
+        "h1": "Nikkei 225 Options Data",
+        "updated": "Data as of {d} | Last updated {now} JST (auto-updated every business day)",
+        "nav": ["Market", "OI Table", "OI Distribution", "Participants", "Put/Call Ratio"],
+        "guide_link": "",
+        "lang_switch": '<a href="../" lang="ja">日本語</a>',
+        "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
+        "sec_market": "Market Overview",
+        "sec_oitable": "Options Open Interest by Expiry",
+        "sec_oi": "Open Interest Distribution by Strike",
+        "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
+        "sec_weekly": "Futures Open Interest by Trading Participant (Weekly)",
+        "sec_pcr": "Put/Call Ratio Trend",
+        "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
+        "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a>',
+        "footer_src": "Data source: compiled from official Japan Exchange Group (JPX) publications. Nikkei 225 price data by Nikkei Inc. (copyright belongs to Nikkei Inc.).",
+        "footer_disclaimer": "This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.",
+        "out": os.path.join("en", "index.html"), "prefix": "../", "html_lang": "en",
+    },
+}
+
+
+def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "ja") -> None:
+    P = PAGE[lang]
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
     # キャッシュ対策: 画像URLにビルド時刻を付け、更新のたびに再取得させる
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
-    charts = {k: (f"{v}?v={ver}" if v else v) for k, v in charts.items()}
+    charts = {k: (f"{P['prefix']}{v}?v={ver}" if v else v) for k, v in charts.items()}
     market_section = (
-        f'<h2 id="market">マーケット概況</h2>\n  <img src="{charts["market"]}" '
-        f'alt="日経平均ローソク足・MACD・RSI・価格帯別出来高">'
+        f'<h2 id="market">{P["sec_market"]}</h2>\n  <img src="{charts["market"]}" '
+        f'alt="Nikkei 225 candlestick, MACD, RSI, volume profile">'
         if charts.get("market") else ""
     )
     weekly_section = (
-        f'<h2 id="weekly">先物 取引参加者別建玉(週次)</h2>\n  {tables["weekly"]}'
+        f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  {tables["weekly"]}'
         if tables.get("weekly") else ""
     )
+    nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
+    nav = "".join(f'<a href="{i}">{label}</a>' for i, label in zip(nav_ids, P["nav"]))
+    nav += P["guide_link"] + P["lang_switch"]
     html_doc = f"""<!DOCTYPE html>
-<html lang="ja">
+<html lang="{P['html_lang']}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>日経225オプション データ分析 | 建玉分布・Put/Callレシオ 毎日更新</title>
-<meta name="description" content="日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。">
+<title>{P['title']}</title>
+<meta name="description" content="{P['desc']}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -455,46 +567,45 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
 </head>
 <body>
 <header>
-  <h1>日経225オプション データ分析</h1>
-  <p class="updated">データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)</p>
-  <nav><a href="#market">マーケット</a><a href="#oitable">建玉一覧</a><a href="#oi">建玉分布</a><a href="#weekly">参加者別建玉</a><a href="#pcr">Put/Callレシオ</a><a href="guide-start.html">始め方ガイド</a></nav>
+  <h1>{P['h1']}</h1>
+  <p class="updated">{P['updated'].format(d=d, now=now)}</p>
+  <nav>{nav}</nav>
 </header>
 <main>
   <div class="kpi">
-    <div>Put/Call レシオ<br><b>{pcr['pcr']}</b></div>
-    <div>プット出来高<br><b>{pcr['put_volume']:,}</b> 枚</div>
-    <div>コール出来高<br><b>{pcr['call_volume']:,}</b> 枚</div>
+    <div>{P['kpi'][0]}<br><b>{pcr['pcr']}</b></div>
+    <div>{P['kpi'][1]}<br><b>{pcr['put_volume']:,}</b>{P['unit']}</div>
+    <div>{P['kpi'][2]}<br><b>{pcr['call_volume']:,}</b>{P['unit']}</div>
   </div>
 
   {market_section}
 
-  <h2 id="oitable">オプション建玉一覧(限月別)</h2>
+  <h2 id="oitable">{P['sec_oitable']}</h2>
   {tables['oi']}
 
-  <h2 id="oi">行使価格別 建玉分布</h2>
-  <p>建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。
-     (<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)</p>
-  <img src="{charts['oi']}" alt="日経225オプション行使価格別建玉分布">
+  <h2 id="oi">{P['sec_oi']}</h2>
+  <p>{P['oi_lead']}</p>
+  <img src="{charts['oi']}" alt="Open interest by strike">
 
   {weekly_section}
 
-  <h2 id="pcr">Put/Call レシオの推移</h2>
-  <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。
-     (<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)</p>
-  <img src="{charts['pcr']}" alt="Put/Callレシオ推移">
+  <h2 id="pcr">{P['sec_pcr']}</h2>
+  <p>{P['pcr_lead']}</p>
+  <img src="{charts['pcr']}" alt="Put/Call ratio trend">
 
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>
 <footer>
-  <p><a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a></p>
-  <p>データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。</p>
-  <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
+  <p>{P['footer_links']}</p>
+  <p>{P['footer_src']}</p>
+  <p>{P['footer_disclaimer']}</p>
 </footer>
 </body>
 </html>
 """
-    os.makedirs(SITE, exist_ok=True)
-    with open(os.path.join(SITE, "index.html"), "w", encoding="utf-8") as f:
+    out_path = os.path.join(SITE, P["out"])
+    os.makedirs(os.path.dirname(out_path) or SITE, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(html_doc)
 
 
@@ -639,19 +750,21 @@ def main() -> None:
 
     hist = save_history(date, pcr, oi, weekly)
     expiry = nearest_expiry(oi)
-    market_chart, spot = chart_market(oi, expiry, date)
+    market_ja, spot = chart_market(oi, expiry, date, "ja")
+    market_en, _ = chart_market(oi, expiry, date, "en")
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
-    charts = {
-        "oi": chart_oi_distribution(oi, expiry, spot),
-        "pcr": chart_pcr(hist),
-        "market": market_chart,
-    }
-    tables = {
-        "oi": oi_tables_html(oi, center),
-        "weekly": weekly_tables_html(weekly) if weekly else None,
-    }
-    render_index(date, pcr, charts, tables)
+    for lang, market_chart in (("ja", market_ja), ("en", market_en)):
+        charts = {
+            "oi": chart_oi_distribution(oi, expiry, spot, lang),
+            "pcr": chart_pcr(hist, lang),
+            "market": market_chart,
+        }
+        tables = {
+            "oi": oi_tables_html(oi, center, lang),
+            "weekly": weekly_tables_html(weekly, lang) if weekly else None,
+        }
+        render_index(date, pcr, charts, tables, lang)
     render_static_pages()
     post = compose_post(date, pcr, oi, expiry, spot)
     print("--- post draft ---")
