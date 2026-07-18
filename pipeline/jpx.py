@@ -167,6 +167,31 @@ def _parse_participant_futures(content: bytes) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def update_participant_history(cache: pd.DataFrame | None, weeks: int = 52) -> pd.DataFrame:
+    """週次の参加者別建玉の履歴を更新する(不足している週だけ取得)。
+
+    cache: DataFrame[date(str YYYYMMDD), product, participant, net] または None
+    Returns: 直近weeks週分に整えた履歴DataFrame
+    """
+    entries = _weekly_file_list()[:weeks]
+    have = set(cache["date"].astype(str)) if cache is not None and len(cache) else set()
+    frames = [cache] if cache is not None and len(cache) else []
+    fetched = 0
+    for e in entries:
+        if e["TradeDate"] in have:
+            continue
+        df = _parse_participant_futures(_download(BASE + e["IndexFutures"]))
+        agg = df.groupby(["product", "participant"], as_index=False)["net"].sum()
+        agg.insert(0, "date", e["TradeDate"])
+        frames.append(agg)
+        fetched += 1
+    print(f"participant history: fetched {fetched} new weekly files")
+    hist = pd.concat(frames, ignore_index=True)
+    keep = {e["TradeDate"] for e in entries}
+    hist = hist[hist["date"].astype(str).isin(keep)]
+    return hist.sort_values(["date", "product", "participant"]).reset_index(drop=True)
+
+
 def fetch_weekly_participant_futures() -> dict:
     """直近2週分の参加者別建玉を取得し、最新週+前週比を返す。
 

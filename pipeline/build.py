@@ -155,13 +155,13 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
 
 
 def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
-                 lang: str = "ja") -> tuple[str | None, float | None]:
+                 lang: str = "ja", n225: pd.DataFrame | None = None) -> tuple[str | None, float | None]:
     """ローソク足+価格帯別出来高+最大建玉ライン+MACD+RSI。
 
     価格データは日経公式CSV(基準日まで確定値)。出来高はYahoo(取得できた日のみ)。
     """
     try:
-        hist = jpx.fetch_n225_official()
+        hist = n225 if n225 is not None else jpx.fetch_n225_official()
         hist = hist[hist.index <= pd.Timestamp(data_date)].tail(125)  # 約6ヶ月
         if len(hist) < 30:
             raise RuntimeError("insufficient history")
@@ -505,6 +505,7 @@ PAGE = {
         "sec_oi": "行使価格別 建玉分布",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)',
         "sec_weekly": "先物 取引参加者別建玉(週次)",
+        "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)',
         "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a>',
@@ -526,6 +527,7 @@ PAGE = {
         "sec_oi": "Open Interest Distribution by Strike",
         "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
         "sec_weekly": "Futures Open Interest by Trading Participant (Weekly)",
+        "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
         "sec_pcr": "Put/Call Ratio Trend",
         "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
         "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a>',
@@ -548,10 +550,15 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         f'alt="Nikkei 225 candlestick, MACD, RSI, volume profile">'
         if charts.get("market") else ""
     )
-    weekly_section = (
-        f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  {tables["weekly"]}'
-        if tables.get("weekly") else ""
-    )
+    weekly_section = ""
+    if tables.get("weekly"):
+        chart_part = (
+            f'<p>{P["wk_chart_lead"]}</p>\n  <img src="{charts["participants"]}" '
+            f'alt="Net OI by participant">\n  '
+            if charts.get("participants") else ""
+        )
+        weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
+                          f'{chart_part}{tables["weekly"]}')
     nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
     nav = "".join(f'<a href="{i}">{label}</a>' for i, label in zip(nav_ids, P["nav"]))
     nav += P["guide_link"] + P["lang_switch"]
@@ -715,6 +722,46 @@ def chart_cot(cot: dict, lang: str) -> str:
     fig.savefig(os.path.join(IMG, name), dpi=120)
     plt.close(fig)
     return f"img/{name}"
+
+
+def chart_participants(hist: pd.DataFrame, n225: pd.DataFrame | None, lang: str) -> str | None:
+    """参加者別ネット建玉の週次推移(棒)+日経平均(灰線)の個社別スモールマルチプル。"""
+    suffix = L[lang]["suffix"]
+    df = hist[hist["product"] == "日経225先物"].copy()
+    if len(df) == 0:
+        return None
+    df["dt"] = pd.to_datetime(df["date"], format="%Y%m%d")
+    latest = df["dt"].max()
+    top = (df[df["dt"] == latest].assign(mag=lambda x: x["net"].abs())
+           .nlargest(12, "mag")["participant"].tolist())
+
+    fig, axes = plt.subplots(4, 3, figsize=(11, 12), sharex=True)
+    for ax, name in zip(axes.flat, top):
+        sub = df[df["participant"] == name].sort_values("dt")
+        colors = [ACCENT if v >= 0 else UP for v in sub["net"]]
+        ax.bar(sub["dt"], sub["net"], width=5, color=colors)
+        ax.axhline(0, color=INK2, linewidth=0.7)
+        if n225 is not None and len(sub) > 1:
+            n = n225[(n225.index >= sub["dt"].min()) & (n225.index <= latest)]
+            if len(n):
+                axp = ax.twinx()
+                axp.plot(n.index, n["Close"], color="#8a97ad", alpha=0.55, linewidth=1)
+                axp.axis("off")
+        ax.set_title(name, fontsize=8.5)
+        ax.grid(alpha=0.2)
+        ax.tick_params(labelsize=7)
+        ax.yaxis.set_major_formatter(lambda v, _: f"{v/1000:,.0f}k")
+    for ax in axes.flat[len(top):]:
+        ax.axis("off")
+    sup = ("日経225先物 参加者別ネット建玉の推移(週次・直近1年・上位12社)" if lang == "ja"
+           else "Nikkei 225 Futures: Net OI by Participant (weekly, 1yr, top 12)")
+    fig.suptitle(sup, fontsize=11)
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name_f = f"participants{suffix}.png"
+    fig.savefig(os.path.join(IMG, name_f), dpi=120)
+    plt.close(fig)
+    return f"img/{name_f}"
 
 
 def chart_spx(res: dict, lang: str) -> str:
@@ -963,8 +1010,25 @@ def main() -> None:
 
     hist = save_history(date, pcr, oi, weekly)
     expiry = nearest_expiry(oi)
-    market_ja, spot = chart_market(oi, expiry, date, "ja")
-    market_en, _ = chart_market(oi, expiry, date, "en")
+    try:
+        n225_hist = jpx.fetch_n225_official()
+    except Exception as e:
+        print(f"WARN: N225 official fetch failed: {e}")
+        n225_hist = None
+    market_ja, spot = chart_market(oi, expiry, date, "ja", n225_hist)
+    market_en, _ = chart_market(oi, expiry, date, "en", n225_hist)
+
+    # 参加者別建玉の履歴を蓄積してトレンドチャートを生成
+    part_charts = {}
+    try:
+        ph_path = os.path.join(DATA, "participants_history.csv")
+        ph_cache = pd.read_csv(ph_path, dtype={"date": str}) if os.path.exists(ph_path) else None
+        ph = jpx.update_participant_history(ph_cache)
+        ph.to_csv(ph_path, index=False)
+        for lg in ("ja", "en"):
+            part_charts[lg] = chart_participants(ph, n225_hist, lg)
+    except Exception as e:
+        print(f"WARN: participant history failed: {e}")
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     for lang, market_chart in (("ja", market_ja), ("en", market_en)):
@@ -972,6 +1036,7 @@ def main() -> None:
             "oi": chart_oi_distribution(oi, expiry, spot, lang),
             "pcr": chart_pcr(hist, lang),
             "market": market_chart,
+            "participants": part_charts.get(lang),
         }
         tables = {
             "oi": oi_tables_html(oi, center, lang),
