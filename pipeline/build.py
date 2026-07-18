@@ -290,19 +290,22 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
     # 増減: 全セルの最大絶対値を基準に濃淡を付ける
     maxabs = max((abs(v) for tbl in chg.values() for v in tbl.values()), default=0)
 
-    def render(table, is_change):
-        ncols = 1 + 2 * len(expiries)
-        head1 = "<tr><th rowspan='2'>行使価格</th>"
+    def render(table, is_change, with_strike):
+        ncols = (1 if with_strike else 0) + 2 * len(expiries)
+        head1 = "<tr>"
+        if with_strike:
+            head1 += "<th rowspan='2'>行使価格</th>"
         head1 += f"<th colspan='{len(expiries)}'>Call</th><th colspan='{len(expiries)}'>Put</th></tr>"
         head2 = "<tr>" + "".join(f"<th>{_exp_label(e)}</th>" for e in expiries) * 2 + "</tr>"
         body = []
         spot_inserted = False
         for s in strikes:
-            # 降順リストの中で、現値を最初に下回る行の直前に現値ラインを挿入
+            # 降順リストの中で、終値を最初に下回る行の直前に終値ラインを挿入(両表で同位置)
             if not spot_inserted and s < center:
-                body.append(f"<tr class='spot'><td colspan='{ncols}'>▶ 前営業日終値 {center:,.0f}</td></tr>")
+                label = f"▶ 前営業日終値 {center:,.0f}" if with_strike else "▶"
+                body.append(f"<tr class='spot'><td colspan='{ncols}'>{label}</td></tr>")
                 spot_inserted = True
-            tds = [f"<th>{s:,}</th>"]
+            tds = [f"<th>{s:,}</th>"] if with_strike else []
             for t in ("C", "P"):
                 for e in expiries:
                     v = table[(t, e)].get(s)
@@ -317,13 +320,13 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
                         style = " style='background:rgba(25,158,112,0.45); font-weight:bold'" if is_max else ""
                         tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
-        cap = "建玉増減(前日比: 増加=緑 / 減少=赤)" if is_change else "建玉残高(緑=各限月の最大)"
-        return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
-                f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
+        return f"<table>{head1}{head2}{''.join(body)}</table>"
 
     note = (f"<p>前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
             f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
-    return f"{note}<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
+    caption = ("<h3>左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)</h3>")
+    return (f"{note}{caption}<div class='tbl-duo'>"
+            f"{render(cur, False, True)}{render(chg, True, False)}</div>")
 
 
 def weekly_tables_html(weekly: dict) -> str:
@@ -420,6 +423,9 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   .tbl-pair {{ display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }}
   .tbl-box {{ flex: 1 1 420px; min-width: 320px; }}
   .tbl-scroll {{ max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }}
+  .tbl-duo {{ display: flex; gap: 20px; max-height: 560px; overflow: auto;
+              border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }}
+  .tbl-duo table {{ width: auto; }}
   table {{ border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%;
            font-variant-numeric: tabular-nums; }}
   th, td {{ border: 1px solid var(--line); padding: 2px 8px; text-align: right; }}
