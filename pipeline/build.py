@@ -260,8 +260,8 @@ def _change_color(v: int, maxabs: float) -> str | None:
 
 
 def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
-    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±15,000円に限定。"""
-    lo, hi = center - 15000, center + 15000
+    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±5,000円に限定。"""
+    lo, hi = center - 5000, center + 5000
     oi = oi[(oi["strike"] >= lo) & (oi["strike"] <= hi)]
     expiries = sorted(oi["expiry"].unique())
     strikes = sorted(oi["strike"].unique(), reverse=True)
@@ -279,11 +279,17 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
     maxabs = max((abs(v) for tbl in chg.values() for v in tbl.values()), default=0)
 
     def render(table, is_change):
+        ncols = 1 + 2 * len(expiries)
         head1 = "<tr><th rowspan='2'>行使価格</th>"
         head1 += f"<th colspan='{len(expiries)}'>Call</th><th colspan='{len(expiries)}'>Put</th></tr>"
         head2 = "<tr>" + "".join(f"<th>{_exp_label(e)}</th>" for e in expiries) * 2 + "</tr>"
         body = []
+        spot_inserted = False
         for s in strikes:
+            # 降順リストの中で、現値を最初に下回る行の直前に現値ラインを挿入
+            if not spot_inserted and s < center:
+                body.append(f"<tr class='spot'><td colspan='{ncols}'>▶ 現値 {center:,.0f}</td></tr>")
+                spot_inserted = True
             tds = [f"<th>{s:,}</th>"]
             for t in ("C", "P"):
                 for e in expiries:
@@ -303,7 +309,7 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
         return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
                 f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
 
-    note = (f"<p>現値を挟んで上下15,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
+    note = (f"<p>現値を挟んで上下5,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
             f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
     return f"{note}<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
 
@@ -409,6 +415,9 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   td.pos {{ color: #4cc38a; }}
   td.neg {{ color: #f07878; }}
   td.na {{ color: #4a5568; }}
+  tr.spot td {{ background: rgba(25,158,112,0.28); color: var(--ink); text-align: center;
+                font-weight: 700; border-top: 2px solid var(--aqua); border-bottom: 2px solid var(--aqua);
+                letter-spacing: 0.05em; }}
   footer {{ border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
             font-size: 0.78em; color: var(--ink2); }}
   @media (max-width: 600px) {{
