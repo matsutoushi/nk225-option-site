@@ -387,6 +387,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
 
 
 def main() -> None:
+    os.makedirs(IMG, exist_ok=True)  # site/はgitignore対象なのでCIでは毎回作る
     files = jpx.discover_files()
     date = files["date"]
     print(f"JPX data date: {date}")
