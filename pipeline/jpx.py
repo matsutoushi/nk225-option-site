@@ -72,9 +72,10 @@ def fetch_put_call_volume(url: str) -> dict:
 
 
 def fetch_open_interest(url: str) -> pd.DataFrame:
-    """open_interestファイルから日経225オプションの行使価格別建玉を返す。
+    """open_interestファイルから日経225オプションの行使価格別建玉と前日比を返す。
 
-    Returns: DataFrame[type(P/C), expiry(YYMM), strike, oi]
+    ファイル内の列構成: 銘柄名称 | 取組高 | 建玉残高 | 増減 | 前日建玉残高
+    Returns: DataFrame[type(P/C), expiry(YYMM), strike, oi, change]
     """
     xls = pd.ExcelFile(io.BytesIO(_download(url)))
     rows = []
@@ -88,21 +89,104 @@ def fetch_open_interest(url: str) -> pd.DataFrame:
                 continue
             for idx in raw.index[mask]:
                 m = NAME_RE.search(str(raw.loc[idx, col]))
-                # 銘柄名の2列右が建玉残高(日中取引終了時点)
                 try:
                     oi = int(raw.loc[idx, col + 2])
                 except (ValueError, TypeError, KeyError):
                     continue
+                try:
+                    change = int(raw.loc[idx, col + 3])
+                except (ValueError, TypeError, KeyError):
+                    change = 0
                 rows.append({
                     "type": m.group(1),
                     "expiry": m.group(2),  # YYMM
                     "strike": int(m.group(3)),
                     "oi": oi,
+                    "change": change,
                 })
     if not rows:
         raise RuntimeError("no NIKKEI 225 option rows found in open_interest file")
-    df = pd.DataFrame(rows).groupby(["type", "expiry", "strike"], as_index=False)["oi"].sum()
+    df = pd.DataFrame(rows).groupby(["type", "expiry", "strike"], as_index=False)[["oi", "change"]].sum()
     return df
+
+
+# ---------------------------------------------------------------------------
+# 週次: 指数先物 取引参加者別建玉残高(旧・手口の後継データ)
+# ---------------------------------------------------------------------------
+
+OI_YEARLIST = BASE + "/automation/markets/derivatives/open-interest/json/open_interest_yearlist.json"
+SECTION_RE = re.compile(r"＜(.+?)＞")
+
+
+def _weekly_file_list() -> list[dict]:
+    """週次・取引参加者別建玉のファイル一覧(新しい順)を返す。"""
+    years = requests.get(OI_YEARLIST, headers=UA, timeout=30).json()["TableDatas"]
+    entries = []
+    for y in years[:2]:  # 直近2年分あれば十分
+        data = requests.get(BASE + y["Jsonfile"], headers=UA, timeout=30).json()["TableDatas"]
+        entries.extend(data)
+    entries.sort(key=lambda e: e["TradeDate"], reverse=True)
+    return entries
+
+
+def _parse_participant_futures(content: bytes) -> pd.DataFrame:
+    """indexfut_oi_by_tp.xlsx をパースする。
+
+    Returns: DataFrame[product, expiry, participant, net] (net: 買超+/売超-)
+    """
+    raw = pd.ExcelFile(io.BytesIO(content)).parse(0, header=None)
+    rows = []
+    product = None
+    for _, r in raw.iterrows():
+        c0 = str(r.iloc[0]) if pd.notna(r.iloc[0]) else ""
+        m = SECTION_RE.search(c0)
+        if m:
+            product = m.group(1)
+            continue
+        if product is None:
+            continue
+        # ランク行: col0=順位(数値), col1=限月
+        try:
+            int(float(r.iloc[0]))
+        except (ValueError, TypeError):
+            continue
+        expiry = str(r.iloc[1]) if pd.notna(r.iloc[1]) else ""
+        # 売超側: col3=参加者名, col4=枚数 / 買超側: col6=参加者名, col7=枚数
+        for name_col, qty_col, sign in ((3, 4, -1), (6, 7, +1)):
+            name = r.iloc[name_col] if len(r) > qty_col else None
+            qty = r.iloc[qty_col] if len(r) > qty_col else None
+            if pd.notna(name) and pd.notna(qty):
+                rows.append({
+                    "product": product,
+                    "expiry": expiry,
+                    "participant": str(name).strip(),
+                    "net": sign * int(float(qty)),
+                })
+    if not rows:
+        raise RuntimeError("no participant rows parsed from weekly futures file")
+    return pd.DataFrame(rows)
+
+
+def fetch_weekly_participant_futures() -> dict:
+    """直近2週分の参加者別建玉を取得し、最新週+前週比を返す。
+
+    Returns: {date, prev_date, data: DataFrame[product, participant, net, net_prev, change]}
+    """
+    entries = _weekly_file_list()
+    latest, prev = entries[0], entries[1]
+
+    def load(entry):
+        df = _parse_participant_futures(_download(BASE + entry["IndexFutures"]))
+        # 限月をまたいで参加者ごとのネットを合算
+        return df.groupby(["product", "participant"], as_index=False)["net"].sum()
+
+    cur, before = load(latest), load(prev)
+    merged = cur.merge(before, on=["product", "participant"],
+                       how="outer", suffixes=("", "_prev")).fillna(0)
+    merged["net"] = merged["net"].astype(int)
+    merged["net_prev"] = merged["net_prev"].astype(int)
+    merged["change"] = merged["net"] - merged["net_prev"]
+    return {"date": latest["TradeDate"], "prev_date": prev["TradeDate"], "data": merged}
 
 
 def nearest_expiry(df: pd.DataFrame) -> str:

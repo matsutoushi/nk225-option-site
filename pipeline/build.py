@@ -2,24 +2,27 @@
 """日経225オプション可視化サイトのビルドパイプライン。
 
 1. JPX公式データを取得(jpx.py)
-2. チャート生成(建玉分布・PCR推移・日経平均)
+   - 日次: 行使価格別建玉・増減、プット/コール出来高
+   - 週次: 指数先物の取引参加者別建玉残高(旧・手口の後継)
+2. チャート・テーブル生成
 3. 履歴をdata/に蓄積(GitHub Actionsがコミットして永続化)
 4. site/index.html を生成
 """
 
+import html
 import os
 from datetime import datetime, timezone, timedelta
 
+import numpy as np
 import pandas as pd
 import yfinance as yf
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
 import jpx
-
-from matplotlib import font_manager
 
 _available = {f.name for f in font_manager.fontManager.ttflist}
 plt.rcParams["font.family"] = [f for f in ("Yu Gothic", "Meiryo", "IPAexGothic")
@@ -31,11 +34,19 @@ IMG = os.path.join(SITE, "img")
 DATA = os.path.join(ROOT, "data")
 JST = timezone(timedelta(hours=9))
 
+UP = "#c23b22"    # 陽線・プット系(赤)
+DOWN = "#1f4e79"  # 陰線・コール系(青)
 
-def save_history(date: str, pcr: dict, oi: pd.DataFrame) -> pd.DataFrame:
-    """日次データを蓄積し、PCR履歴のDataFrameを返す。"""
+
+# ---------------------------------------------------------------------------
+# データ蓄積
+# ---------------------------------------------------------------------------
+
+def save_history(date: str, pcr: dict, oi: pd.DataFrame, weekly: dict | None) -> pd.DataFrame:
     os.makedirs(DATA, exist_ok=True)
     oi.to_csv(os.path.join(DATA, f"oi_{date}.csv"), index=False)
+    if weekly:
+        weekly["data"].to_csv(os.path.join(DATA, f"weekly_fut_{weekly['date']}.csv"), index=False)
 
     hist_path = os.path.join(DATA, "pcr_history.csv")
     hist = pd.read_csv(hist_path, dtype={"date": str}) if os.path.exists(hist_path) else \
@@ -47,11 +58,21 @@ def save_history(date: str, pcr: dict, oi: pd.DataFrame) -> pd.DataFrame:
     return hist
 
 
+# ---------------------------------------------------------------------------
+# チャート
+# ---------------------------------------------------------------------------
+
+def nearest_expiry(oi: pd.DataFrame) -> str:
+    totals = oi.groupby("expiry")["oi"].sum()
+    for exp in sorted(totals.index):
+        if totals[exp] > 1000:
+            return exp
+    return sorted(totals.index)[0]
+
+
 def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> str:
-    """直近限月の行使価格別建玉分布(プット/コール)を描く。"""
     df = oi[oi["expiry"] == expiry]
     strikes = sorted(df["strike"].unique())
-    # ATM周辺に絞る(現値±15%、なければ建玉上位帯)
     if spot:
         strikes = [s for s in strikes if 0.85 * spot <= s <= 1.15 * spot]
     puts = df[df["type"] == "P"].set_index("strike")["oi"].reindex(strikes).fillna(0)
@@ -60,9 +81,9 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> 
     fig, ax = plt.subplots(figsize=(10, 6))
     width = (strikes[1] - strikes[0]) * 0.4 if len(strikes) > 1 else 100
     ax.barh([s - width / 2 for s in strikes], -puts.values, height=width,
-            color="#c23b22", label="プット建玉")
+            color=UP, label="プット建玉")
     ax.barh([s + width / 2 for s in strikes], calls.values, height=width,
-            color="#1f4e79", label="コール建玉")
+            color=DOWN, label="コール建玉")
     if spot:
         ax.axhline(spot, color="#333", linestyle="--", linewidth=1,
                    label=f"日経平均 {spot:,.0f}")
@@ -82,7 +103,7 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> 
 def chart_pcr(hist: pd.DataFrame) -> str:
     fig, ax = plt.subplots(figsize=(10, 4))
     x = pd.to_datetime(hist["date"], format="%Y%m%d")
-    ax.plot(x, hist["pcr"], marker="o", color="#1f4e79", linewidth=1.5)
+    ax.plot(x, hist["pcr"], marker="o", color=DOWN, linewidth=1.5)
     ax.axhline(1.0, color="#999", linestyle="--", linewidth=1)
     ax.set_title("日経225オプション Put/Call レシオ(出来高ベース・日次)")
     ax.grid(alpha=0.3)
@@ -93,44 +114,213 @@ def chart_pcr(hist: pd.DataFrame) -> str:
     return "img/pcr.png"
 
 
-def chart_n225() -> tuple[str | None, float | None]:
-    """日経平均チャート。取得失敗(CI環境でのブロック等)でもサイト生成は止めない。"""
+def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
+    delta = close.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1 / period, adjust=False).mean()
+    loss = (-delta.clip(upper=0)).ewm(alpha=1 / period, adjust=False).mean()
+    rs = gain / loss.replace(0, np.nan)
+    rsi = 100 - 100 / (1 + rs)
+    rsi.iloc[:period] = np.nan  # 計算初期は信頼できないので表示しない
+    return rsi
+
+
+def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | None]:
+    """ローソク足+価格帯別出来高+最大建玉ライン+MACD+RSI。"""
     try:
         hist = yf.Ticker("^N225").history(period="6mo")
-        if len(hist) == 0:
-            raise RuntimeError("empty history")
+        if len(hist) < 30:
+            raise RuntimeError("insufficient history")
     except Exception as e:
         print(f"WARN: N225 fetch failed, skipping market chart: {e}")
         return None, None
+
     spot = float(hist["Close"].iloc[-1])
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(hist.index, hist["Close"], color="#1f4e79", linewidth=1.5)
-    ax.set_title("日経平均株価(直近6ヶ月)")
-    ax.grid(alpha=0.3)
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    os.makedirs(IMG, exist_ok=True)
-    fig.savefig(os.path.join(IMG, "n225.png"), dpi=120)
+    o, h, l, c = (hist[k].values for k in ("Open", "High", "Low", "Close"))
+    vol = hist["Volume"].fillna(0).values
+    n = len(hist)
+    x = np.arange(n)
+
+    fig = plt.figure(figsize=(11, 9))
+    gs = fig.add_gridspec(4, 1, height_ratios=[3, 1, 1, 0.001], hspace=0.08)
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2], sharex=ax1)
+
+    # --- ローソク足 ---
+    up = c >= o
+    colors = np.where(up, UP, DOWN)
+    ax1.vlines(x, l, h, color=colors, linewidth=0.8)
+    ax1.bar(x[up], (c - o)[up], bottom=o[up], width=0.65, color=UP)
+    ax1.bar(x[~up], (c - o)[~up], bottom=o[~up], width=0.65, color=DOWN)
+
+    # --- 価格帯別出来高(左側の横棒) ---
+    if vol.sum() > 0:
+        bins = np.linspace(l.min(), h.max(), 30)
+        centers = (bins[:-1] + bins[1:]) / 2
+        prof, _ = np.histogram(c, bins=bins, weights=vol)
+        axp = ax1.twiny()
+        axp.barh(centers, prof, height=(bins[1] - bins[0]) * 0.9,
+                 color="#888", alpha=0.25, zorder=0)
+        axp.set_xlim(0, prof.max() * 4)  # 左1/4だけ使う
+        axp.set_ylim(ax1.get_ylim())
+        axp.axis("off")
+
+    # --- オプション最大建玉ライン ---
+    near = oi[oi["expiry"] == expiry]
+    ymin, ymax = l.min() * 0.995, h.max() * 1.005
+    for t, color, label in (("C", DOWN, "コール最大建玉"), ("P", UP, "プット最大建玉")):
+        sub = near[near["type"] == t]
+        if len(sub):
+            k = int(sub.loc[sub["oi"].idxmax(), "strike"])
+            if ymin * 0.9 <= k <= ymax * 1.1:
+                ax1.axhline(k, color=color, linestyle=":", linewidth=1.6)
+                ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
+                         va="bottom", ha="right")
+    ax1.set_ylim(ymin, ymax)
+    ax1.set_title("日経平均(日足6ヶ月) + 価格帯別出来高 + オプション最大建玉")
+    ax1.grid(alpha=0.3)
+    plt.setp(ax1.get_xticklabels(), visible=False)
+
+    # --- MACD ---
+    close_s = pd.Series(c)
+    ema12 = close_s.ewm(span=12, adjust=False).mean()
+    ema26 = close_s.ewm(span=26, adjust=False).mean()
+    macd = ema12 - ema26
+    signal = macd.ewm(span=9, adjust=False).mean()
+    histo = macd - signal
+    ax2.bar(x, histo, width=0.65, color=np.where(histo >= 0, UP, DOWN), alpha=0.5)
+    ax2.plot(x, macd, color="#333", linewidth=1.2, label="MACD")
+    ax2.plot(x, signal, color="#e69f00", linewidth=1.2, label="シグナル")
+    ax2.axhline(0, color="#999", linewidth=0.8)
+    ax2.legend(loc="upper left", fontsize=8, ncol=2)
+    ax2.set_ylabel("MACD")
+    ax2.grid(alpha=0.3)
+    plt.setp(ax2.get_xticklabels(), visible=False)
+
+    # --- RSI ---
+    rsi = _rsi(close_s)
+    ax3.plot(x, rsi, color=DOWN, linewidth=1.2)
+    for lv, style in ((70, "--"), (30, "--"), (50, ":")):
+        ax3.axhline(lv, color="#999", linestyle=style, linewidth=0.8)
+    ax3.set_ylim(0, 100)
+    ax3.set_ylabel("RSI(14)")
+    ax3.grid(alpha=0.3)
+
+    # 月初の位置に日付ラベル
+    dates = hist.index
+    ticks = [i for i in range(n) if i == 0 or dates[i].month != dates[i - 1].month]
+    ax3.set_xticks(ticks)
+    ax3.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
+
+    fig.savefig(os.path.join(IMG, "market.png"), dpi=120, bbox_inches="tight")
     plt.close(fig)
-    return "img/n225.png", spot
+    return "img/market.png", spot
 
 
-def render_index(date: str, pcr: dict, charts: dict) -> None:
+# ---------------------------------------------------------------------------
+# テーブル生成
+# ---------------------------------------------------------------------------
+
+def _exp_label(exp: str) -> str:
+    return f"{exp[:2]}年{int(exp[2:])}月"
+
+
+def oi_tables_html(oi: pd.DataFrame) -> str:
+    """全限月の行使価格別建玉テーブル(現在値と増減を横並び)。"""
+    expiries = sorted(oi["expiry"].unique())
+    strikes = sorted(oi["strike"].unique(), reverse=True)
+
+    def pivot(col):
+        return {(t, e): oi[(oi["type"] == t) & (oi["expiry"] == e)]
+                .set_index("strike")[col].to_dict()
+                for t in ("C", "P") for e in expiries}
+
+    cur, chg = pivot("oi"), pivot("change")
+
+    def render(table, is_change):
+        head1 = "<tr><th rowspan='2'>行使価格</th>"
+        head1 += f"<th colspan='{len(expiries)}'>Call</th><th colspan='{len(expiries)}'>Put</th></tr>"
+        head2 = "<tr>" + "".join(f"<th>{_exp_label(e)}</th>" for e in expiries) * 2 + "</tr>"
+        body = []
+        for s in strikes:
+            tds = [f"<th>{s:,}</th>"]
+            for t in ("C", "P"):
+                for e in expiries:
+                    v = table[(t, e)].get(s)
+                    if v is None or (is_change and v == 0 and cur[(t, e)].get(s) is None):
+                        tds.append("<td class='na'>-</td>")
+                    elif is_change:
+                        cls = "pos" if v > 0 else ("neg" if v < 0 else "")
+                        tds.append(f"<td class='{cls}'>{v:+,}</td>" if v else "<td>0</td>")
+                    else:
+                        tds.append(f"<td>{v:,}</td>")
+            body.append("<tr>" + "".join(tds) + "</tr>")
+        cap = "建玉増減(前日比)" if is_change else "建玉残高"
+        return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
+                f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
+
+    return f"<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
+
+
+def weekly_tables_html(weekly: dict) -> str:
+    """参加者別建玉(週次)のテーブル。"""
+    d = weekly["date"]
+    date_label = f"{d[:4]}/{d[4:6]}/{d[6:]}"
+    out = [f"<p>基準日: {date_label}(毎週第1営業日に更新される週次データ。"
+           f"前週比は1週間でのネット建玉の増減)</p>"]
+    for product in ("日経225先物", "日経225mini"):
+        df = weekly["data"][weekly["data"]["product"] == product]
+        if len(df) == 0:
+            continue
+        sellers = df[df["net"] < 0].sort_values("net").head(8)
+        buyers = df[df["net"] > 0].sort_values("net", ascending=False).head(8)
+
+        def rows(sub):
+            r = []
+            for _, row in sub.iterrows():
+                cls = "pos" if row["change"] > 0 else ("neg" if row["change"] < 0 else "")
+                r.append(f"<tr><td class='name'>{html.escape(row['participant'])}</td>"
+                         f"<td>{row['net']:+,}</td>"
+                         f"<td class='{cls}'>{row['change']:+,}</td></tr>")
+            return "".join(r)
+
+        out.append(f"""
+<div class='tbl-pair'>
+  <div class='tbl-box'><h3>{product} 売超上位</h3><div class='tbl-scroll'>
+    <table><tr><th>参加者</th><th>ネット建玉</th><th>前週比</th></tr>{rows(sellers)}</table>
+  </div></div>
+  <div class='tbl-box'><h3>{product} 買超上位</h3><div class='tbl-scroll'>
+    <table><tr><th>参加者</th><th>ネット建玉</th><th>前週比</th></tr>{rows(buyers)}</table>
+  </div></div>
+</div>""")
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# HTML
+# ---------------------------------------------------------------------------
+
+def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
     market_section = (
-        f'<h2 id="market">マーケット概況</h2>\n  <img src="{charts["n225"]}" alt="日経平均チャート">'
-        if charts.get("n225") else ""
+        f'<h2 id="market">マーケット概況</h2>\n  <img src="{charts["market"]}" '
+        f'alt="日経平均ローソク足・MACD・RSI・価格帯別出来高">'
+        if charts.get("market") else ""
     )
-    html = f"""<!DOCTYPE html>
+    weekly_section = (
+        f'<h2 id="weekly">先物 取引参加者別建玉(週次)</h2>\n  {tables["weekly"]}'
+        if tables.get("weekly") else ""
+    )
+    html_doc = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>日経225オプション データ分析 | 建玉分布・Put/Callレシオ 毎日更新</title>
-<meta name="description" content="日経225オプションの行使価格別建玉分布とPut/Callレシオを毎営業日自動更新。データ出典はJPX公式。">
+<meta name="description" content="日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。">
 <style>
-  body {{ font-family: "Yu Gothic", Meiryo, sans-serif; max-width: 980px; margin: 0 auto; padding: 16px; color: #222; line-height: 1.7; }}
+  body {{ font-family: "Yu Gothic", Meiryo, sans-serif; max-width: 1100px; margin: 0 auto; padding: 16px; color: #222; line-height: 1.7; }}
   header {{ border-bottom: 2px solid #1f4e79; padding-bottom: 8px; }}
   h1 {{ font-size: 1.5em; margin-bottom: 4px; }}
   .updated {{ color: #666; font-size: 0.9em; }}
@@ -139,6 +329,17 @@ def render_index(date: str, pcr: dict, charts: dict) -> None:
   .kpi b {{ font-size: 1.4em; }}
   img {{ max-width: 100%; height: auto; border: 1px solid #eee; }}
   nav a {{ margin-right: 16px; }}
+  .tbl-pair {{ display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }}
+  .tbl-box {{ flex: 1 1 420px; min-width: 320px; }}
+  .tbl-scroll {{ max-height: 560px; overflow: auto; border: 1px solid #ddd; }}
+  table {{ border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }}
+  th, td {{ border: 1px solid #ddd; padding: 2px 8px; text-align: right; }}
+  th {{ background: #f4f7fb; position: sticky; top: 0; }}
+  tr > th:first-child {{ position: sticky; left: 0; background: #f4f7fb; }}
+  td.name {{ text-align: left; }}
+  td.pos {{ color: #c23b22; }}
+  td.neg {{ color: #1f4e79; }}
+  td.na {{ color: #bbb; }}
   footer {{ border-top: 1px solid #ddd; margin-top: 32px; padding-top: 8px; font-size: 0.85em; color: #666; }}
 </style>
 </head>
@@ -146,7 +347,7 @@ def render_index(date: str, pcr: dict, charts: dict) -> None:
 <header>
   <h1>日経225オプション データ分析</h1>
   <p class="updated">データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)</p>
-  <nav><a href="#oi">建玉分布</a><a href="#pcr">Put/Callレシオ</a><a href="#market">マーケット</a></nav>
+  <nav><a href="#oi">建玉分布</a><a href="#oitable">建玉一覧</a><a href="#pcr">Put/Callレシオ</a><a href="#weekly">参加者別建玉</a><a href="#market">マーケット</a></nav>
 </header>
 <main>
   <div class="kpi">
@@ -159,9 +360,15 @@ def render_index(date: str, pcr: dict, charts: dict) -> None:
   <p>建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。</p>
   <img src="{charts['oi']}" alt="日経225オプション行使価格別建玉分布">
 
+  <h2 id="oitable">建玉一覧(限月別)</h2>
+  <p>JPXが日次公開する直近3限月分を掲載しています。増減は前日比です。</p>
+  {tables['oi']}
+
   <h2 id="pcr">Put/Call レシオの推移</h2>
   <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。</p>
   <img src="{charts['pcr']}" alt="Put/Callレシオ推移">
+
+  {weekly_section}
 
   {market_section}
 
@@ -176,7 +383,7 @@ def render_index(date: str, pcr: dict, charts: dict) -> None:
 """
     os.makedirs(SITE, exist_ok=True)
     with open(os.path.join(SITE, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+        f.write(html_doc)
 
 
 def main() -> None:
@@ -189,15 +396,26 @@ def main() -> None:
     oi = jpx.fetch_open_interest(files["open_interest"])
     print(f"OI rows: {len(oi)}")
 
-    hist = save_history(date, pcr, oi)
-    n225_chart, spot = chart_n225()
-    expiry = jpx.nearest_expiry(oi)
+    try:
+        weekly = jpx.fetch_weekly_participant_futures()
+        print(f"weekly participants: {len(weekly['data'])} (date {weekly['date']})")
+    except Exception as e:
+        print(f"WARN: weekly participant data failed: {e}")
+        weekly = None
+
+    hist = save_history(date, pcr, oi, weekly)
+    expiry = nearest_expiry(oi)
+    market_chart, spot = chart_market(oi, expiry)
     charts = {
         "oi": chart_oi_distribution(oi, expiry, spot),
         "pcr": chart_pcr(hist),
-        "n225": n225_chart,
+        "market": market_chart,
     }
-    render_index(date, pcr, charts)
+    tables = {
+        "oi": oi_tables_html(oi),
+        "weekly": weekly_tables_html(weekly) if weekly else None,
+    }
+    render_index(date, pcr, charts, tables)
     print(f"site generated: {os.path.join(SITE, 'index.html')}")
 
 
