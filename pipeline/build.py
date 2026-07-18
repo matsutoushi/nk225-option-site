@@ -502,7 +502,7 @@ PAGE = {
         "h1": "日経225オプション データ分析",
         "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
         "nav": ["マーケット", "建玉一覧", "建玉分布", "参加者別建玉", "Put/Callレシオ"],
-        "guide_link": '<a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a><a href="guide-start.html">始め方ガイド</a>',
+        "guide_link": '<a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a><a href="fedwatch.html">要人発言</a><a href="guide-start.html">始め方ガイド</a>',
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
@@ -524,7 +524,7 @@ PAGE = {
         "h1": "Nikkei 225 Options Data",
         "updated": "Data as of {d} | Last updated {now} JST (auto-updated every business day)",
         "nav": ["Market", "OI Table", "OI Distribution", "Participants", "Put/Call Ratio"],
-        "guide_link": '<a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a>',
+        "guide_link": '<a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a><a href="fedwatch.html">Fed Watch</a>',
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
@@ -545,6 +545,7 @@ PAGE = {
 
 def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "ja") -> None:
     P = PAGE[lang]
+    og = og_meta(P["title"], P["desc"])
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
     # キャッシュ対策: 画像URLにビルド時刻を付け、更新のたびに再取得させる
@@ -573,6 +574,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
+{og}
 <title>{P['title']}</title>
 <meta name="description" content="{P['desc']}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -732,6 +734,7 @@ def chart_risk(series: dict, lang: str) -> str | None:
 
 def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
     P = RISKPAGE[lang]
+    og = og_meta(P["title"])
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     counts = {"green": 0, "yellow": 0, "red": 0}
@@ -763,6 +766,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
+{og}
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -784,6 +788,86 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
   <p>{P['legend']}</p>
   {''.join(sections)}
   {chart_html}
+</main>
+<footer>
+  <p>{P['footer_src']}</p>
+  <p>{PAGE[lang]['footer_disclaimer']}</p>
+</footer>
+</body>
+</html>
+"""
+    out_path = os.path.join(SITE, P["out"])
+    os.makedirs(os.path.dirname(out_path) or SITE, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+
+FEDPAGE = {
+    "ja": {
+        "title": "FRB要人発言・公式文書トラッカー | FOMC声明・講演・議会証言",
+        "h1": "FRB要人発言トラッカー",
+        "updated": "最終更新: {now} JST(毎営業日 自動更新)",
+        "lead": "米連邦準備制度理事会(FRB)の公式サイトから、FOMC関連リリース・講演・議会証言を自動収集しています。リンク先はすべて英語の原文(federalreserve.gov)です。FOMC声明など重要文書の日本語解説は、今後不定期で追加予定です。",
+        "cols": ["日付", "タイトル(英語原文へのリンク)"],
+        "back": '<a href="./">← 日本市場データ</a><a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a>',
+        "lang_switch": '<a href="en/fedwatch.html" lang="en">English</a>',
+        "footer_src": "出典: Board of Governors of the Federal Reserve System(federalreserve.gov)公式RSS。",
+        "out": "fedwatch.html", "prefix": "",
+    },
+    "en": {
+        "title": "Fed Watch | FOMC Releases, Speeches & Testimony Tracker",
+        "h1": "Fed Watch",
+        "updated": "Last updated {now} JST (auto-updated every business day)",
+        "lead": "Latest FOMC-related releases, speeches and congressional testimony, collected automatically from the Federal Reserve Board's official RSS feeds. All links go to original documents on federalreserve.gov.",
+        "cols": ["Date", "Title"],
+        "back": '<a href="../">← Nikkei data</a><a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a>',
+        "lang_switch": '<a href="../fedwatch.html" lang="ja">日本語</a>',
+        "footer_src": "Source: Board of Governors of the Federal Reserve System (federalreserve.gov) official RSS feeds.",
+        "out": os.path.join("en", "fedwatch.html"), "prefix": "../",
+    },
+}
+
+
+def render_fedwatch(feeds: dict, lang: str) -> None:
+    import fed_watch
+    P = FEDPAGE[lang]
+    og = og_meta(P["title"])
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    sections = []
+    head = "".join(f"<th>{c}</th>" for c in P["cols"])
+    for f in fed_watch.FEEDS:
+        items = feeds.get(f["key"], [])
+        if not items:
+            continue
+        rows = "".join(
+            f"<tr><td style='white-space:nowrap'>{it['date']}</td>"
+            f"<td class='name'><a href='{it['link']}' rel='noopener' target='_blank'>"
+            f"{html.escape(it['title'])}</a></td></tr>"
+            for it in items)
+        sections.append(f"<h2>{f[lang]}</h2><div class='tbl-pair'>"
+                        f"<div class='tbl-box' style='flex:1 1 100%'><div class='tbl-scroll'>"
+                        f"<table><tr>{head}</tr>{rows}</table></div></div></div>")
+
+    html_doc = f"""<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<title>{P['title']}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}</style>
+</head>
+<body>
+<header>
+  <h1>{P['h1']}</h1>
+  <p class="updated">{P['updated'].format(now=now)}</p>
+  <nav>{P['back']}{P['lang_switch']}</nav>
+</header>
+<main>
+  <p>{P['lead']}</p>
+  {''.join(sections)}
 </main>
 <footer>
   <p>{P['footer_src']}</p>
@@ -967,6 +1051,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
               spx_res: dict | None = None, spx_chart: str | None = None) -> None:
     import us_data
     P = USPAGE[lang]
+    og = og_meta(P["title"])
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     chart_src = f"{P['prefix']}{chart_rel}?v={ver}"
@@ -1005,6 +1090,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
+{og}
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -1071,10 +1157,35 @@ SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
 GSV_META = '<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymCE5AgMGsKG0uu4BI5QdwWz24">'
 
 
+def og_meta(title: str, desc: str = "") -> str:
+    """OGP/Twitterカード用メタタグ(X告知でリンクカードを出すため)。"""
+    img = SITE_URL + "img/market.png"
+    return (f'<meta property="og:title" content="{title}">\n'
+            f'<meta property="og:description" content="{desc}">\n'
+            f'<meta property="og:image" content="{img}">\n'
+            f'<meta property="og:type" content="website">\n'
+            f'<meta name="twitter:card" content="summary_large_image">\n'
+            f'<link rel="icon" type="image/png" href="{SITE_URL}favicon.png">')
+
+
+def render_favicon() -> None:
+    """シンプルなファビコン(ダーク地に3色のバー)を生成する。"""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGB", (64, 64), "#0d1117")
+    d = ImageDraw.Draw(img)
+    d.rectangle([14, 12, 26, 52], fill="#199e70")
+    d.rectangle([32, 22, 44, 52], fill="#3987e5")
+    d.rectangle([50, 30, 62, 52], fill="#e66767")
+    os.makedirs(SITE, exist_ok=True)
+    img.save(os.path.join(SITE, "favicon.png"))
+
+
 def render_seo_files() -> None:
     """sitemap.xml と robots.txt(検索エンジン向け)。"""
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
+             "fedwatch.html", "en/fedwatch.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html",
+             "guide-gex.html", "guide-cot.html",
              "about.html", "privacy.html"]
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
@@ -1090,12 +1201,14 @@ def render_seo_files() -> None:
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
     def shell(title, body):
+        og = og_meta(f"{title} | 日経225オプション データ分析")
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
+{og}
 <title>{title} | 日経225オプション データ分析</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{SUB_CSS}</style>
@@ -1256,6 +1369,24 @@ def main() -> None:
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
             render_us(cot, pcr_us, lang, chart_cot(cot, lang), spx_res, spx_chart)
+
+        # 米国データ版のX投稿下書き(site/post_us.txt)
+        lines = [f"【米国市場データ {int(pcr_us['date'][5:7])}/{int(pcr_us['date'][8:])}】", ""]
+        if spx_res:
+            gex_bn = spx_res["total_gex"] / 1e9
+            mood = "ネガティブガンマ・値動き増幅域" if gex_bn < 0 else "ポジティブガンマ・値動き抑制域"
+            lines.append(f"SPXガンマエクスポージャー: {gex_bn:+,.1f}bn$({mood})")
+            w = spx_res["walls"]
+            cw = w[w["type"] == "C"].nlargest(1, "oi").iloc[0]
+            pw = w[w["type"] == "P"].nlargest(1, "oi").iloc[0]
+            lines.append(f"コール最大壁 {cw['strike']:,.0f} / プット最大壁 {pw['strike']:,.0f}")
+            lines.append("")
+        lines.append(f"CBOE Put/Callレシオ: {pcr_us['total']:.2f}(株式 {pcr_us['equity']:.2f})")
+        es = cot["markets"]["es"]
+        es_net, es_wow = int(es["net"].iloc[-1]), int(es["net"].iloc[-1] - es["net"].iloc[-2])
+        lines.append(f"COT: ES投機筋ネット {es_net:+,}枚(前週比 {es_wow:+,})")
+        with open(os.path.join(SITE, "post_us.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
     except Exception as e:
         warn(f"US market section failed: {e}")
 
@@ -1280,6 +1411,18 @@ def main() -> None:
             render_risk(risk, lang, chart_risk(risk["series"], lang))
     except Exception as e:
         warn(f"risk monitor failed: {e!r}")
+
+    # FRB要人発言トラッカー
+    try:
+        import fed_watch
+        feeds = fed_watch.fetch_feeds()
+        print(f"fed watch: {sum(len(v) for v in feeds.values())} items")
+        for lang in ("ja", "en"):
+            render_fedwatch(feeds, lang)
+    except Exception as e:
+        warn(f"fed watch failed: {e!r}")
+
+    render_favicon()
 
     # 部分失敗の診断用(data/はCIがコミットするので後から確認できる)
     with open(os.path.join(DATA, "build_warnings.txt"), "w", encoding="utf-8") as f:
