@@ -35,7 +35,19 @@ jobs:
         run: pip install -r pipeline/requirements.txt
 
       - name: Build site
-        run: python pipeline/build.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python pipeline/build.py 2>&1 | tee build.log
+
+      - name: Save error log for diagnosis
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f build.log
+          git commit -m "ci: build error log"
+          git push
 
       - name: Commit data history
         run: |
