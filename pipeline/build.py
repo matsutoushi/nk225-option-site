@@ -429,6 +429,66 @@ def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
 # HTML
 # ---------------------------------------------------------------------------
 
+CSS_MAIN = """
+  :root {
+    --bg: #0d1117; --panel: #151b26; --panel2: #1a2232;
+    --ink: #e8eef7; --ink2: #9aa7ba; --line: #2a3247;
+    --blue: #3987e5; --red: #e66767; --aqua: #199e70;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
+         max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.7; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,0.92);
+            backdrop-filter: blur(6px); padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 1.25em; margin: 0 0 2px; letter-spacing: 0.02em; }
+  h1::before { content: "▮"; color: var(--aqua); margin-right: 8px; }
+  h2 { font-size: 1.05em; margin: 40px 0 10px; padding-left: 10px;
+        border-left: 3px solid var(--aqua); letter-spacing: 0.03em; }
+  h3 { font-size: 0.92em; color: var(--ink2); font-weight: 500; margin: 12px 0 6px; }
+  p { color: var(--ink2); font-size: 0.9em; }
+  .updated { color: var(--ink2); font-size: 0.8em; margin: 0; }
+  nav { margin-top: 6px; }
+  nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
+           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
+  nav a:hover { color: var(--ink); border-color: var(--aqua); }
+  .kpi { display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }
+  .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+              padding: 10px 20px; flex: 1 1 140px; font-size: 0.82em; color: var(--ink2); }
+  .kpi b { font-size: 1.7em; color: var(--ink); font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }
+  .kpi div:first-child b { color: var(--aqua); }
+  img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+  .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .tbl-box { flex: 1 1 420px; min-width: 320px; }
+  .tbl-scroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+  .tbl-duo { display: flex; gap: 20px; max-height: 560px; overflow: auto;
+              border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }
+  .tbl-duo table { width: auto; }
+  table { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%;
+           font-variant-numeric: tabular-nums; }
+  th, td { border: 1px solid var(--line); padding: 2px 8px; text-align: right; }
+  td { color: var(--ink); }
+  th { background: var(--panel2); color: var(--ink2); position: sticky; top: 0; font-weight: 500; }
+  tr > th:first-child { position: sticky; left: 0; background: var(--panel2); }
+  td.name { text-align: left; }
+  td.pos { color: #4cc38a; }
+  td.neg { color: #f07878; }
+  td.na { color: #4a5568; }
+  tr.spot td { background: rgba(25,158,112,0.28); color: var(--ink); text-align: center;
+                font-weight: 700; border-top: 2px solid var(--aqua); border-bottom: 2px solid var(--aqua);
+                letter-spacing: 0.05em; }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
+            font-size: 0.78em; color: var(--ink2); }
+  @media (max-width: 600px) {
+    body { padding: 0 10px 24px; }
+    h1 { font-size: 1.05em; }
+    .kpi div { padding: 8px 14px; }
+    .kpi b { font-size: 1.3em; }
+    table { font-size: 11px; }
+    .tbl-scroll { max-height: 420px; }
+    nav a { margin-right: 4px; font-size: 0.78em; }
+  }
+"""
+
 # ページ本文の文言(日英)
 PAGE = {
     "ja": {
@@ -437,7 +497,7 @@ PAGE = {
         "h1": "日経225オプション データ分析",
         "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
         "nav": ["マーケット", "建玉一覧", "建玉分布", "参加者別建玉", "Put/Callレシオ"],
-        "guide_link": '<a href="guide-start.html">始め方ガイド</a>',
+        "guide_link": '<a href="guide-start.html">始め方ガイド</a><a href="us.html">米国市場</a>',
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
@@ -458,7 +518,7 @@ PAGE = {
         "h1": "Nikkei 225 Options Data",
         "updated": "Data as of {d} | Last updated {now} JST (auto-updated every business day)",
         "nav": ["Market", "OI Table", "OI Distribution", "Participants", "Put/Call Ratio"],
-        "guide_link": "",
+        "guide_link": '<a href="us.html">US Markets</a>',
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
@@ -505,65 +565,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root {{
-    --bg: #0d1117; --panel: #151b26; --panel2: #1a2232;
-    --ink: #e8eef7; --ink2: #9aa7ba; --line: #2a3247;
-    --blue: #3987e5; --red: #e66767; --aqua: #199e70;
-  }}
-  * {{ box-sizing: border-box; }}
-  body {{ font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
-         max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.7; }}
-  header {{ position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,0.92);
-            backdrop-filter: blur(6px); padding: 14px 0 10px; border-bottom: 1px solid var(--line); }}
-  h1 {{ font-size: 1.25em; margin: 0 0 2px; letter-spacing: 0.02em; }}
-  h1::before {{ content: "▮"; color: var(--aqua); margin-right: 8px; }}
-  h2 {{ font-size: 1.05em; margin: 40px 0 10px; padding-left: 10px;
-        border-left: 3px solid var(--aqua); letter-spacing: 0.03em; }}
-  h3 {{ font-size: 0.92em; color: var(--ink2); font-weight: 500; margin: 12px 0 6px; }}
-  p {{ color: var(--ink2); font-size: 0.9em; }}
-  .updated {{ color: var(--ink2); font-size: 0.8em; margin: 0; }}
-  nav {{ margin-top: 6px; }}
-  nav a {{ color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
-           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }}
-  nav a:hover {{ color: var(--ink); border-color: var(--aqua); }}
-  .kpi {{ display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }}
-  .kpi div {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-              padding: 10px 20px; flex: 1 1 140px; font-size: 0.82em; color: var(--ink2); }}
-  .kpi b {{ font-size: 1.7em; color: var(--ink); font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }}
-  .kpi div:first-child b {{ color: var(--aqua); }}
-  img {{ max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }}
-  .tbl-pair {{ display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }}
-  .tbl-box {{ flex: 1 1 420px; min-width: 320px; }}
-  .tbl-scroll {{ max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }}
-  .tbl-duo {{ display: flex; gap: 20px; max-height: 560px; overflow: auto;
-              border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }}
-  .tbl-duo table {{ width: auto; }}
-  table {{ border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%;
-           font-variant-numeric: tabular-nums; }}
-  th, td {{ border: 1px solid var(--line); padding: 2px 8px; text-align: right; }}
-  td {{ color: var(--ink); }}
-  th {{ background: var(--panel2); color: var(--ink2); position: sticky; top: 0; font-weight: 500; }}
-  tr > th:first-child {{ position: sticky; left: 0; background: var(--panel2); }}
-  td.name {{ text-align: left; }}
-  td.pos {{ color: #4cc38a; }}
-  td.neg {{ color: #f07878; }}
-  td.na {{ color: #4a5568; }}
-  tr.spot td {{ background: rgba(25,158,112,0.28); color: var(--ink); text-align: center;
-                font-weight: 700; border-top: 2px solid var(--aqua); border-bottom: 2px solid var(--aqua);
-                letter-spacing: 0.05em; }}
-  footer {{ border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
-            font-size: 0.78em; color: var(--ink2); }}
-  @media (max-width: 600px) {{
-    body {{ padding: 0 10px 24px; }}
-    h1 {{ font-size: 1.05em; }}
-    .kpi div {{ padding: 8px 14px; }}
-    .kpi b {{ font-size: 1.3em; }}
-    table {{ font-size: 11px; }}
-    .tbl-scroll {{ max-height: 420px; }}
-    nav a {{ margin-right: 4px; font-size: 0.78em; }}
-  }}
-</style>
+<style>{CSS_MAIN}</style>
 </head>
 <body>
 <header>
@@ -640,6 +642,141 @@ def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
     with open(os.path.join(SITE, "post.txt"), "w", encoding="utf-8") as f:
         f.write(text)
     return text
+
+
+USPAGE = {
+    "ja": {
+        "title": "米国市場データ | COTポジション・CBOE Put/Callレシオ",
+        "h1": "米国市場データ",
+        "updated": "COT基準日: {cot_date}(毎週金曜更新) | CBOE基準日: {pcr_date} | 最終更新: {now} JST",
+        "kpi": ["CBOE 全体PCR", "株式PCR", "SPX PCR"],
+        "sec_cot": "COT 投機筋ネットポジション(週次)",
+        "cot_lead": "CFTC建玉明細報告より。株価指数・通貨はレバレッジファンド、金・原油はマネージドマネーのネットポジション(買い−売り)。毎週火曜時点のデータが金曜に公表されます。",
+        "cot_cols": ["市場", "ネットポジション", "前週比"],
+        "sec_pcr": "CBOE Put/Callレシオ(日次)",
+        "pcr_lead": "米国オプション市場全体の弱気/強気の偏り。1.0超はプット優勢です。",
+        "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
+                     "spx": "SPX+SPXW", "vix": "VIX"},
+        "pcr_cols": ["区分", "Put/Callレシオ"],
+        "back": '<a href="./">← 日本市場データへ</a>',
+        "lang_switch": '<a href="en/us.html" lang="en">English</a>',
+        "footer_src": "データ出典: CFTC(建玉明細報告)、Cboe Global Markets公表データより当サイト作成。",
+        "out": "us.html", "prefix": "",
+    },
+    "en": {
+        "title": "US Markets | COT Positioning & CBOE Put/Call Ratios",
+        "h1": "US Markets Data",
+        "updated": "COT as of {cot_date} (updated every Friday) | CBOE as of {pcr_date} | Last updated {now} JST",
+        "kpi": ["CBOE Total P/C", "Equity P/C", "SPX P/C"],
+        "sec_cot": "COT Speculator Net Positions (Weekly)",
+        "cot_lead": "From the CFTC Commitments of Traders report. Leveraged funds for index/FX futures, managed money for gold/crude. Tuesday data, released Friday.",
+        "cot_cols": ["Market", "Net Position", "WoW"],
+        "sec_pcr": "CBOE Put/Call Ratios (Daily)",
+        "pcr_lead": "Bearish/bullish skew of the US options market. Above 1.0 = puts dominant.",
+        "pcr_rows": {"total": "Total", "index": "Index", "equity": "Equity",
+                     "spx": "SPX+SPXW", "vix": "VIX"},
+        "pcr_cols": ["Category", "Put/Call Ratio"],
+        "back": '<a href="./">← Nikkei data</a>',
+        "lang_switch": '<a href="../us.html" lang="ja">日本語</a>',
+        "footer_src": "Data sources: CFTC Commitments of Traders; Cboe Global Markets.",
+        "out": os.path.join("en", "us.html"), "prefix": "../",
+    },
+}
+
+
+def chart_cot(cot: dict, lang: str) -> str:
+    """6市場のネットポジション推移(スモールマルチプル)。"""
+    import us_data
+    suffix = L[lang]["suffix"]
+    fig, axes = plt.subplots(2, 3, figsize=(11, 6), sharex=False)
+    for ax, m in zip(axes.flat, us_data.COT_MARKETS):
+        df = cot["markets"][m["key"]]
+        x = pd.to_datetime(df["date"])
+        color = ACCENT if df["net"].iloc[-1] >= 0 else UP
+        ax.plot(x, df["net"], color=color, linewidth=1.3)
+        ax.fill_between(x, df["net"], 0, color=color, alpha=0.15)
+        ax.axhline(0, color=INK2, linewidth=0.7)
+        ax.set_title(m[lang], fontsize=9)
+        ax.grid(alpha=0.25)
+        ax.tick_params(labelsize=7)
+        ax.yaxis.set_major_formatter(lambda v, _: f"{v/1000:,.0f}k")
+    sup = ("COT 投機筋ネットポジション(直近1年・枚)" if lang == "ja"
+           else "COT Speculator Net Positions (1 year, contracts)")
+    fig.suptitle(sup, fontsize=11)
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"cot{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str) -> None:
+    import us_data
+    P = USPAGE[lang]
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    ver = datetime.now(JST).strftime("%Y%m%d%H%M")
+    chart_src = f"{P['prefix']}{chart_rel}?v={ver}"
+
+    rows = []
+    for m in us_data.COT_MARKETS:
+        df = cot["markets"][m["key"]]
+        net = int(df["net"].iloc[-1])
+        wow = net - int(df["net"].iloc[-2])
+        cls = "pos" if wow > 0 else ("neg" if wow < 0 else "")
+        rows.append(f"<tr><td class='name'>{m[lang]}</td>"
+                    f"<td>{net:+,}</td><td class='{cls}'>{wow:+,}</td></tr>")
+    cot_head = "".join(f"<th>{c}</th>" for c in P["cot_cols"])
+    pcr_head = "".join(f"<th>{c}</th>" for c in P["pcr_cols"])
+    pcr_rows = "".join(f"<tr><td class='name'>{label}</td><td>{pcr_us[k]:.2f}</td></tr>"
+                       for k, label in P["pcr_rows"].items() if pcr_us.get(k) is not None)
+
+    html_doc = f"""<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{P['title']}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}</style>
+</head>
+<body>
+<header>
+  <h1>{P['h1']}</h1>
+  <p class="updated">{P['updated'].format(cot_date=cot['date'], pcr_date=pcr_us['date'], now=now)}</p>
+  <nav>{P['back']}{P['lang_switch']}</nav>
+</header>
+<main>
+  <div class="kpi">
+    <div>{P['kpi'][0]}<br><b>{pcr_us['total']:.2f}</b></div>
+    <div>{P['kpi'][1]}<br><b>{pcr_us['equity']:.2f}</b></div>
+    <div>{P['kpi'][2]}<br><b>{pcr_us['spx']:.2f}</b></div>
+  </div>
+
+  <h2>{P['sec_cot']}</h2>
+  <p>{P['cot_lead']}</p>
+  <img src="{chart_src}" alt="COT net positions">
+  <div class="tbl-pair"><div class="tbl-box"><div class="tbl-scroll">
+    <table><tr>{cot_head}</tr>{''.join(rows)}</table>
+  </div></div></div>
+
+  <h2>{P['sec_pcr']}</h2>
+  <p>{P['pcr_lead']}</p>
+  <div class="tbl-pair"><div class="tbl-box"><div class="tbl-scroll">
+    <table><tr>{pcr_head}</tr>{pcr_rows}</table>
+  </div></div></div>
+</main>
+<footer>
+  <p>{P['footer_src']}</p>
+  <p>{PAGE[lang]['footer_disclaimer']}</p>
+</footer>
+</body>
+</html>
+"""
+    out_path = os.path.join(SITE, P["out"])
+    os.makedirs(os.path.dirname(out_path) or SITE, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
 
 
 SUB_CSS = """
@@ -766,6 +903,20 @@ def main() -> None:
         }
         render_index(date, pcr, charts, tables, lang)
     render_static_pages()
+
+    # 米国市場データ(取得失敗しても日本側のビルドは止めない)
+    try:
+        import us_data
+        cot = us_data.fetch_cot()
+        pcr_us = us_data.fetch_cboe_pcr()
+        print(f"US data: COT {cot['date']}, CBOE {pcr_us['date']} (total {pcr_us['total']})")
+        combined = pd.concat(
+            [df.assign(market=k) for k, df in cot["markets"].items()], ignore_index=True)
+        combined.to_csv(os.path.join(DATA, "cot_history.csv"), index=False)
+        for lang in ("ja", "en"):
+            render_us(cot, pcr_us, lang, chart_cot(cot, lang))
+    except Exception as e:
+        print(f"WARN: US market section failed: {e}")
     post = compose_post(date, pcr, oi, expiry, spot)
     print("--- post draft ---")
     print(post)
