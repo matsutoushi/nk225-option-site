@@ -225,15 +225,19 @@ def _exp_label(exp: str) -> str:
     return f"{exp[:2]}年{int(exp[2:])}月"
 
 
-def _heat_color(pct: float) -> str:
-    """0(最小)→赤、0.5→黄、1(最大)→緑 の淡色グラデーション。"""
-    hue = int(120 * pct)  # 0=red, 120=green
-    return f"hsl({hue}, 75%, 85%)"
+def _change_color(v: int, maxabs: float) -> str | None:
+    """増減の強弱: 増加=緑、減少=赤。大きいほど濃く、0は無色。"""
+    if v == 0 or maxabs <= 0:
+        return None
+    strength = min(abs(v) / maxabs, 1.0)
+    lightness = 95 - 25 * strength  # 95%(薄)→70%(濃)
+    hue = 120 if v > 0 else 0
+    return f"hsl({hue}, 70%, {lightness:.0f}%)"
 
 
 def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
-    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±20,000円に限定。"""
-    lo, hi = center - 20000, center + 20000
+    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±15,000円に限定。"""
+    lo, hi = center - 15000, center + 15000
     oi = oi[(oi["strike"] >= lo) & (oi["strike"] <= hi)]
     expiries = sorted(oi["expiry"].unique())
     strikes = sorted(oi["strike"].unique(), reverse=True)
@@ -245,14 +249,10 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
 
     cur, chg = pivot("oi"), pivot("change")
 
-    # 建玉の多寡→色: 偏りが大きいのでパーセンタイル順位でグラデーションを付ける
-    all_values = sorted(v for tbl in cur.values() for v in tbl.values())
-
-    def pct_rank(v):
-        if not all_values:
-            return 0.0
-        import bisect
-        return bisect.bisect_left(all_values, v) / max(len(all_values) - 1, 1)
+    # 建玉残高: 各限月×Call/Put列の最大値セルだけ緑にする
+    col_max = {key: max(tbl.values()) if tbl else None for key, tbl in cur.items()}
+    # 増減: 全セルの最大絶対値を基準に濃淡を付ける
+    maxabs = max((abs(v) for tbl in chg.values() for v in tbl.values()), default=0)
 
     def render(table, is_change):
         head1 = "<tr><th rowspan='2'>行使価格</th>"
@@ -267,17 +267,19 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
                     if v is None or (is_change and cur[(t, e)].get(s) is None):
                         tds.append("<td class='na'>-</td>")
                     elif is_change:
-                        cls = "pos" if v > 0 else ("neg" if v < 0 else "")
-                        tds.append(f"<td class='{cls}'>{v:+,}</td>" if v else "<td>0</td>")
+                        color = _change_color(v, maxabs)
+                        style = f" style='background:{color}'" if color else ""
+                        tds.append(f"<td{style}>{v:+,}</td>" if v else "<td>0</td>")
                     else:
-                        style = f" style='background:{_heat_color(pct_rank(v))}'"
+                        is_max = col_max[(t, e)] is not None and v == col_max[(t, e)]
+                        style = " style='background:hsl(120, 70%, 78%); font-weight:bold'" if is_max else ""
                         tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
-        cap = "建玉増減(前日比)" if is_change else "建玉残高(多=緑 / 少=赤)"
+        cap = "建玉増減(前日比: 増加=緑 / 減少=赤)" if is_change else "建玉残高(緑=各限月の最大)"
         return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
                 f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
 
-    note = (f"<p>現値を挟んで上下20,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
+    note = (f"<p>現値を挟んで上下15,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
             f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
     return f"{note}<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
 
