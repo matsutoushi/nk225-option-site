@@ -658,6 +658,9 @@ USPAGE = {
         "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
+        "sec_spx": "SPXオプション: 建玉の壁とGEX(推定)",
+        "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。GEXは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
+        "spx_kpi": ["SPX終値", "合計GEX($bn/1%)", "ガンマフリップ"],
         "back": '<a href="./">← 日本市場データへ</a>',
         "lang_switch": '<a href="en/us.html" lang="en">English</a>',
         "footer_src": "データ出典: CFTC(建玉明細報告)、Cboe Global Markets公表データより当サイト作成。",
@@ -676,6 +679,9 @@ USPAGE = {
         "pcr_rows": {"total": "Total", "index": "Index", "equity": "Equity",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["Category", "Put/Call Ratio"],
+        "sec_spx": "SPX Options: OI Walls & Gamma Exposure (Estimate)",
+        "spx_lead": "From Cboe delayed data (as of last US close), expiries within 45 days, strikes within ±10% of spot. GEX uses the standard naive assumption (dealers long calls, short puts) and is an estimate, not actual dealer positioning. Positive GEX tends to dampen volatility; negative GEX tends to amplify it.",
+        "spx_kpi": ["SPX Close", "Total GEX ($bn/1%)", "Gamma Flip"],
         "back": '<a href="./">← Nikkei data</a>',
         "lang_switch": '<a href="../us.html" lang="ja">日本語</a>',
         "footer_src": "Data sources: CFTC Commitments of Traders; Cboe Global Markets.",
@@ -711,7 +717,60 @@ def chart_cot(cot: dict, lang: str) -> str:
     return f"img/{name}"
 
 
-def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str) -> None:
+def chart_spx(res: dict, lang: str) -> str:
+    """SPXの建玉の壁とネットGEXを25pt刻みで並べた2パネル図。"""
+    suffix = L[lang]["suffix"]
+    spot = res["spot"]
+    walls = res["walls"].copy()
+    walls["bin"] = (walls["strike"] // 25) * 25
+    gex = res["gex"].copy()
+    gex["bin"] = (gex["strike"] // 25) * 25
+    gex_b = gex.groupby("bin")["gex"].sum() / 1e9
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 6.5), sharey=True)
+
+    puts = walls[walls["type"] == "P"].groupby("bin")["oi"].sum()
+    calls = walls[walls["type"] == "C"].groupby("bin")["oi"].sum()
+    bins = sorted(set(puts.index) | set(calls.index))
+    ax1.barh(bins, -puts.reindex(bins).fillna(0), height=20, color=UP,
+             label="Put OI" if lang == "en" else "プット建玉")
+    ax1.barh(bins, calls.reindex(bins).fillna(0), height=20, color=DOWN,
+             label="Call OI" if lang == "en" else "コール建玉")
+    ax1.axhline(spot, color=INK, linestyle="--", linewidth=1)
+    ax1.set_title("SPX Open Interest by Strike" if lang == "en"
+                  else "SPX 行使価格別建玉(壁)", fontsize=10)
+    ax1.xaxis.set_major_formatter(lambda x, _: f"{abs(x)/1000:,.0f}k")
+    ax1.legend(loc="lower left", fontsize=8)
+    ax1.grid(alpha=0.25)
+
+    colors = [ACCENT if v >= 0 else UP for v in gex_b.values]
+    ax2.barh(gex_b.index, gex_b.values, height=20, color=colors)
+    ax2.axhline(spot, color=INK, linestyle="--", linewidth=1,
+                label=f"SPX {spot:,.0f}")
+    if res["flip"]:
+        ax2.axhline(res["flip"], color=WARN, linestyle=":", linewidth=1.6,
+                    label=("Gamma flip" if lang == "en" else "ガンマフリップ")
+                    + f" {res['flip']:,.0f}")
+    ax2.axvline(0, color=INK2, linewidth=0.7)
+    total = res["total_gex"] / 1e9
+    ax2.set_title((f"Net GEX by Strike (Total {total:+,.1f} $bn/1%)" if lang == "en"
+                   else f"ネットGEX(合計 {total:+,.1f} $bn/1%)"), fontsize=10)
+    ax2.legend(loc="lower right", fontsize=8)
+    ax2.grid(alpha=0.25)
+
+    sup = ("SPX Options: OI Walls & Naive Gamma Exposure (45d expiries, ±10%)"
+           if lang == "en" else
+           "SPXオプション: 建玉の壁とGEX推定(45日以内の限月・現値±10%)")
+    fig.suptitle(sup, fontsize=11)
+    fig.tight_layout()
+    name = f"spx{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
+              spx_res: dict | None = None, spx_chart: str | None = None) -> None:
     import us_data
     P = USPAGE[lang]
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
@@ -730,6 +789,21 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str) -> None:
     pcr_head = "".join(f"<th>{c}</th>" for c in P["pcr_cols"])
     pcr_rows = "".join(f"<tr><td class='name'>{label}</td><td>{pcr_us[k]:.2f}</td></tr>"
                        for k, label in P["pcr_rows"].items() if pcr_us.get(k) is not None)
+
+    spx_section = ""
+    if spx_res and spx_chart:
+        flip_txt = f"{spx_res['flip']:,.0f}" if spx_res["flip"] else "-"
+        gex_bn = spx_res["total_gex"] / 1e9
+        spx_src = f"{P['prefix']}{spx_chart}?v={ver}"
+        spx_section = f"""
+  <h2>{P['sec_spx']}</h2>
+  <div class="kpi">
+    <div>{P['spx_kpi'][0]}<br><b>{spx_res['spot']:,.0f}</b></div>
+    <div>{P['spx_kpi'][1]}<br><b>{gex_bn:+,.1f}</b></div>
+    <div>{P['spx_kpi'][2]}<br><b>{flip_txt}</b></div>
+  </div>
+  <p>{P['spx_lead']}</p>
+  <img src="{spx_src}" alt="SPX OI walls and gamma exposure">"""
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="{lang}">
@@ -765,6 +839,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str) -> None:
   <div class="tbl-pair"><div class="tbl-box"><div class="tbl-scroll">
     <table><tr>{pcr_head}</tr>{pcr_rows}</table>
   </div></div></div>
+
+  {spx_section}
 </main>
 <footer>
   <p>{P['footer_src']}</p>
@@ -913,8 +989,29 @@ def main() -> None:
         combined = pd.concat(
             [df.assign(market=k) for k, df in cot["markets"].items()], ignore_index=True)
         combined.to_csv(os.path.join(DATA, "cot_history.csv"), index=False)
+
+        # SPX建玉の壁+GEX(失敗してもCOT/PCRセクションは出す)
+        spx_res = None
+        try:
+            spx_res = us_data.spx_walls_and_gex(us_data.fetch_spx_chain())
+            print(f"SPX: spot {spx_res['spot']:,.0f}, GEX {spx_res['total_gex']/1e9:+,.1f}bn, "
+                  f"flip {spx_res['flip']}")
+            hist_path = os.path.join(DATA, "spx_gex_history.csv")
+            gh = pd.read_csv(hist_path, dtype={"date": str}) if os.path.exists(hist_path) else \
+                pd.DataFrame(columns=["date", "spot", "total_gex_bn", "flip"])
+            gh = gh[gh["date"] != date]
+            gh = pd.concat([gh, pd.DataFrame([{
+                "date": date, "spot": round(spx_res["spot"], 2),
+                "total_gex_bn": round(spx_res["total_gex"] / 1e9, 2),
+                "flip": spx_res["flip"] or "",
+            }])], ignore_index=True).sort_values("date")
+            gh.to_csv(hist_path, index=False)
+        except Exception as e:
+            print(f"WARN: SPX section failed: {e}")
+
         for lang in ("ja", "en"):
-            render_us(cot, pcr_us, lang, chart_cot(cot, lang))
+            spx_chart = chart_spx(spx_res, lang) if spx_res else None
+            render_us(cot, pcr_us, lang, chart_cot(cot, lang), spx_res, spx_chart)
     except Exception as e:
         print(f"WARN: US market section failed: {e}")
     post = compose_post(date, pcr, oi, expiry, spot)

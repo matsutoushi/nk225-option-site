@@ -7,6 +7,7 @@
 - CBOE 日次Put/Callレシオ: 公式CDNのJSON
 """
 
+import re
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
@@ -67,6 +68,71 @@ def fetch_cot(weeks: int = 56) -> dict:
         d = df["date"].iloc[-1]
         latest = max(latest, d) if latest else d
     return {"date": str(latest), "markets": out}
+
+
+SPX_URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json"
+_OPT_RE = re.compile(r"^(SPXW?)(\d{6})([CP])(\d{8})$")
+
+
+def fetch_spx_chain() -> dict:
+    """SPX全オプションチェーン(建玉・ガンマ入り)を取得する。
+
+    Returns: {"spot": float, "chain": DataFrame[expiry, type, strike, oi, gamma]}
+    """
+    r = requests.get(SPX_URL, headers=UA, timeout=90)
+    r.raise_for_status()
+    data = r.json()["data"]
+    spot = float(data["close"])
+    rows = []
+    for o in data["options"]:
+        m = _OPT_RE.match(o.get("option", ""))
+        if not m:
+            continue
+        oi = o.get("open_interest") or 0
+        if oi <= 0:
+            continue
+        rows.append({
+            "expiry": datetime.strptime(m.group(2), "%y%m%d").date(),
+            "type": m.group(3),
+            "strike": int(m.group(4)) / 1000,
+            "oi": int(oi),
+            "gamma": float(o.get("gamma") or 0),
+        })
+    if not rows:
+        raise RuntimeError("no SPX option rows parsed")
+    return {"spot": spot, "chain": pd.DataFrame(rows)}
+
+
+def spx_walls_and_gex(spx: dict, days: int = 45, band: float = 0.10) -> dict:
+    """建玉の壁とネットGEX(ナイーブ推定)を行使価格別に集計する。
+
+    GEXの想定(業界標準のナイーブ仮定): ディーラーはコール買い持ち・プット売り持ち
+    → コールのガンマを正、プットのガンマを負として合算。
+    GEX($) = gamma × OI × 100(乗数) × spot^2 × 1% で「指数1%変動あたりのドル建てガンマ」。
+    """
+    spot = spx["spot"]
+    df = spx["chain"].copy()
+    cutoff = datetime.now(timezone.utc).date() + timedelta(days=days)
+    df = df[(df["expiry"] <= cutoff)
+            & (df["strike"] >= spot * (1 - band)) & (df["strike"] <= spot * (1 + band))]
+
+    walls = df.groupby(["type", "strike"], as_index=False)["oi"].sum()
+    df["gex"] = df["gamma"] * df["oi"] * 100 * spot * spot * 0.01 \
+        * df["type"].map({"C": 1, "P": -1})
+    gex = df.groupby("strike", as_index=False)["gex"].sum()
+    total_gex = float(df["gex"].sum())
+
+    # ガンマフリップの近似: 下の行使価格から累積GEXの符号が変わる水準
+    g = gex.sort_values("strike").reset_index(drop=True)
+    g["cum"] = g["gex"].cumsum()
+    flip = None
+    sign = g["cum"].iloc[0] >= 0
+    for _, row in g.iterrows():
+        if (row["cum"] >= 0) != sign:
+            flip = float(row["strike"])
+            break
+    return {"spot": spot, "walls": walls, "gex": gex,
+            "total_gex": total_gex, "flip": flip}
 
 
 def fetch_cboe_pcr() -> dict:
