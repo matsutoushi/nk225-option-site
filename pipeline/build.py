@@ -476,6 +476,11 @@ CSS_MAIN = """
   tr.spot td { background: rgba(25,158,112,0.28); color: var(--ink); text-align: center;
                 font-weight: 700; border-top: 2px solid var(--aqua); border-bottom: 2px solid var(--aqua);
                 letter-spacing: 0.05em; }
+  .sig { font-size: 1.1em; }
+  .sig-green { color: #2ecc71; }
+  .sig-yellow { color: #f1c40f; }
+  .sig-red { color: #e74c3c; }
+  td.basis { text-align: left; color: var(--ink2); font-size: 11px; white-space: normal; min-width: 200px; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
             font-size: 0.78em; color: var(--ink2); }
   @media (max-width: 600px) {
@@ -497,7 +502,7 @@ PAGE = {
         "h1": "日経225オプション データ分析",
         "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
         "nav": ["マーケット", "建玉一覧", "建玉分布", "参加者別建玉", "Put/Callレシオ"],
-        "guide_link": '<a href="guide-start.html">始め方ガイド</a><a href="us.html">米国市場</a>',
+        "guide_link": '<a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a><a href="guide-start.html">始め方ガイド</a>',
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
@@ -519,7 +524,7 @@ PAGE = {
         "h1": "Nikkei 225 Options Data",
         "updated": "Data as of {d} | Last updated {now} JST (auto-updated every business day)",
         "nav": ["Market", "OI Table", "OI Distribution", "Participants", "Put/Call Ratio"],
-        "guide_link": '<a href="us.html">US Markets</a>',
+        "guide_link": '<a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a>',
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
@@ -649,6 +654,146 @@ def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
     with open(os.path.join(SITE, "post.txt"), "w", encoding="utf-8") as f:
         f.write(text)
     return text
+
+
+RISKPAGE = {
+    "ja": {
+        "title": "マクロリスクモニター | 景気後退・インフレ再燃・金融ストレスの兆候チェック",
+        "h1": "マクロリスクモニター",
+        "updated": "最終更新: {now} JST(毎営業日 自動更新。指標により月次・週次)",
+        "lead": "米国の公式統計・市場データから、リスクイベントの兆候を機械的にチェックするページです。信号は出典に記載の閾値による自動判定で、当サイトの相場予想ではありません。",
+        "groups": {"recession": "景気後退リスク", "inflation": "インフレ再燃リスク", "stress": "金融ストレス"},
+        "cols": ["信号", "指標", "最新値", "基準日", "判定基準"],
+        "legend": "●緑=平常 / ●黄=注意 / ●赤=警告",
+        "summary": "現在の状態: 緑 {g} / 黄 {y} / 赤 {r}",
+        "sec_chart": "主要指標の推移(直近3年)",
+        "back": '<a href="./">← 日本市場データへ</a><a href="us.html">米国市場</a>',
+        "lang_switch": '<a href="en/risk.html" lang="en">English</a>',
+        "footer_src": "データ出典: FRED(セントルイス連銀)、ニューヨーク連銀公表データより当サイト作成。閾値は各出典・学術研究・市場慣行に基づく目安です。",
+        "out": "risk.html", "prefix": "",
+    },
+    "en": {
+        "title": "Macro Risk Monitor | Recession, Inflation & Financial Stress Signals",
+        "h1": "Macro Risk Monitor",
+        "updated": "Last updated {now} JST (auto-updated every business day; some series weekly/monthly)",
+        "lead": "A mechanical check of risk-event signals from official US statistics and market data. Signals are threshold-based flags per the cited sources — not this site's market forecast.",
+        "groups": {"recession": "Recession Risk", "inflation": "Inflation Re-acceleration Risk", "stress": "Financial Stress"},
+        "cols": ["Signal", "Indicator", "Latest", "As of", "Threshold Basis"],
+        "legend": "●Green = normal / ●Yellow = caution / ●Red = warning",
+        "summary": "Current status: {g} green / {y} yellow / {r} red",
+        "sec_chart": "Key Series (3 years)",
+        "back": '<a href="../">← Nikkei data</a><a href="us.html">US Markets</a>',
+        "lang_switch": '<a href="../risk.html" lang="ja">日本語</a>',
+        "footer_src": "Data sources: FRED (St. Louis Fed), Federal Reserve Bank of New York. Thresholds are guideline values based on the cited sources, academic research and market convention.",
+        "out": os.path.join("en", "risk.html"), "prefix": "../",
+    },
+}
+
+
+def chart_risk(series: dict, lang: str) -> str | None:
+    """主要リスク指標6系列の3年チャート。"""
+    suffix = L[lang]["suffix"]
+    panels = [
+        ("T10Y3M", "イールドカーブ(10年-3ヶ月, %)", "Yield Curve (10y-3m, %)", 0.0),
+        ("SAHMREALTIME", "Sahmルール", "Sahm Rule", 0.5),
+        ("RECPROUSM156N", "景気後退確率(C-P, %)", "Recession Prob. (C-P, %)", 50),
+        ("T10YIE", "期待インフレ(10年BEI, %)", "10y Breakeven (%)", 3.0),
+        ("BAMLH0A0HYM2", "HY債スプレッド(%)", "High Yield Spread (%)", 6.0),
+        ("VIXCLS", "VIX", "VIX", 30),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(11, 6))
+    drawn = 0
+    for ax, (sid, ja, en, thresh) in zip(axes.flat, panels):
+        s = series.get(sid)
+        if s is None or len(s) == 0:
+            ax.axis("off")
+            continue
+        s3 = s[s.index >= s.index[-1] - pd.Timedelta(days=365 * 3)]
+        ax.plot(s3.index, s3.values, color=ACCENT, linewidth=1.2)
+        ax.axhline(thresh, color=UP, linestyle="--", linewidth=0.9, alpha=0.8)
+        ax.set_title(ja if lang == "ja" else en, fontsize=9)
+        ax.grid(alpha=0.25)
+        ax.tick_params(labelsize=7)
+        drawn += 1
+    if drawn == 0:
+        plt.close(fig)
+        return None
+    sup = ("マクロリスク指標(赤点線=警告水準の目安)" if lang == "ja"
+           else "Macro Risk Indicators (red dashed = warning threshold)")
+    fig.suptitle(sup, fontsize=11)
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"risk{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
+    P = RISKPAGE[lang]
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    ver = datetime.now(JST).strftime("%Y%m%d%H%M")
+    counts = {"green": 0, "yellow": 0, "red": 0}
+    for it in risk["items"]:
+        counts[it["signal"]] += 1
+
+    sections = []
+    for gkey, gname in P["groups"].items():
+        rows = []
+        for it in (x for x in risk["items"] if x["group"] == gkey):
+            dot = f"<span class='sig sig-{it['signal']}'>●</span>"
+            name = it["ja"] if lang == "ja" else it["en"]
+            basis = it["basis_ja"] if lang == "ja" else it["basis_en"]
+            rows.append(f"<tr><td style='text-align:center'>{dot}</td>"
+                        f"<td class='name'>{name}</td><td>{it['disp']}</td>"
+                        f"<td>{it['date']}</td><td class='basis'>{basis}</td></tr>")
+        head = "".join(f"<th>{c}</th>" for c in P["cols"])
+        sections.append(f"<h2>{gname}</h2><div class='tbl-pair'><div class='tbl-box' style='flex:1 1 100%'>"
+                        f"<div class='tbl-scroll'><table><tr>{head}</tr>{''.join(rows)}</table></div></div></div>")
+
+    chart_html = ""
+    if chart_rel:
+        chart_html = (f"<h2>{P['sec_chart']}</h2>\n"
+                      f'<img src="{P["prefix"]}{chart_rel}?v={ver}" alt="macro risk indicators">')
+
+    html_doc = f"""<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{P['title']}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}</style>
+</head>
+<body>
+<header>
+  <h1>{P['h1']}</h1>
+  <p class="updated">{P['updated'].format(now=now)}</p>
+  <nav>{P['back']}{P['lang_switch']}</nav>
+</header>
+<main>
+  <p>{P['lead']}</p>
+  <div class="kpi">
+    <div>{P['summary'].format(g=counts['green'], y=counts['yellow'], r=counts['red'])}<br>
+    <b><span class='sig sig-green'>●</span>{counts['green']}
+       <span class='sig sig-yellow'>●</span>{counts['yellow']}
+       <span class='sig sig-red'>●</span>{counts['red']}</b></div>
+  </div>
+  <p>{P['legend']}</p>
+  {''.join(sections)}
+  {chart_html}
+</main>
+<footer>
+  <p>{P['footer_src']}</p>
+  <p>{PAGE[lang]['footer_disclaimer']}</p>
+</footer>
+</body>
+</html>
+"""
+    out_path = os.path.join(SITE, P["out"])
+    os.makedirs(os.path.dirname(out_path) or SITE, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
 
 
 USPAGE = {
@@ -1080,6 +1225,22 @@ def main() -> None:
             render_us(cot, pcr_us, lang, chart_cot(cot, lang), spx_res, spx_chart)
     except Exception as e:
         print(f"WARN: US market section failed: {e}")
+
+    # マクロリスクモニター(失敗しても他セクションは影響を受けない)
+    try:
+        import fred
+        risk = fred.collect_indicators()
+        counts = {}
+        for it in risk["items"]:
+            counts[it["signal"]] = counts.get(it["signal"], 0) + 1
+        print(f"risk monitor: {len(risk['items'])} indicators, signals {counts}")
+        pd.DataFrame([{k: it[k] for k in ("group", "key", "ja", "disp", "date", "signal")}
+                      for it in risk["items"]]).to_csv(
+            os.path.join(DATA, "risk_latest.csv"), index=False)
+        for lang in ("ja", "en"):
+            render_risk(risk, lang, chart_risk(risk["series"], lang))
+    except Exception as e:
+        print(f"WARN: risk monitor failed: {e}")
     post = compose_post(date, pcr, oi, expiry, spot)
     print("--- post draft ---")
     print(post)
