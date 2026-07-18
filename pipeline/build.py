@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 import jpx
+import pages
 
 _available = {f.name for f in font_manager.fontManager.ttflist}
 plt.rcParams["font.family"] = [f for f in ("Yu Gothic", "Meiryo", "IPAexGothic")
@@ -456,7 +457,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
 <header>
   <h1>日経225オプション データ分析</h1>
   <p class="updated">データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)</p>
-  <nav><a href="#market">マーケット</a><a href="#oitable">建玉一覧</a><a href="#oi">建玉分布</a><a href="#weekly">参加者別建玉</a><a href="#pcr">Put/Callレシオ</a></nav>
+  <nav><a href="#market">マーケット</a><a href="#oitable">建玉一覧</a><a href="#oi">建玉分布</a><a href="#weekly">参加者別建玉</a><a href="#pcr">Put/Callレシオ</a><a href="guide-start.html">始め方ガイド</a></nav>
 </header>
 <main>
   <div class="kpi">
@@ -471,13 +472,15 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   {tables['oi']}
 
   <h2 id="oi">行使価格別 建玉分布</h2>
-  <p>建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。</p>
+  <p>建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。
+     (<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)</p>
   <img src="{charts['oi']}" alt="日経225オプション行使価格別建玉分布">
 
   {weekly_section}
 
   <h2 id="pcr">Put/Call レシオの推移</h2>
-  <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。</p>
+  <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。
+     (<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)</p>
   <img src="{charts['pcr']}" alt="Put/Callレシオ推移">
 
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
@@ -570,6 +573,9 @@ def render_static_pages() -> None:
         f.write(shell("運営者情報", about))
     with open(os.path.join(SITE, "privacy.html"), "w", encoding="utf-8") as f:
         f.write(shell("プライバシーポリシー", privacy))
+    for fname, (title, body) in pages.GUIDE_PAGES.items():
+        with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
+            f.write(shell(title, body))
 
 
 def main() -> None:
