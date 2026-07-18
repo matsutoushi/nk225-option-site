@@ -1128,6 +1128,14 @@ def render_static_pages() -> None:
             f.write(shell(title, body))
 
 
+WARNINGS: list[str] = []
+
+
+def warn(msg: str) -> None:
+    print(f"WARN: {msg}")
+    WARNINGS.append(msg)
+
+
 def main() -> None:
     files = jpx.discover_files()
     date = files["date"]
@@ -1151,7 +1159,7 @@ def main() -> None:
         weekly = jpx.fetch_weekly_participant_futures()
         print(f"weekly participants: {len(weekly['data'])} (date {weekly['date']})")
     except Exception as e:
-        print(f"WARN: weekly participant data failed: {e}")
+        warn(f"weekly participant data failed: {e}")
         weekly = None
 
     hist = save_history(date, pcr, oi, weekly)
@@ -1159,7 +1167,7 @@ def main() -> None:
     try:
         n225_hist = jpx.fetch_n225_official()
     except Exception as e:
-        print(f"WARN: N225 official fetch failed: {e}")
+        warn(f"N225 official fetch failed: {e}")
         n225_hist = None
     market_ja, spot = chart_market(oi, expiry, date, "ja", n225_hist)
     market_en, _ = chart_market(oi, expiry, date, "en", n225_hist)
@@ -1174,7 +1182,7 @@ def main() -> None:
         for lg in ("ja", "en"):
             part_charts[lg] = chart_participants(ph, n225_hist, lg)
     except Exception as e:
-        print(f"WARN: participant history failed: {e}")
+        warn(f"participant history failed: {e}")
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     for lang, market_chart in (("ja", market_ja), ("en", market_en)):
@@ -1218,13 +1226,13 @@ def main() -> None:
             }])], ignore_index=True).sort_values("date")
             gh.to_csv(hist_path, index=False)
         except Exception as e:
-            print(f"WARN: SPX section failed: {e}")
+            warn(f"SPX section failed: {e}")
 
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
             render_us(cot, pcr_us, lang, chart_cot(cot, lang), spx_res, spx_chart)
     except Exception as e:
-        print(f"WARN: US market section failed: {e}")
+        warn(f"US market section failed: {e}")
 
     # マクロリスクモニター(失敗しても他セクションは影響を受けない)
     try:
@@ -1240,7 +1248,11 @@ def main() -> None:
         for lang in ("ja", "en"):
             render_risk(risk, lang, chart_risk(risk["series"], lang))
     except Exception as e:
-        print(f"WARN: risk monitor failed: {e}")
+        warn(f"risk monitor failed: {e!r}")
+
+    # 部分失敗の診断用(data/はCIがコミットするので後から確認できる)
+    with open(os.path.join(DATA, "build_warnings.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(WARNINGS) if WARNINGS else "none")
     post = compose_post(date, pcr, oi, expiry, spot)
     print("--- post draft ---")
     print(post)
