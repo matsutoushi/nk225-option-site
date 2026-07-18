@@ -72,6 +72,22 @@ jobs:
           git diff --cached --quiet || git commit -m "data: daily update"
           git push
 
+      - name: Email post draft
+        if: steps.build.outputs.updated == 'true' && env.MAIL_APP_PASSWORD != ''
+        env:
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_APP_PASSWORD }}
+          subject: "【X投稿ネタ】日経225オプションデータ更新"
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: nk225-option-site
+          body: file://site/post.txt
+
       - name: Upload artifact
         if: steps.build.outputs.updated == 'true'
         uses: actions/upload-pages-artifact@v3

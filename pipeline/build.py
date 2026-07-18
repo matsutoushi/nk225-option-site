@@ -498,6 +498,39 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
         f.write(html_doc)
 
 
+def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
+                 spot: float | None) -> str:
+    """X投稿用の下書きテキストを生成し、site/post.txt にも出力する。"""
+    d = f"{int(date[4:6])}/{int(date[6:])}"
+    exp_label = f"{int(expiry[2:])}月限"
+    near = oi[oi["expiry"] == expiry]
+    lines = [f"【日経225オプションデータ {d}】", ""]
+    mood = "プット優勢" if pcr["pcr"] and pcr["pcr"] > 1 else "コール優勢"
+    lines.append(f"Put/Callレシオ: {pcr['pcr']}({mood})")
+    lines.append(f"プット出来高 {pcr['put_volume']:,}枚 / コール出来高 {pcr['call_volume']:,}枚")
+    lines.append("")
+    lines.append(f"{exp_label}の最大建玉")
+    for t, name in (("C", "コール"), ("P", "プット")):
+        sub = near[near["type"] == t]
+        if len(sub):
+            row = sub.loc[sub["oi"].idxmax()]
+            lines.append(f"・{name}: {int(row['strike']):,}円({int(row['oi']):,}枚)")
+    # 建玉が最も増えた銘柄(前日比)
+    inc = near.loc[near["change"].idxmax()] if len(near) else None
+    if inc is not None and inc["change"] > 0:
+        t_label = "コール" if inc["type"] == "C" else "プット"
+        lines.append("")
+        lines.append(f"建玉増加トップ: {t_label} {int(inc['strike']):,}円(+{int(inc['change']):,}枚)")
+    if spot:
+        lines.append("")
+        lines.append(f"日経平均終値: {spot:,.0f}円")
+    text = "\n".join(lines)
+    os.makedirs(SITE, exist_ok=True)
+    with open(os.path.join(SITE, "post.txt"), "w", encoding="utf-8") as f:
+        f.write(text)
+    return text
+
+
 SUB_CSS = """
   :root { --bg: #0d1117; --panel: #151b26; --ink: #e8eef7; --ink2: #9aa7ba;
           --line: #2a3247; --aqua: #199e70; }
@@ -620,6 +653,9 @@ def main() -> None:
     }
     render_index(date, pcr, charts, tables)
     render_static_pages()
+    post = compose_post(date, pcr, oi, expiry, spot)
+    print("--- post draft ---")
+    print(post)
     with open(last_path, "w") as f:
         f.write(date)
     print(f"site generated: {os.path.join(SITE, 'index.html')}")
