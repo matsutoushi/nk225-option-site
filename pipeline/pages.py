@@ -97,6 +97,20 @@ GUIDE_PAGES = {
 <!-- 【アフィリエイトリンク: SBI証券 口座開設(アクセストレード)】 -->
 <!-- 【アフィリエイトリンク: 楽天証券 口座開設(TGアフィリエイト)】 -->
 
+<h2>オプション以外の選択肢: CFDで日経225を取引する</h2>
+<p>「オプションはまだ難しそうだが、日経平均の指数そのものをレバレッジをかけて取引したい」という場合、
+<b>CFD(差金決済取引)</b>という選択肢もあります。日経225やNYダウなどの株価指数を、
+ほぼ24時間・少額の証拠金から売買でき、売りからも入れます。
+当サイトで扱う建玉分布やガンマエクスポージャーの分析は、CFDでの指数トレードにもそのまま活用できます。</p>
+<p>CFDの取扱いがある口座の例として、DMM.com証券(DMM CFD)があります。</p>
+<div style="text-align:center; margin: 16px 0;">
+<a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4BZL9U+1WP2+NXESX" rel="nofollow">
+<img border="0" width="250" height="250" alt="DMM.com証券 CFD" src="https://www21.a8.net/svt/bgt?aid=260718089262&wid=001&eno=01&mid=s00000008903004019000&mc=1"></a>
+<img border="0" width="1" height="1" src="https://www19.a8.net/0.gif?a8mat=4B83D5+4BZL9U+1WP2+NXESX" alt="">
+</div>
+<p>※ CFDも証拠金取引であり、相場変動により預託した証拠金を上回る損失が生じるおそれがあります。
+取引条件・手数料等の詳細は公式サイトで最新情報をご確認ください。</p>
+
 <h2>始める前に理解しておくべきリスク</h2>
 <p>オプション取引は仕組み上、買い方の損失は支払ったプレミアムに限定されますが、
 <b>売り方の損失は理論上限定されません</b>。また証拠金取引のためレバレッジがかかります。
@@ -106,5 +120,11 @@ GUIDE_PAGES = {
 <h2>データを活かす</h2>
 <p>口座の準備ができたら、当サイトの<a href="./">建玉分布・Put/Callレシオ</a>を
 日々の分析にお役立てください。毎営業日、JPX公表データで自動更新しています。</p>
+
+<div style="text-align:center; margin: 24px 0; overflow-x:auto;">
+<a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4BZL9U+1WP2+NYHDT" rel="nofollow">
+<img border="0" width="728" height="90" alt="DMM.com証券" src="https://www28.a8.net/svt/bgt?aid=260718089262&wid=001&eno=01&mid=s00000008903004024000&mc=1"></a>
+<img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+4BZL9U+1WP2+NYHDT" alt="">
+</div>
 """),
 }

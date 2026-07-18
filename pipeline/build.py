@@ -913,6 +913,7 @@ SUB_CSS = """
   h2 { font-size: 1.0em; margin: 28px 0 8px; padding-left: 10px; border-left: 3px solid var(--aqua); }
   p, li { color: var(--ink2); font-size: 0.92em; }
   a { color: #3987e5; }
+  img { max-width: 100%; height: auto; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
            font-size: 0.78em; color: var(--ink2); }
 """
