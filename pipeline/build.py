@@ -658,9 +658,9 @@ USPAGE = {
         "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
-        "sec_spx": "SPXオプション: 建玉の壁とGEX(推定)",
-        "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。GEXは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
-        "spx_kpi": ["SPX終値", "合計GEX($bn/1%)", "ガンマフリップ"],
+        "sec_spx": "SPXオプション: 建玉の壁とガンマエクスポージャー(推定)",
+        "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。ガンマエクスポージャーは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
+        "spx_kpi": ["SPX終値", "合計ガンマエクスポージャー($bn/1%)", "ガンマフリップ"],
         "back": '<a href="./">← 日本市場データへ</a>',
         "lang_switch": '<a href="en/us.html" lang="en">English</a>',
         "footer_src": "データ出典: CFTC(建玉明細報告)、Cboe Global Markets公表データより当サイト作成。",
@@ -754,13 +754,13 @@ def chart_spx(res: dict, lang: str) -> str:
     ax2.axvline(0, color=INK2, linewidth=0.7)
     total = res["total_gex"] / 1e9
     ax2.set_title((f"Net GEX by Strike (Total {total:+,.1f} $bn/1%)" if lang == "en"
-                   else f"ネットGEX(合計 {total:+,.1f} $bn/1%)"), fontsize=10)
+                   else f"ネット・ガンマエクスポージャー(合計 {total:+,.1f} $bn/1%)"), fontsize=10)
     ax2.legend(loc="lower right", fontsize=8)
     ax2.grid(alpha=0.25)
 
     sup = ("SPX Options: OI Walls & Naive Gamma Exposure (45d expiries, ±10%)"
            if lang == "en" else
-           "SPXオプション: 建玉の壁とGEX推定(45日以内の限月・現値±10%)")
+           "SPXオプション: 建玉の壁とガンマエクスポージャー推定(45日以内の限月・現値±10%)")
     fig.suptitle(sup, fontsize=11)
     fig.tight_layout()
     name = f"spx{suffix}.png"
