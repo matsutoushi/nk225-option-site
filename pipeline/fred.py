@@ -26,6 +26,10 @@ NYFED_XLS = "https://www.newyorkfed.org/medialibrary/media/research/capital_mark
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                          "data", "fred_cache")
 
+# CI(GitHub Actions)ではfredgraphがタイムアウトするため、待ち時間を短くして
+# 早くキャッシュフォールバックに切り替える
+TIMEOUT = 15 if os.environ.get("GITHUB_ACTIONS") else 60
+
 
 def _cache_path(name: str) -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -41,7 +45,7 @@ def fetch_series(sid: str) -> pd.Series:
     api_key = os.environ.get("FRED_API_KEY")
     if api_key:
         try:
-            r = requests.get(FRED_API.format(sid=sid, key=api_key), headers=UA, timeout=60)
+            r = requests.get(FRED_API.format(sid=sid, key=api_key), headers=UA, timeout=TIMEOUT)
             r.raise_for_status()
             obs = r.json()["observations"]
             df = pd.DataFrame(obs)
@@ -52,7 +56,7 @@ def fetch_series(sid: str) -> pd.Series:
             print(f"WARN: FRED API failed for {sid}: {e}")
     if s is None:
         try:
-            r = requests.get(FRED_CSV.format(sid=sid), headers=UA, timeout=60)
+            r = requests.get(FRED_CSV.format(sid=sid), headers=UA, timeout=TIMEOUT)
             r.raise_for_status()
             df = pd.read_csv(io.BytesIO(r.content))
             date_col, val_col = df.columns[0], df.columns[1]
@@ -78,7 +82,7 @@ def fetch_nyfed_recprob() -> tuple[float, str]:
     """NY連銀の12ヶ月先景気後退確率(最新の予測値, 対象月)を返す。取得失敗時はキャッシュ。"""
     cp = _cache_path("nyfed_recprob.json")
     try:
-        r = requests.get(NYFED_XLS, headers=UA, timeout=60)
+        r = requests.get(NYFED_XLS, headers=UA, timeout=TIMEOUT)
         r.raise_for_status()
         df = pd.read_excel(io.BytesIO(r.content))
         df = df.dropna(subset=["Rec_prob"])
