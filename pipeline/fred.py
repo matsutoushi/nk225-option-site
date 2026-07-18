@@ -9,6 +9,8 @@
 """
 
 import io
+import json
+import os
 from datetime import datetime
 
 import pandas as pd
@@ -16,35 +18,81 @@ import requests
 
 UA = {"User-Agent": "Mozilla/5.0 (compatible; nk225-options-site)"}
 FRED_CSV = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+FRED_API = ("https://api.stlouisfed.org/fred/series/observations"
+            "?series_id={sid}&api_key={key}&file_type=json")
 NYFED_XLS = "https://www.newyorkfed.org/medialibrary/media/research/capital_markets/allmonth.xls"
+
+# 取得成功時にキャッシュし、CI等で取得失敗した場合のフォールバックに使う
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "data", "fred_cache")
+
+
+def _cache_path(name: str) -> str:
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    return os.path.join(CACHE_DIR, name)
 
 
 def fetch_series(sid: str) -> pd.Series:
-    """FREDの系列を取得する(index=日付, 値=float)。"""
-    for attempt in range(3):
+    """FREDの系列を取得する(index=日付, 値=float)。
+
+    優先順: 公式API(FRED_API_KEY環境変数がある場合) → fredgraph CSV → ローカルキャッシュ
+    """
+    s = None
+    api_key = os.environ.get("FRED_API_KEY")
+    if api_key:
         try:
-            r = requests.get(FRED_CSV.format(sid=sid), headers=UA, timeout=90)
+            r = requests.get(FRED_API.format(sid=sid, key=api_key), headers=UA, timeout=60)
             r.raise_for_status()
-            break
-        except requests.RequestException:
-            if attempt == 2:
-                raise
-    df = pd.read_csv(io.BytesIO(r.content))
-    date_col, val_col = df.columns[0], df.columns[1]
-    df[date_col] = pd.to_datetime(df[date_col])
-    s = pd.to_numeric(df[val_col], errors="coerce")
-    s.index = df[date_col]
-    return s.dropna()
+            obs = r.json()["observations"]
+            df = pd.DataFrame(obs)
+            s = pd.to_numeric(df["value"], errors="coerce")
+            s.index = pd.to_datetime(df["date"])
+            s = s.dropna()
+        except Exception as e:
+            print(f"WARN: FRED API failed for {sid}: {e}")
+    if s is None:
+        try:
+            r = requests.get(FRED_CSV.format(sid=sid), headers=UA, timeout=60)
+            r.raise_for_status()
+            df = pd.read_csv(io.BytesIO(r.content))
+            date_col, val_col = df.columns[0], df.columns[1]
+            df[date_col] = pd.to_datetime(df[date_col])
+            s = pd.to_numeric(df[val_col], errors="coerce")
+            s.index = df[date_col]
+            s = s.dropna()
+        except Exception as e:
+            print(f"WARN: fredgraph CSV failed for {sid}: {e}")
+    if s is not None and len(s):
+        s.rename("value").to_csv(_cache_path(f"{sid}.csv"))
+        return s
+    # フォールバック: キャッシュ
+    cp = _cache_path(f"{sid}.csv")
+    if os.path.exists(cp):
+        print(f"INFO: using cached series for {sid}")
+        df = pd.read_csv(cp, index_col=0, parse_dates=True)
+        return df["value"].dropna()
+    raise RuntimeError(f"no data and no cache for {sid}")
 
 
 def fetch_nyfed_recprob() -> tuple[float, str]:
-    """NY連銀の12ヶ月先景気後退確率(最新の予測値, 対象月)を返す。"""
-    r = requests.get(NYFED_XLS, headers=UA, timeout=90)
-    r.raise_for_status()
-    df = pd.read_excel(io.BytesIO(r.content))
-    df = df.dropna(subset=["Rec_prob"])
-    last = df.iloc[-1]
-    return float(last["Rec_prob"]) * 100, pd.Timestamp(last["Date"]).strftime("%Y-%m")
+    """NY連銀の12ヶ月先景気後退確率(最新の予測値, 対象月)を返す。取得失敗時はキャッシュ。"""
+    cp = _cache_path("nyfed_recprob.json")
+    try:
+        r = requests.get(NYFED_XLS, headers=UA, timeout=60)
+        r.raise_for_status()
+        df = pd.read_excel(io.BytesIO(r.content))
+        df = df.dropna(subset=["Rec_prob"])
+        last = df.iloc[-1]
+        result = {"prob": float(last["Rec_prob"]) * 100,
+                  "month": pd.Timestamp(last["Date"]).strftime("%Y-%m")}
+        with open(cp, "w") as f:
+            json.dump(result, f)
+    except Exception as e:
+        if not os.path.exists(cp):
+            raise
+        print(f"INFO: using cached NY Fed prob ({e})")
+        result = json.load(open(cp))
+    return result["prob"], result["month"]
 
 
 def _signal(value: float, green, yellow, higher_is_worse=True) -> str:

@@ -27,6 +27,8 @@ jobs:
     env:
       # 手動実行・コード変更時は未更新でも必ずビルドする
       FORCE_BUILD: ${{ github.event_name != 'schedule' && '1' || '' }}
+      # FRED公式APIキー(未設定でもキャッシュフォールバックで動作)
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
