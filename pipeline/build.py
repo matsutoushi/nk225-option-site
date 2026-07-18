@@ -1064,6 +1064,25 @@ SUB_CSS = """
 """
 
 
+SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
+
+
+def render_seo_files() -> None:
+    """sitemap.xml と robots.txt(検索エンジン向け)。"""
+    pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
+             "guide-start.html", "guide-oi.html", "guide-pcr.html",
+             "about.html", "privacy.html"]
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    urls = "\n".join(
+        f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod></url>" for p in pages)
+    sitemap = (f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+               f"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{urls}\n</urlset>\n")
+    with open(os.path.join(SITE, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(sitemap)
+    with open(os.path.join(SITE, "robots.txt"), "w", encoding="utf-8") as f:
+        f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
+
+
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
     def shell(title, body):
@@ -1198,6 +1217,7 @@ def main() -> None:
         }
         render_index(date, pcr, charts, tables, lang)
     render_static_pages()
+    render_seo_files()
 
     # 米国市場データ(取得失敗しても日本側のビルドは止めない)
     try:
