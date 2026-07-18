@@ -367,6 +367,9 @@ def weekly_tables_html(weekly: dict) -> str:
 def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+    # キャッシュ対策: 画像URLにビルド時刻を付け、更新のたびに再取得させる
+    ver = datetime.now(JST).strftime("%Y%m%d%H%M")
+    charts = {k: (f"{v}?v={ver}" if v else v) for k, v in charts.items()}
     market_section = (
         f'<h2 id="market">マーケット概況</h2>\n  <img src="{charts["market"]}" '
         f'alt="日経平均ローソク足・MACD・RSI・価格帯別出来高">'
