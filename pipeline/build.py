@@ -572,6 +572,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
 <title>{P['title']}</title>
 <meta name="description" content="{P['desc']}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -761,6 +762,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -1002,6 +1004,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -1065,6 +1068,7 @@ SUB_CSS = """
 
 
 SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
+GSV_META = '<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymCE5AgMGsKG0uu4BI5QdwWz24">'
 
 
 def render_seo_files() -> None:
@@ -1091,6 +1095,7 @@ def render_static_pages() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
 <title>{title} | 日経225オプション データ分析</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{SUB_CSS}</style>
