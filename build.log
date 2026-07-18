@@ -1,0 +1,30 @@
+JPX data date: 20260717
+PCR: {'put_volume': 33283, 'call_volume': 23733, 'pcr': 1.402}
+OI rows: 732
+weekly participants: 86 (date 20260710)
+Traceback (most recent call last):
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 423, in <module>
+    main()
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 408, in main
+    market_chart, spot = chart_market(oi, expiry)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 215, in chart_market
+    fig.savefig(os.path.join(IMG, "market.png"), dpi=120, bbox_inches="tight")
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/figure.py", line 3515, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/backend_bases.py", line 2281, in print_figure
+    result = print_method(
+             ^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/backend_bases.py", line 2138, in <lambda>
+    print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+                                                                 ^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/backends/backend_agg.py", line 537, in print_png
+    self._print_pil(filename_or_obj, "png", pil_kwargs, metadata)
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/backends/backend_agg.py", line 486, in _print_pil
+    mpl.image.imsave(
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/matplotlib/image.py", line 1722, in imsave
+    image.save(fname, **pil_kwargs)
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/PIL/Image.py", line 2706, in save
+    fp = builtins.open(filename, "w+b")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/nk225-option-site/nk225-option-site/site/img/market.png'
