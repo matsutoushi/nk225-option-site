@@ -2,7 +2,11 @@ name: daily-update
 
 on:
   schedule:
-    # 平日 20:30 JST (= 11:30 UTC)。JPXの日次データ公表後に実行
+    # JPXの公表(夕方)を追いかけて平日4回チェック(JST: 16:35 / 17:05 / 18:05 / 20:30)
+    # 新しいデータが出た回だけビルド&デプロイし、未更新ならスキップする
+    - cron: "35 7 * * 1-5"
+    - cron: "5 8 * * 1-5"
+    - cron: "5 9 * * 1-5"
     - cron: "30 11 * * 1-5"
   workflow_dispatch: {}
   push:
@@ -15,11 +19,14 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      # 手動実行・コード変更時は未更新でも必ずビルドする
+      FORCE_BUILD: ${{ github.event_name != 'schedule' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,10 +42,17 @@ jobs:
         run: pip install -r pipeline/requirements.txt
 
       - name: Build site
+        id: build
         shell: bash
         run: |
           set -o pipefail
           python pipeline/build.py 2>&1 | tee build.log
+          if [ -f site/index.html ]; then
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            echo "No new JPX data yet - skipping deploy."
+          fi
 
       - name: Save error log for diagnosis
         if: failure()
@@ -50,6 +64,7 @@ jobs:
           git push
 
       - name: Commit data history
+        if: steps.build.outputs.updated == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -58,9 +73,11 @@ jobs:
           git push
 
       - name: Upload artifact
+        if: steps.build.outputs.updated == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
       - name: Deploy to GitHub Pages
+        if: steps.build.outputs.updated == 'true'
         uses: actions/deploy-pages@v4

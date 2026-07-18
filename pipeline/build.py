@@ -225,8 +225,16 @@ def _exp_label(exp: str) -> str:
     return f"{exp[:2]}年{int(exp[2:])}月"
 
 
-def oi_tables_html(oi: pd.DataFrame) -> str:
-    """全限月の行使価格別建玉テーブル(現在値と増減を横並び)。"""
+def _heat_color(pct: float) -> str:
+    """0(最小)→赤、0.5→黄、1(最大)→緑 の淡色グラデーション。"""
+    hue = int(120 * pct)  # 0=red, 120=green
+    return f"hsl({hue}, 75%, 85%)"
+
+
+def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
+    """行使価格別建玉テーブル(現在値と増減を横並び)。現値±20,000円に限定。"""
+    lo, hi = center - 20000, center + 20000
+    oi = oi[(oi["strike"] >= lo) & (oi["strike"] <= hi)]
     expiries = sorted(oi["expiry"].unique())
     strikes = sorted(oi["strike"].unique(), reverse=True)
 
@@ -236,6 +244,15 @@ def oi_tables_html(oi: pd.DataFrame) -> str:
                 for t in ("C", "P") for e in expiries}
 
     cur, chg = pivot("oi"), pivot("change")
+
+    # 建玉の多寡→色: 偏りが大きいのでパーセンタイル順位でグラデーションを付ける
+    all_values = sorted(v for tbl in cur.values() for v in tbl.values())
+
+    def pct_rank(v):
+        if not all_values:
+            return 0.0
+        import bisect
+        return bisect.bisect_left(all_values, v) / max(len(all_values) - 1, 1)
 
     def render(table, is_change):
         head1 = "<tr><th rowspan='2'>行使価格</th>"
@@ -247,19 +264,22 @@ def oi_tables_html(oi: pd.DataFrame) -> str:
             for t in ("C", "P"):
                 for e in expiries:
                     v = table[(t, e)].get(s)
-                    if v is None or (is_change and v == 0 and cur[(t, e)].get(s) is None):
+                    if v is None or (is_change and cur[(t, e)].get(s) is None):
                         tds.append("<td class='na'>-</td>")
                     elif is_change:
                         cls = "pos" if v > 0 else ("neg" if v < 0 else "")
                         tds.append(f"<td class='{cls}'>{v:+,}</td>" if v else "<td>0</td>")
                     else:
-                        tds.append(f"<td>{v:,}</td>")
+                        style = f" style='background:{_heat_color(pct_rank(v))}'"
+                        tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
-        cap = "建玉増減(前日比)" if is_change else "建玉残高"
+        cap = "建玉増減(前日比)" if is_change else "建玉残高(多=緑 / 少=赤)"
         return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
                 f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
 
-    return f"<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
+    note = (f"<p>現値を挟んで上下20,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
+            f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
+    return f"{note}<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
 
 
 def weekly_tables_html(weekly: dict) -> str:
@@ -341,13 +361,22 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   td.neg {{ color: #1f4e79; }}
   td.na {{ color: #bbb; }}
   footer {{ border-top: 1px solid #ddd; margin-top: 32px; padding-top: 8px; font-size: 0.85em; color: #666; }}
+  @media (max-width: 600px) {{
+    body {{ padding: 8px; }}
+    h1 {{ font-size: 1.2em; }}
+    .kpi div {{ padding: 6px 12px; }}
+    .kpi b {{ font-size: 1.1em; }}
+    table {{ font-size: 11px; }}
+    .tbl-scroll {{ max-height: 420px; }}
+    nav a {{ margin-right: 10px; font-size: 0.9em; }}
+  }}
 </style>
 </head>
 <body>
 <header>
   <h1>日経225オプション データ分析</h1>
   <p class="updated">データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)</p>
-  <nav><a href="#oi">建玉分布</a><a href="#oitable">建玉一覧</a><a href="#pcr">Put/Callレシオ</a><a href="#weekly">参加者別建玉</a><a href="#market">マーケット</a></nav>
+  <nav><a href="#market">マーケット</a><a href="#oitable">建玉一覧</a><a href="#oi">建玉分布</a><a href="#weekly">参加者別建玉</a><a href="#pcr">Put/Callレシオ</a></nav>
 </header>
 <main>
   <div class="kpi">
@@ -356,21 +385,20 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
     <div>コール出来高<br><b>{pcr['call_volume']:,}</b> 枚</div>
   </div>
 
+  {market_section}
+
+  <h2 id="oitable">オプション建玉一覧(限月別)</h2>
+  {tables['oi']}
+
   <h2 id="oi">行使価格別 建玉分布</h2>
   <p>建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。</p>
   <img src="{charts['oi']}" alt="日経225オプション行使価格別建玉分布">
 
-  <h2 id="oitable">建玉一覧(限月別)</h2>
-  <p>JPXが日次公開する直近3限月分を掲載しています。増減は前日比です。</p>
-  {tables['oi']}
+  {weekly_section}
 
   <h2 id="pcr">Put/Call レシオの推移</h2>
   <p>1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。</p>
   <img src="{charts['pcr']}" alt="Put/Callレシオ推移">
-
-  {weekly_section}
-
-  {market_section}
 
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>
@@ -387,11 +415,19 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
 
 
 def main() -> None:
-    os.makedirs(IMG, exist_ok=True)  # site/はgitignore対象なのでCIでは毎回作る
     files = jpx.discover_files()
     date = files["date"]
     print(f"JPX data date: {date}")
 
+    # 既に処理済みの日付ならビルドせず終了(1日複数回のcronで新データの回だけ動かす)
+    # workflow_dispatch / push では FORCE_BUILD=1 が入り常にビルドする
+    last_path = os.path.join(DATA, "last_date.txt")
+    last = open(last_path).read().strip() if os.path.exists(last_path) else ""
+    if last == date and not os.environ.get("FORCE_BUILD"):
+        print(f"NO_NEW_DATA: {date} is already processed")
+        return
+
+    os.makedirs(IMG, exist_ok=True)  # site/はgitignore対象なのでCIでは毎回作る
     pcr = jpx.fetch_put_call_volume(files["whole_day"])
     print(f"PCR: {pcr}")
     oi = jpx.fetch_open_interest(files["open_interest"])
@@ -407,16 +443,20 @@ def main() -> None:
     hist = save_history(date, pcr, oi, weekly)
     expiry = nearest_expiry(oi)
     market_chart, spot = chart_market(oi, expiry)
+    # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
+    center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     charts = {
         "oi": chart_oi_distribution(oi, expiry, spot),
         "pcr": chart_pcr(hist),
         "market": market_chart,
     }
     tables = {
-        "oi": oi_tables_html(oi),
+        "oi": oi_tables_html(oi, center),
         "weekly": weekly_tables_html(weekly) if weekly else None,
     }
     render_index(date, pcr, charts, tables)
+    with open(last_path, "w") as f:
+        f.write(date)
     print(f"site generated: {os.path.join(SITE, 'index.html')}")
 
 
