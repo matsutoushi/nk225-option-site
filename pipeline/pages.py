@@ -110,7 +110,7 @@ GUIDE_PAGES = {
 <img border="0" width="250" height="250" alt="DMM.com証券 CFD" src="https://www21.a8.net/svt/bgt?aid=260718089262&wid=001&eno=01&mid=s00000008903004019000&mc=1"></a>
 <img border="0" width="1" height="1" src="https://www19.a8.net/0.gif?a8mat=4B83D5+4BZL9U+1WP2+NXESX" alt="">
 </div>
-<p><a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4BZL9U+1WP2+NZC8Z" rel="nofollow">DMM CFD 公式サイトで詳細を見る(PR)</a></p>
+<p><a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4BZL9U+1WP2+NTRMQ" rel="nofollow">【PR】全銘柄の取引手数料が0円の【DMM CFD】</a><img border="0" width="1" height="1" src="https://www10.a8.net/0.gif?a8mat=4B83D5+4BZL9U+1WP2+NTRMQ" alt=""></p>
 <p>※ CFDも証拠金取引であり、相場変動により預託した証拠金を上回る損失が生じるおそれがあります。
 取引条件・手数料等の詳細は公式サイトで最新情報をご確認ください。</p>
 
