@@ -189,6 +189,25 @@ def fetch_weekly_participant_futures() -> dict:
     return {"date": latest["TradeDate"], "prev_date": prev["TradeDate"], "data": merged}
 
 
+NIKKEI_CSV = "https://indexes.nikkei.co.jp/nkave/historical/nikkei_stock_average_daily_jp.csv"
+
+
+def fetch_n225_official() -> pd.DataFrame:
+    """日経公式サイトの日次CSVから日経平均のOHLCを取得する。
+
+    Returns: DataFrame[Open, High, Low, Close] (index: 日付, 昇順)
+    """
+    r = requests.get(NIKKEI_CSV, headers=UA, timeout=60)
+    r.raise_for_status()
+    df = pd.read_csv(io.BytesIO(r.content), encoding="shift_jis")
+    df = df.rename(columns={"データ日付": "date", "終値": "Close", "始値": "Open",
+                            "高値": "High", "安値": "Low"})
+    # 末尾の著作権表記行などを除外
+    df["date"] = pd.to_datetime(df["date"], format="%Y/%m/%d", errors="coerce")
+    df = df.dropna(subset=["date", "Close"]).set_index("date").sort_index()
+    return df[["Open", "High", "Low", "Close"]].astype(float)
+
+
 def nearest_expiry(df: pd.DataFrame) -> str:
     """建玉が最も多い直近限月(YYMM)を返す。"""
     totals = df.groupby("expiry")["oi"].sum()

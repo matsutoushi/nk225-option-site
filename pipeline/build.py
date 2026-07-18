@@ -148,10 +148,14 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
     return rsi
 
 
-def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | None]:
-    """ローソク足+価格帯別出来高+最大建玉ライン+MACD+RSI。"""
+def chart_market(oi: pd.DataFrame, expiry: str, data_date: str) -> tuple[str | None, float | None]:
+    """ローソク足+価格帯別出来高+最大建玉ライン+MACD+RSI。
+
+    価格データは日経公式CSV(基準日まで確定値)。出来高はYahoo(取得できた日のみ)。
+    """
     try:
-        hist = yf.Ticker("^N225").history(period="6mo")
+        hist = jpx.fetch_n225_official()
+        hist = hist[hist.index <= pd.Timestamp(data_date)].tail(125)  # 約6ヶ月
         if len(hist) < 30:
             raise RuntimeError("insufficient history")
     except Exception as e:
@@ -160,7 +164,15 @@ def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | Non
 
     spot = float(hist["Close"].iloc[-1])
     o, h, l, c = (hist[k].values for k in ("Open", "High", "Low", "Close"))
-    vol = hist["Volume"].fillna(0).values
+    # 出来高: 公式CSVには無いのでYahooから日付合わせで補完(失敗時はゼロ=プロファイル省略)
+    vol = np.zeros(len(hist))
+    try:
+        yhist = yf.Ticker("^N225").history(period="8mo")
+        yvol = yhist["Volume"]
+        yvol.index = yvol.index.tz_localize(None).normalize()
+        vol = yvol.reindex(hist.index).fillna(0).values
+    except Exception as e:
+        print(f"WARN: volume fetch failed, skipping volume profile: {e}")
     n = len(hist)
     x = np.arange(n)
 
@@ -261,7 +273,7 @@ def _change_color(v: int, maxabs: float) -> str | None:
 
 def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
     """行使価格別建玉テーブル(現在値と増減を横並び)。現値±5,000円に限定。"""
-    lo, hi = center - 5000, center + 5000
+    lo, hi = center - 3000, center + 3000
     oi = oi[(oi["strike"] >= lo) & (oi["strike"] <= hi)]
     expiries = sorted(oi["expiry"].unique())
     strikes = sorted(oi["strike"].unique(), reverse=True)
@@ -288,7 +300,7 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
         for s in strikes:
             # 降順リストの中で、現値を最初に下回る行の直前に現値ラインを挿入
             if not spot_inserted and s < center:
-                body.append(f"<tr class='spot'><td colspan='{ncols}'>▶ 現値 {center:,.0f}</td></tr>")
+                body.append(f"<tr class='spot'><td colspan='{ncols}'>▶ 前営業日終値 {center:,.0f}</td></tr>")
                 spot_inserted = True
             tds = [f"<th>{s:,}</th>"]
             for t in ("C", "P"):
@@ -309,7 +321,7 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
         return (f"<div class='tbl-box'><h3>{cap}</h3><div class='tbl-scroll'>"
                 f"<table>{head1}{head2}{''.join(body)}</table></div></div>")
 
-    note = (f"<p>現値を挟んで上下5,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
+    note = (f"<p>前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。"
             f"JPXが日次公開する直近3限月分。増減は前日比。</p>")
     return f"{note}<div class='tbl-pair'>{render(cur, False)}{render(chg, True)}</div>"
 
@@ -462,7 +474,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>
 <footer>
-  <p>データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。Yahoo Finance(日経平均、遅延データ)。</p>
+  <p>データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。</p>
   <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
 </footer>
 </body>
@@ -501,7 +513,7 @@ def main() -> None:
 
     hist = save_history(date, pcr, oi, weekly)
     expiry = nearest_expiry(oi)
-    market_chart, spot = chart_market(oi, expiry)
+    market_chart, spot = chart_market(oi, expiry, date)
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     charts = {
