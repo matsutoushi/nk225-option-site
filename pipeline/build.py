@@ -483,6 +483,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>
 <footer>
+  <p><a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a></p>
   <p>データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。</p>
   <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
 </footer>
@@ -492,6 +493,83 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
     os.makedirs(SITE, exist_ok=True)
     with open(os.path.join(SITE, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_doc)
+
+
+SUB_CSS = """
+  :root { --bg: #0d1117; --panel: #151b26; --ink: #e8eef7; --ink2: #9aa7ba;
+          --line: #2a3247; --aqua: #199e70; }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
+         max-width: 820px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.9; }
+  h1 { font-size: 1.25em; margin: 24px 0 8px; }
+  h1::before { content: "▮"; color: var(--aqua); margin-right: 8px; }
+  h2 { font-size: 1.0em; margin: 28px 0 8px; padding-left: 10px; border-left: 3px solid var(--aqua); }
+  p, li { color: var(--ink2); font-size: 0.92em; }
+  a { color: #3987e5; }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
+           font-size: 0.78em; color: var(--ink2); }
+"""
+
+
+def render_static_pages() -> None:
+    """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
+    def shell(title, body):
+        return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} | 日経225オプション データ分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{SUB_CSS}</style>
+</head>
+<body>
+{body}
+<footer>
+  <p><a href="./">トップページへ戻る</a></p>
+  <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
+</footer>
+</body>
+</html>
+"""
+
+    about = """
+<h1>運営者情報</h1>
+<h2>運営者</h2>
+<p>matsutoushi(個人投資家)</p>
+<h2>サイトについて</h2>
+<p>日経225オプション・先物のパブリックデータ(日本取引所グループ公表)を毎営業日自動集計し、
+建玉分布・Put/Callレシオ・取引参加者別建玉などを可視化しています。
+以前より金融データの収集・分析を行っており、個人投資家のマーケット分析の一助となることを目的としています。</p>
+<h2>お問い合わせ</h2>
+<p>X(旧Twitter)のダイレクトメッセージにてご連絡ください。</p>
+<h2>広告掲載について</h2>
+<p>当サイトは、アフィリエイトプログラムに参加し、広告を掲載する場合があります。
+広告を含むページにはその旨を表記します。</p>
+"""
+    privacy = """
+<h1>プライバシーポリシー</h1>
+<h2>個人情報の取り扱い</h2>
+<p>当サイトは、閲覧にあたって個人情報の入力を求めることはありません。</p>
+<h2>広告について</h2>
+<p>当サイトは、第三者配信の広告サービスおよびアフィリエイトプログラム
+(A8.net、アクセストレード、TGアフィリエイト等)を利用する場合があります。
+広告配信事業者は、ユーザーの興味に応じた広告を表示するためにCookieを使用することがあります。</p>
+<h2>アクセス解析について</h2>
+<p>当サイトは、アクセス解析ツールを利用する場合があります。
+これらのツールはトラフィックデータの収集のためにCookieを使用することがありますが、
+個人を特定する情報は含まれません。</p>
+<h2>免責事項</h2>
+<p>当サイトに掲載する情報の正確性には万全を期していますが、その内容の正確性・安全性を保証するものではありません。
+当サイトの利用によって生じた損害について、運営者は一切の責任を負いません。
+掲載データの出典は日本取引所グループ(JPX)および日本経済新聞社の公表データです。</p>
+<h2>制定日</h2>
+<p>2026年7月18日</p>
+"""
+    with open(os.path.join(SITE, "about.html"), "w", encoding="utf-8") as f:
+        f.write(shell("運営者情報", about))
+    with open(os.path.join(SITE, "privacy.html"), "w", encoding="utf-8") as f:
+        f.write(shell("プライバシーポリシー", privacy))
 
 
 def main() -> None:
@@ -535,6 +613,7 @@ def main() -> None:
         "weekly": weekly_tables_html(weekly) if weekly else None,
     }
     render_index(date, pcr, charts, tables)
+    render_static_pages()
     with open(last_path, "w") as f:
         f.write(date)
     print(f"site generated: {os.path.join(SITE, 'index.html')}")
