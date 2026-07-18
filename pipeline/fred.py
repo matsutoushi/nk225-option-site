@@ -31,6 +31,10 @@ CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 TIMEOUT = 15 if os.environ.get("GITHUB_ACTIONS") else 60
 
 
+# 各系列をどの経路で取得したかの記録(api / csv / cache)
+SOURCES: dict[str, str] = {}
+
+
 def _cache_path(name: str) -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
     return os.path.join(CACHE_DIR, name)
@@ -52,6 +56,7 @@ def fetch_series(sid: str) -> pd.Series:
             s = pd.to_numeric(df["value"], errors="coerce")
             s.index = pd.to_datetime(df["date"])
             s = s.dropna()
+            SOURCES[sid] = "api"
         except Exception as e:
             print(f"WARN: FRED API failed for {sid}: {e}")
     if s is None:
@@ -64,6 +69,7 @@ def fetch_series(sid: str) -> pd.Series:
             s = pd.to_numeric(df[val_col], errors="coerce")
             s.index = df[date_col]
             s = s.dropna()
+            SOURCES[sid] = "csv"
         except Exception as e:
             print(f"WARN: fredgraph CSV failed for {sid}: {e}")
     if s is not None and len(s):
@@ -73,6 +79,7 @@ def fetch_series(sid: str) -> pd.Series:
     cp = _cache_path(f"{sid}.csv")
     if os.path.exists(cp):
         print(f"INFO: using cached series for {sid}")
+        SOURCES[sid] = "cache"
         df = pd.read_csv(cp, index_col=0, parse_dates=True)
         return df["value"].dropna()
     raise RuntimeError(f"no data and no cache for {sid}")

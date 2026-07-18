@@ -1245,6 +1245,12 @@ def main() -> None:
         pd.DataFrame([{k: it[k] for k in ("group", "key", "ja", "disp", "date", "signal")}
                       for it in risk["items"]]).to_csv(
             os.path.join(DATA, "risk_latest.csv"), index=False)
+        src_counts = {}
+        for v in fred.SOURCES.values():
+            src_counts[v] = src_counts.get(v, 0) + 1
+        with open(os.path.join(DATA, "fred_status.txt"), "w", encoding="utf-8") as f:
+            f.write(f"sources: {src_counts}\n")
+        print(f"fred sources: {src_counts}")
         for lang in ("ja", "en"):
             render_risk(risk, lang, chart_risk(risk["series"], lang))
     except Exception as e:
