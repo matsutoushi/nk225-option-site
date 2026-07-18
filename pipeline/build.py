@@ -34,8 +34,32 @@ IMG = os.path.join(SITE, "img")
 DATA = os.path.join(ROOT, "data")
 JST = timezone(timedelta(hours=9))
 
-UP = "#c23b22"    # 陽線・プット系(赤)
-DOWN = "#1f4e79"  # 陰線・コール系(青)
+# --- ダークテーマ配色(検証済みダークモードパレット由来) ---
+PAGE_BG = "#0d1117"   # ページ背景
+PANEL = "#151b26"     # カード・チャート面
+INK = "#e8eef7"       # 主要テキスト
+INK2 = "#9aa7ba"      # 補助テキスト
+GRID = "#2a3247"      # グリッド・罫線
+UP = "#e66767"        # 陽線・プット系(赤)
+DOWN = "#3987e5"      # 陰線・コール系(青)
+ACCENT = "#199e70"    # アクセント(アクア)
+WARN = "#c98500"      # シグナル線(黄)
+
+plt.rcParams.update({
+    "figure.facecolor": PANEL,
+    "axes.facecolor": PANEL,
+    "savefig.facecolor": PANEL,
+    "text.color": INK,
+    "axes.edgecolor": GRID,
+    "axes.labelcolor": INK2,
+    "xtick.color": INK2,
+    "ytick.color": INK2,
+    "grid.color": GRID,
+    "legend.facecolor": PANEL,
+    "legend.edgecolor": GRID,
+    "legend.labelcolor": INK,
+    "axes.titlecolor": INK,
+})
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +109,7 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> 
     ax.barh([s + width / 2 for s in strikes], calls.values, height=width,
             color=DOWN, label="コール建玉")
     if spot:
-        ax.axhline(spot, color="#333", linestyle="--", linewidth=1,
+        ax.axhline(spot, color=INK, linestyle="--", linewidth=1,
                    label=f"日経平均 {spot:,.0f}")
     ax.set_title(f"日経225オプション 行使価格別建玉分布(20{expiry[:2]}年{int(expiry[2:])}月限)")
     ax.set_xlabel("建玉残高(枚)  ← プット | コール →")
@@ -103,8 +127,8 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None) -> 
 def chart_pcr(hist: pd.DataFrame) -> str:
     fig, ax = plt.subplots(figsize=(10, 4))
     x = pd.to_datetime(hist["date"], format="%Y%m%d")
-    ax.plot(x, hist["pcr"], marker="o", color=DOWN, linewidth=1.5)
-    ax.axhline(1.0, color="#999", linestyle="--", linewidth=1)
+    ax.plot(x, hist["pcr"], marker="o", color=ACCENT, linewidth=1.5)
+    ax.axhline(1.0, color=INK2, linestyle="--", linewidth=1)
     ax.set_title("日経225オプション Put/Call レシオ(出来高ベース・日次)")
     ax.grid(alpha=0.3)
     fig.autofmt_xdate()
@@ -160,7 +184,7 @@ def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | Non
         prof, _ = np.histogram(c, bins=bins, weights=vol)
         axp = ax1.twiny()
         axp.barh(centers, prof, height=(bins[1] - bins[0]) * 0.9,
-                 color="#888", alpha=0.25, zorder=0)
+                 color=INK2, alpha=0.22, zorder=0)
         axp.set_xlim(0, prof.max() * 4)  # 左1/4だけ使う
         axp.set_ylim(ax1.get_ylim())
         axp.axis("off")
@@ -189,9 +213,9 @@ def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | Non
     signal = macd.ewm(span=9, adjust=False).mean()
     histo = macd - signal
     ax2.bar(x, histo, width=0.65, color=np.where(histo >= 0, UP, DOWN), alpha=0.5)
-    ax2.plot(x, macd, color="#333", linewidth=1.2, label="MACD")
-    ax2.plot(x, signal, color="#e69f00", linewidth=1.2, label="シグナル")
-    ax2.axhline(0, color="#999", linewidth=0.8)
+    ax2.plot(x, macd, color=INK, linewidth=1.2, label="MACD")
+    ax2.plot(x, signal, color=WARN, linewidth=1.2, label="シグナル")
+    ax2.axhline(0, color=INK2, linewidth=0.8)
     ax2.legend(loc="upper left", fontsize=8, ncol=2)
     ax2.set_ylabel("MACD")
     ax2.grid(alpha=0.3)
@@ -199,9 +223,9 @@ def chart_market(oi: pd.DataFrame, expiry: str) -> tuple[str | None, float | Non
 
     # --- RSI ---
     rsi = _rsi(close_s)
-    ax3.plot(x, rsi, color=DOWN, linewidth=1.2)
+    ax3.plot(x, rsi, color=ACCENT, linewidth=1.2)
     for lv, style in ((70, "--"), (30, "--"), (50, ":")):
-        ax3.axhline(lv, color="#999", linestyle=style, linewidth=0.8)
+        ax3.axhline(lv, color=INK2, linestyle=style, linewidth=0.8)
     ax3.set_ylim(0, 100)
     ax3.set_ylabel("RSI(14)")
     ax3.grid(alpha=0.3)
@@ -226,13 +250,13 @@ def _exp_label(exp: str) -> str:
 
 
 def _change_color(v: int, maxabs: float) -> str | None:
-    """増減の強弱: 増加=緑、減少=赤。大きいほど濃く、0は無色。"""
+    """増減の強弱: 増加=緑、減少=赤。大きいほど濃く、0は無色(ダーク面向けrgba)。"""
     if v == 0 or maxabs <= 0:
         return None
     strength = min(abs(v) / maxabs, 1.0)
-    lightness = 95 - 25 * strength  # 95%(薄)→70%(濃)
-    hue = 120 if v > 0 else 0
-    return f"hsl({hue}, 70%, {lightness:.0f}%)"
+    alpha = 0.15 + 0.5 * strength
+    rgb = "12,163,12" if v > 0 else "208,59,59"
+    return f"rgba({rgb}, {alpha:.2f})"
 
 
 def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
@@ -272,7 +296,7 @@ def oi_tables_html(oi: pd.DataFrame, center: float) -> str:
                         tds.append(f"<td{style}>{v:+,}</td>" if v else "<td>0</td>")
                     else:
                         is_max = col_max[(t, e)] is not None and v == col_max[(t, e)]
-                        style = " style='background:hsl(120, 70%, 78%); font-weight:bold'" if is_max else ""
+                        style = " style='background:rgba(25,158,112,0.45); font-weight:bold'" if is_max else ""
                         tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
         cap = "建玉増減(前日比: 増加=緑 / 減少=赤)" if is_change else "建玉残高(緑=各限月の最大)"
@@ -341,36 +365,60 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict) -> None:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>日経225オプション データ分析 | 建玉分布・Put/Callレシオ 毎日更新</title>
 <meta name="description" content="日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  body {{ font-family: "Yu Gothic", Meiryo, sans-serif; max-width: 1100px; margin: 0 auto; padding: 16px; color: #222; line-height: 1.7; }}
-  header {{ border-bottom: 2px solid #1f4e79; padding-bottom: 8px; }}
-  h1 {{ font-size: 1.5em; margin-bottom: 4px; }}
-  .updated {{ color: #666; font-size: 0.9em; }}
-  .kpi {{ display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }}
-  .kpi div {{ background: #f4f7fb; border-left: 4px solid #1f4e79; padding: 10px 18px; }}
-  .kpi b {{ font-size: 1.4em; }}
-  img {{ max-width: 100%; height: auto; border: 1px solid #eee; }}
-  nav a {{ margin-right: 16px; }}
+  :root {{
+    --bg: #0d1117; --panel: #151b26; --panel2: #1a2232;
+    --ink: #e8eef7; --ink2: #9aa7ba; --line: #2a3247;
+    --blue: #3987e5; --red: #e66767; --aqua: #199e70;
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
+         max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.7; }}
+  header {{ position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,0.92);
+            backdrop-filter: blur(6px); padding: 14px 0 10px; border-bottom: 1px solid var(--line); }}
+  h1 {{ font-size: 1.25em; margin: 0 0 2px; letter-spacing: 0.02em; }}
+  h1::before {{ content: "▮"; color: var(--aqua); margin-right: 8px; }}
+  h2 {{ font-size: 1.05em; margin: 40px 0 10px; padding-left: 10px;
+        border-left: 3px solid var(--aqua); letter-spacing: 0.03em; }}
+  h3 {{ font-size: 0.92em; color: var(--ink2); font-weight: 500; margin: 12px 0 6px; }}
+  p {{ color: var(--ink2); font-size: 0.9em; }}
+  .updated {{ color: var(--ink2); font-size: 0.8em; margin: 0; }}
+  nav {{ margin-top: 6px; }}
+  nav a {{ color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
+           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }}
+  nav a:hover {{ color: var(--ink); border-color: var(--aqua); }}
+  .kpi {{ display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }}
+  .kpi div {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+              padding: 10px 20px; flex: 1 1 140px; font-size: 0.82em; color: var(--ink2); }}
+  .kpi b {{ font-size: 1.7em; color: var(--ink); font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }}
+  .kpi div:first-child b {{ color: var(--aqua); }}
+  img {{ max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }}
   .tbl-pair {{ display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }}
   .tbl-box {{ flex: 1 1 420px; min-width: 320px; }}
-  .tbl-scroll {{ max-height: 560px; overflow: auto; border: 1px solid #ddd; }}
-  table {{ border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%; }}
-  th, td {{ border: 1px solid #ddd; padding: 2px 8px; text-align: right; }}
-  th {{ background: #f4f7fb; position: sticky; top: 0; }}
-  tr > th:first-child {{ position: sticky; left: 0; background: #f4f7fb; }}
+  .tbl-scroll {{ max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }}
+  table {{ border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%;
+           font-variant-numeric: tabular-nums; }}
+  th, td {{ border: 1px solid var(--line); padding: 2px 8px; text-align: right; }}
+  td {{ color: var(--ink); }}
+  th {{ background: var(--panel2); color: var(--ink2); position: sticky; top: 0; font-weight: 500; }}
+  tr > th:first-child {{ position: sticky; left: 0; background: var(--panel2); }}
   td.name {{ text-align: left; }}
-  td.pos {{ color: #c23b22; }}
-  td.neg {{ color: #1f4e79; }}
-  td.na {{ color: #bbb; }}
-  footer {{ border-top: 1px solid #ddd; margin-top: 32px; padding-top: 8px; font-size: 0.85em; color: #666; }}
+  td.pos {{ color: #4cc38a; }}
+  td.neg {{ color: #f07878; }}
+  td.na {{ color: #4a5568; }}
+  footer {{ border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
+            font-size: 0.78em; color: var(--ink2); }}
   @media (max-width: 600px) {{
-    body {{ padding: 8px; }}
-    h1 {{ font-size: 1.2em; }}
-    .kpi div {{ padding: 6px 12px; }}
-    .kpi b {{ font-size: 1.1em; }}
+    body {{ padding: 0 10px 24px; }}
+    h1 {{ font-size: 1.05em; }}
+    .kpi div {{ padding: 8px 14px; }}
+    .kpi b {{ font-size: 1.3em; }}
     table {{ font-size: 11px; }}
     .tbl-scroll {{ max-height: 420px; }}
-    nav a {{ margin-right: 10px; font-size: 0.9em; }}
+    nav a {{ margin-right: 4px; font-size: 0.78em; }}
   }}
 </style>
 </head>
