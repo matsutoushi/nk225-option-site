@@ -7,8 +7,97 @@
 - 広告を含む予定のページには冒頭にPR表記
 """
 
+# 英語ページ {ファイル名: (タイトル, 本文HTML)} — en/ 配下に出力される
+EN_GUIDE_PAGES = {
+    "guide-participants.html": ("Japan's Hidden COT: JPX Participant Positioning", """
+<h1>Japan's Hidden COT — Reading JPX Trading-Participant Positioning</h1>
+<p>Most global traders know the CFTC's COT report. Far fewer know that Japan Exchange Group (JPX)
+publishes something arguably richer for Nikkei futures: <b>weekly open interest by named trading
+participant</b> — Nomura, Goldman Sachs, HSBC, Morgan (MUFG), UBS and others, each with their
+net long/short position in Nikkei 225 futures.</p>
+
+<h2>What the data shows</h2>
+<p>Every week (first business day), JPX publishes each participant's net open interest in
+index futures. Unlike the CFTC report, which aggregates anonymous categories,
+this data names the firms. Positions reflect a mix of house books and customer flows cleared
+through each firm, so treat them as flow fingerprints rather than pure proprietary bets.</p>
+
+<h2>How this site presents it</h2>
+<p>On our <a href="./">main page</a> we chart each major participant's weekly net position
+over the past year, with the Nikkei 225 overlaid. Patterns emerge quickly: some firms trend-follow,
+some fade rallies, some hold persistent structural shorts (often hedges against structured products).</p>
+
+<h2>Why it matters</h2>
+<p>Japan's cash-equity flows are dominated by foreign investors, but Nikkei futures positioning
+gives a faster weekly read on how large players lean. Combined with options open interest
+("walls") and the CME's Nikkei COT data, it forms a reasonably complete positioning picture
+that is hard to find in English anywhere else.</p>
+
+<p><a href="./">→ See the live data (updated weekly)</a></p>
+"""),
+
+    "guide-nikkei-options.html": ("Nikkei 225 Options: A Field Guide", """
+<h1>Nikkei 225 Options — A Field Guide for Global Traders</h1>
+<p>A quick orientation to Japan's benchmark index options market, and the free official data
+this site turns into daily charts.</p>
+
+<h2>Contract basics</h2>
+<ul>
+<li><b>Underlying:</b> Nikkei 225. Regular options multiplier ×1,000 yen; mini options ×100 yen
+with weekly expiries.</li>
+<li><b>Expiry (SQ):</b> monthly settlement on the second Friday ("SQ day"). March/June/September/December
+are "Major SQ" when futures expire together.</li>
+<li><b>Session:</b> day session plus a night session that overlaps US hours — Nikkei options react
+to US moves in real time.</li>
+</ul>
+
+<h2>The data JPX publishes daily (all free)</h2>
+<ul>
+<li>Open interest by strike for the nearest three expiries — the "walls" we chart daily</li>
+<li>Put/call volume — the basis of our Nikkei put/call ratio series</li>
+<li>Weekly: open interest by named trading participant (<a href="guide-participants.html">explainer</a>)</li>
+</ul>
+
+<h2>Reading the walls</h2>
+<p>Strikes with heavy open interest often act as reference levels. A large put wall below spot
+marks where hedging demand concentrated; SQ week tends to gravitate toward high-OI strikes.
+Combined with the Nikkei VI (Japan's volatility index) you get a quick regime read:
+walls close + VI low = pinned market; walls broken + VI spiking = trend risk.</p>
+
+<p><a href="./">→ Live Nikkei dashboard</a> ・ <a href="us.html">→ US markets (COT & SPX gamma)</a></p>
+"""),
+}
+
 # {ファイル名: (タイトル, 本文HTML)}
 GUIDE_PAGES = {
+    "glossary.html": ("用語集", """
+<h1>用語集 — 当サイトで使うデータ用語</h1>
+<p>各用語の詳しい解説は個別記事へのリンクからどうぞ。</p>
+
+<h2>オプション関連</h2>
+<ul>
+<li><b>建玉(たてぎょく/OI)</b>: 未決済のまま残っている契約の総量。→ <a href="guide-oi.html">建玉分布の見方</a></li>
+<li><b>壁</b>: 特定の行使価格に建玉が集中した状態。意識されやすい価格帯の目安</li>
+<li><b>Put/Callレシオ(PCR)</b>: プット出来高÷コール出来高。1.0超はプット優勢 → <a href="guide-pcr.html">解説</a></li>
+<li><b>SQ</b>: 特別清算指数。毎月第2金曜に算出され、その限月の取引が清算される。3・6・9・12月は先物も同時に満期を迎える「メジャーSQ」</li>
+<li><b>IV(インプライド・ボラティリティ)</b>: オプション価格から逆算される将来変動率の織り込み</li>
+<li><b>ガンマエクスポージャー</b>: ディーラーのヘッジ売買が相場を増幅するか抑制するかの推定値 → <a href="guide-gex.html">解説</a></li>
+<li><b>ガンマフリップ</b>: ガンマエクスポージャーの符号が変わる価格帯</li>
+</ul>
+
+<h2>ポジションデータ関連</h2>
+<li><b>取引参加者別建玉</b>: JPXが週次で公表する、証券会社名入りの先物建玉。旧「手口情報」の後継</li>
+<li><b>COTレポート</b>: CFTC(米)が週次公表する投資家区分別の先物建玉 → <a href="guide-cot.html">解説</a></li>
+<li><b>投資部門別売買状況</b>: JPXが週次公表する、海外投資家・個人などの現物売買金額</li>
+
+<h2>ボラティリティ・マクロ関連</h2>
+<ul>
+<li><b>日経VI</b>: 日経平均版の恐怖指数。20超で警戒領域、30超は荒れ相場</li>
+<li><b>VIX</b>: S&P500版の恐怖指数</li>
+<li><b>ブレークイーブン(BEI)</b>: 債券市場が織り込む期待インフレ率</li>
+<li><b>Sahmルール</b>: 失業率の変化から景気後退入りを判定する経験則 → <a href="risk.html">リスクモニター</a></li>
+</ul>
+"""),
     "guide-gex.html": ("ガンマエクスポージャーとは", """
 <h1>ガンマエクスポージャー(GEX)とは — 相場の「静と動」を分ける需給</h1>
 <p>当サイトの<a href="us.html">米国市場ページ</a>で毎日更新しているガンマエクスポージャーの読み方を解説します。</p>

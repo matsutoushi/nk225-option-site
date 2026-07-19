@@ -147,94 +147,136 @@ def collect_indicators() -> dict:
         s = get(sid)
         return float(s.iloc[-1]), s.index[-1].strftime("%Y-%m-%d")
 
+    def _try(name, fn):
+        """指標単位で失敗を隔離する(1系列の失敗でページ全体を止めない)。"""
+        try:
+            fn()
+        except Exception as e:
+            print(f"WARN: indicator {name} failed: {e}")
+
     # --- 景気後退リスク ---
-    v, d = latest("SAHMREALTIME")
-    add("recession", "sahm", "Sahmルール", "Sahm Rule", v, d,
-        _signal(v, 0.30, 0.50), "0.50以上で景気後退入りの経験則(公式)",
-        "0.50+ historically marks recession onset")
+    def i_sahm():
+        v, d = latest("SAHMREALTIME")
+        add("recession", "sahm", "Sahmルール", "Sahm Rule", v, d,
+            _signal(v, 0.30, 0.50), "0.50以上で景気後退入りの経験則(公式)",
+            "0.50+ historically marks recession onset")
 
-    s = get("ICSA")
-    v4 = float(s.tail(4).mean())
-    add("recession", "claims", "新規失業保険申請(4週平均)", "Initial Claims (4wk avg)",
-        v4, s.index[-1].strftime("%Y-%m-%d"), _signal(v4, 280000, 350000),
-        "28万件超で注意、35万件超で警告(歴史的水準)",
-        "Caution above 280k, warning above 350k", disp=f"{v4/1000:,.0f}k")
+    def i_claims():
+        s = get("ICSA")
+        v4 = float(s.tail(4).mean())
+        add("recession", "claims", "新規失業保険申請(4週平均)", "Initial Claims (4wk avg)",
+            v4, s.index[-1].strftime("%Y-%m-%d"), _signal(v4, 280000, 350000),
+            "28万件超で注意、35万件超で警告(歴史的水準)",
+            "Caution above 280k, warning above 350k", disp=f"{v4/1000:,.0f}k")
 
-    v, d = latest("T10Y3M")
-    add("recession", "t10y3m", "イールドカーブ(10年-3ヶ月)", "Yield Curve (10y-3m)", v, d,
-        _signal(-v, -0.25, 0.0), "逆転(マイナス)は歴史的に景気後退の先行シグナル",
-        "Inversion has preceded recessions", disp=f"{v:+.2f}%")
+    def i_t10y3m():
+        v, d = latest("T10Y3M")
+        add("recession", "t10y3m", "イールドカーブ(10年-3ヶ月)", "Yield Curve (10y-3m)", v, d,
+            _signal(-v, -0.25, 0.0), "逆転(マイナス)は歴史的に景気後退の先行シグナル",
+            "Inversion has preceded recessions", disp=f"{v:+.2f}%")
 
-    v, d = latest("T10Y2Y")
-    add("recession", "t10y2y", "イールドカーブ(10年-2年)", "Yield Curve (10y-2y)", v, d,
-        _signal(-v, -0.25, 0.0), "同上", "Same as above", disp=f"{v:+.2f}%")
+    def i_t10y2y():
+        v, d = latest("T10Y2Y")
+        add("recession", "t10y2y", "イールドカーブ(10年-2年)", "Yield Curve (10y-2y)", v, d,
+            _signal(-v, -0.25, 0.0), "同上", "Same as above", disp=f"{v:+.2f}%")
 
-    v, d = latest("RECPROUSM156N")
-    add("recession", "cp_prob", "景気後退確率(Chauvet-Piger)", "Recession Prob. (Chauvet-Piger)",
-        v, d, _signal(v, 20, 50), "セントルイス連銀公表の平滑化確率。50%超で警告",
-        "St. Louis Fed smoothed probability", disp=f"{v:.1f}%")
+    def i_cp():
+        v, d = latest("RECPROUSM156N")
+        add("recession", "cp_prob", "景気後退確率(Chauvet-Piger)", "Recession Prob. (Chauvet-Piger)",
+            v, d, _signal(v, 20, 50), "セントルイス連銀公表の平滑化確率。50%超で警告",
+            "St. Louis Fed smoothed probability", disp=f"{v:.1f}%")
 
-    try:
+    def i_nyfed():
         v, d = fetch_nyfed_recprob()
         add("recession", "nyfed_prob", "NY連銀 12ヶ月先景気後退確率", "NY Fed 12m Recession Prob.",
             v, d, _signal(v, 20, 35), "イールドカーブ型モデル(NY連銀公式)。歴史的に30%超は強い警告",
             "NY Fed yield-curve model; 30%+ is a strong signal", disp=f"{v:.1f}%")
-    except Exception as e:
-        print(f"WARN: NY Fed prob failed: {e}")
 
     # --- インフレ再燃リスク ---
-    v, d = latest("T10YIE")
-    add("inflation", "bei10", "期待インフレ率(10年BEI)", "10y Breakeven Inflation", v, d,
-        _signal(v, 2.5, 3.0), "2.5%超で注意、3%超で警告(インフレ期待の脱錨)",
-        "Caution above 2.5%, warning above 3%", disp=f"{v:.2f}%")
+    def i_bei10():
+        v, d = latest("T10YIE")
+        add("inflation", "bei10", "期待インフレ率(10年BEI)", "10y Breakeven Inflation", v, d,
+            _signal(v, 2.5, 3.0), "2.5%超で注意、3%超で警告(インフレ期待の脱錨)",
+            "Caution above 2.5%, warning above 3%", disp=f"{v:.2f}%")
 
-    v, d = latest("T5YIFR")
-    add("inflation", "f5y5y", "期待インフレ率(5年先5年)", "5y5y Forward Inflation", v, d,
-        _signal(v, 2.5, 3.0), "Fedが重視する長期期待インフレの指標",
-        "Fed's preferred long-run expectations gauge", disp=f"{v:.2f}%")
+    def i_f5y5y():
+        v, d = latest("T5YIFR")
+        add("inflation", "f5y5y", "期待インフレ率(5年先5年)", "5y5y Forward Inflation", v, d,
+            _signal(v, 2.5, 3.0), "Fedが重視する長期期待インフレの指標",
+            "Fed's preferred long-run expectations gauge", disp=f"{v:.2f}%")
 
-    s = get("CPIAUCSL")
-    yoy = float((s.iloc[-1] / s.iloc[-13] - 1) * 100)
-    add("inflation", "cpi", "CPI(前年比)", "CPI (YoY)", yoy,
-        s.index[-1].strftime("%Y-%m"), _signal(yoy, 3.0, 4.0),
-        "3%超で注意、4%超で警告", "Caution above 3%, warning above 4%",
-        disp=f"{yoy:.1f}%")
+    def i_cpi():
+        s = get("CPIAUCSL")
+        yoy = float((s.iloc[-1] / s.iloc[-13] - 1) * 100)
+        add("inflation", "cpi", "米CPI(前年比)", "US CPI (YoY)", yoy,
+            s.index[-1].strftime("%Y-%m"), _signal(yoy, 3.0, 4.0),
+            "3%超で注意、4%超で警告", "Caution above 3%, warning above 4%",
+            disp=f"{yoy:.1f}%")
 
-    s = get("PCEPILFE")
-    yoy = float((s.iloc[-1] / s.iloc[-13] - 1) * 100)
-    add("inflation", "corepce", "コアPCE(前年比)", "Core PCE (YoY)", yoy,
-        s.index[-1].strftime("%Y-%m"), _signal(yoy, 2.5, 3.5),
-        "Fed目標2%。2.5%超で注意", "Fed target 2%; caution above 2.5%",
-        disp=f"{yoy:.1f}%")
+    def i_corepce():
+        s = get("PCEPILFE")
+        yoy = float((s.iloc[-1] / s.iloc[-13] - 1) * 100)
+        add("inflation", "corepce", "米コアPCE(前年比)", "US Core PCE (YoY)", yoy,
+            s.index[-1].strftime("%Y-%m"), _signal(yoy, 2.5, 3.5),
+            "Fed目標2%。2.5%超で注意", "Fed target 2%; caution above 2.5%",
+            disp=f"{yoy:.1f}%")
 
-    s = get("DCOILWTICO")
-    cur = float(s.iloc[-1])
-    ago = float(s[s.index <= s.index[-1] - pd.Timedelta(days=365)].iloc[-1])
-    chg = (cur / ago - 1) * 100
-    add("inflation", "wti", "WTI原油(前年比)", "WTI Crude (YoY)", chg,
-        s.index[-1].strftime("%Y-%m-%d"), _signal(chg, 20, 50),
-        "前年比+20%超で注意(エネルギー起点の再インフレ)",
-        "Caution above +20% YoY", disp=f"${cur:,.0f} ({chg:+.0f}%)")
+    def i_jpcpi():
+        s = get("JPNCPIALLMINMEI")
+        yoy = float((s.iloc[-1] / s.iloc[-13] - 1) * 100)
+        add("inflation", "jpcpi", "日本CPI(前年比)", "Japan CPI (YoY)", yoy,
+            s.index[-1].strftime("%Y-%m"), _signal(yoy, 2.5, 3.5),
+            "日銀目標2%。2.5%超で注意(OECD系列・公表ラグあり)",
+            "BOJ target 2%; caution above 2.5% (OECD series, lagged)",
+            disp=f"{yoy:.1f}%")
+
+    def i_wti():
+        s = get("DCOILWTICO")
+        cur = float(s.iloc[-1])
+        ago = float(s[s.index <= s.index[-1] - pd.Timedelta(days=365)].iloc[-1])
+        chg = (cur / ago - 1) * 100
+        add("inflation", "wti", "WTI原油(前年比)", "WTI Crude (YoY)", chg,
+            s.index[-1].strftime("%Y-%m-%d"), _signal(chg, 20, 50),
+            "前年比+20%超で注意(エネルギー起点の再インフレ)",
+            "Caution above +20% YoY", disp=f"${cur:,.0f} ({chg:+.0f}%)")
 
     # --- 金融ストレス ---
-    v, d = latest("NFCI")
-    add("stress", "nfci", "シカゴ連銀 金融環境指数", "Chicago Fed NFCI", v, d,
-        _signal(v, 0.0, 0.5), "0超=歴史平均よりタイト(公式基準)",
-        "Above 0 = tighter than average", disp=f"{v:+.2f}")
+    def i_nfci():
+        v, d = latest("NFCI")
+        add("stress", "nfci", "シカゴ連銀 金融環境指数", "Chicago Fed NFCI", v, d,
+            _signal(v, 0.0, 0.5), "0超=歴史平均よりタイト(公式基準)",
+            "Above 0 = tighter than average", disp=f"{v:+.2f}")
 
-    v, d = latest("STLFSI4")
-    add("stress", "stlfsi", "セントルイス連銀 金融ストレス指数", "St. Louis Fed Stress Index", v, d,
-        _signal(v, 0.0, 1.0), "0超=平常よりストレス高(公式基準)",
-        "Above 0 = above-normal stress", disp=f"{v:+.2f}")
+    def i_stl():
+        v, d = latest("STLFSI4")
+        add("stress", "stlfsi", "セントルイス連銀 金融ストレス指数", "St. Louis Fed Stress Index", v, d,
+            _signal(v, 0.0, 1.0), "0超=平常よりストレス高(公式基準)",
+            "Above 0 = above-normal stress", disp=f"{v:+.2f}")
 
-    v, d = latest("BAMLH0A0HYM2")
-    add("stress", "hy", "ハイイールド債スプレッド", "High Yield Spread", v, d,
-        _signal(v, 4.0, 6.0), "4%超で注意、6%超で警告(信用不安)",
-        "Caution above 4%, warning above 6%", disp=f"{v:.2f}%")
+    def i_hy():
+        v, d = latest("BAMLH0A0HYM2")
+        add("stress", "hy", "ハイイールド債スプレッド", "High Yield Spread", v, d,
+            _signal(v, 4.0, 6.0), "4%超で注意、6%超で警告(信用不安)",
+            "Caution above 4%, warning above 6%", disp=f"{v:.2f}%")
 
-    v, d = latest("VIXCLS")
-    add("stress", "vix", "VIX指数", "VIX", v, d,
-        _signal(v, 20, 30), "20超で注意、30超で警告",
-        "Caution above 20, warning above 30", disp=f"{v:.1f}")
+    def i_vix():
+        v, d = latest("VIXCLS")
+        add("stress", "vix", "VIX指数", "VIX", v, d,
+            _signal(v, 20, 30), "20超で注意、30超で警告",
+            "Caution above 20, warning above 30", disp=f"{v:.1f}")
+
+    for name, fn in [("sahm", i_sahm), ("claims", i_claims), ("t10y3m", i_t10y3m),
+                     ("t10y2y", i_t10y2y), ("cp", i_cp), ("nyfed", i_nyfed),
+                     ("bei10", i_bei10), ("f5y5y", i_f5y5y), ("cpi", i_cpi),
+                     ("corepce", i_corepce), ("jpcpi", i_jpcpi), ("wti", i_wti),
+                     ("nfci", i_nfci), ("stl", i_stl), ("hy", i_hy), ("vix", i_vix)]:
+        _try(name, fn)
+
+    # 金利・為替(チャート用の系列も取得しておく)
+    for sid in ("DGS10", "IRLTLT01JPM156N", "DEXJPUS"):
+        try:
+            get(sid)
+        except Exception as e:
+            print(f"WARN: series {sid} failed: {e}")
 
     return {"date": datetime.now().strftime("%Y-%m-%d"), "items": items, "series": cache}

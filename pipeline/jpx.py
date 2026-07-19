@@ -215,6 +215,97 @@ def fetch_weekly_participant_futures() -> dict:
 
 
 NIKKEI_CSV = "https://indexes.nikkei.co.jp/nkave/historical/nikkei_stock_average_daily_jp.csv"
+NIKKEI_VI_CSV = "https://indexes.nikkei.co.jp/nkave/historical/nikkei_stock_average_vi_daily_jp.csv"
+MINI_RE = re.compile(r"NK225 MINI ([PC])(\d{6})-(\d+)")
+INVESTOR_URL = "https://www.jpx.co.jp/markets/statistics-equities/investor-type/index.html"
+
+
+def fetch_nikkei_vi() -> pd.DataFrame:
+    """日経公式CSVから日経VI(ボラティリティー・インデックス)のOHLCを取得する。"""
+    r = requests.get(NIKKEI_VI_CSV, headers=UA, timeout=60)
+    r.raise_for_status()
+    df = pd.read_csv(io.BytesIO(r.content), encoding="shift_jis")
+    df = df.rename(columns={"データ日付": "date", "終値": "Close", "始値": "Open",
+                            "高値": "High", "安値": "Low"})
+    df["date"] = pd.to_datetime(df["date"], format="%Y/%m/%d", errors="coerce")
+    df = df.dropna(subset=["date", "Close"]).set_index("date").sort_index()
+    return df[["Open", "High", "Low", "Close"]].astype(float)
+
+
+def fetch_mini_oi(url: str) -> pd.DataFrame:
+    """open_interestファイルからミニオプション(ウィークリー限月含む)の建玉を返す。
+
+    Returns: DataFrame[type(P/C), expiry(date), strike, oi]
+    """
+    xls = pd.ExcelFile(io.BytesIO(_download(url)))
+    rows = []
+    for sheet in xls.sheet_names:
+        raw = xls.parse(sheet, header=None)
+        for col in raw.columns:
+            series = raw[col].astype(str)
+            if not series.str.contains("NK225 MINI", na=False).any():
+                continue
+            for idx in raw.index[series.str.contains("NK225 MINI", na=False)]:
+                m = MINI_RE.search(str(raw.loc[idx, col]))
+                if not m:
+                    continue
+                try:
+                    oi = int(raw.loc[idx, col + 2])
+                except (ValueError, TypeError, KeyError):
+                    continue
+                rows.append({
+                    "type": m.group(1),
+                    "expiry": pd.to_datetime("20" + m.group(2), format="%Y%m%d").date(),
+                    "strike": int(m.group(3)),
+                    "oi": oi,
+                })
+    if not rows:
+        raise RuntimeError("no NK225 MINI option rows found")
+    return pd.DataFrame(rows).groupby(["type", "expiry", "strike"], as_index=False)["oi"].sum()
+
+
+def fetch_investor_flows(cache: pd.DataFrame | None) -> pd.DataFrame:
+    """投資部門別売買状況(東証プライム・金額)から海外投資家の週次ネット売買を取得する。
+
+    ページに掲載中の週次Excelのうち未取得分を取り込み、履歴を返す。
+    Returns: DataFrame[week(str), label(str), sales(円), purchases(円), net(円)]
+    """
+    r = requests.get(INVESTOR_URL, headers=UA, timeout=60)
+    r.raise_for_status()
+    links = re.findall(r'href="([^"]+stock_val_1_(\d+)\.xls)"', r.text)
+    have = set(cache["week"].astype(str)) if cache is not None and len(cache) else set()
+    frames = [cache] if cache is not None and len(cache) else []
+    fetched = 0
+    for path, ymd in links:
+        if ymd in have:
+            continue
+        raw = pd.read_excel(io.BytesIO(_download(BASE + path)), header=None)
+        label = ""
+        for i in range(min(6, len(raw))):
+            s = str(raw.iloc[i, 0])
+            if "週" in s:
+                label = s.split()[0]
+                break
+        sales = purchases = None
+        for i in raw.index:
+            if str(raw.iloc[i, 0]).strip() == "海外投資家":
+                # 同じ行が「売り」、次の行が「買い」。右ブロック(col8)が表題週の金額
+                sales = float(str(raw.iloc[i, 8]).replace(",", ""))
+                purchases = float(str(raw.iloc[i + 1, 8]).replace(",", ""))
+                break
+        if sales is None or purchases is None:
+            print(f"WARN: investor xls parse failed for {ymd}")
+            continue
+        frames.append(pd.DataFrame([{
+            "week": ymd, "label": label,
+            "sales": sales, "purchases": purchases, "net": purchases - sales,
+        }]))
+        fetched += 1
+    print(f"investor flows: fetched {fetched} new weekly files")
+    if not frames:
+        raise RuntimeError("no investor flow data")
+    hist = pd.concat(frames, ignore_index=True)
+    return hist.drop_duplicates("week").sort_values("week").reset_index(drop=True)
 
 
 def fetch_n225_official() -> pd.DataFrame:

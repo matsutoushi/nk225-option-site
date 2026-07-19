@@ -506,6 +506,12 @@ PAGE = {
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
+        "kpi_vi": "日経VI(前日差)",
+        "kpi_sq": "次回SQ",
+        "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
+        "mini_lead": "日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。",
+        "sec_flows": "海外投資家の売買動向(週次)",
+        "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より、海外投資家の週次ネット売買。{latest}",
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)',
@@ -513,7 +519,7 @@ PAGE = {
         "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)',
-        "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a>',
+        "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#3987e5">用語集</a>',
         "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
         "footer_disclaimer": "本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。",
         "out": "index.html", "prefix": "", "html_lang": "ja",
@@ -528,6 +534,12 @@ PAGE = {
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
+        "kpi_vi": "Nikkei VI (DoD)",
+        "kpi_sq": "Next SQ",
+        "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
+        "mini_lead": "Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines.",
+        "sec_flows": "Foreign Investor Flows (Weekly)",
+        "flows_lead": "Weekly net buying by foreign investors in TSE Prime cash equities, from JPX trading-by-investor-type data. {latest}",
         "sec_oitable": "Options Open Interest by Expiry",
         "sec_oi": "Open Interest Distribution by Strike",
         "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
@@ -535,7 +547,7 @@ PAGE = {
         "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
         "sec_pcr": "Put/Call Ratio Trend",
         "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
-        "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a>',
+        "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a> | <a href="guide-participants.html" style="color:#3987e5">Guide: Participant Positioning</a> | <a href="guide-nikkei-options.html" style="color:#3987e5">Guide: Nikkei Options</a>',
         "footer_src": "Data source: compiled from official Japan Exchange Group (JPX) publications. Nikkei 225 price data by Nikkei Inc. (copyright belongs to Nikkei Inc.).",
         "footer_disclaimer": "This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.",
         "out": os.path.join("en", "index.html"), "prefix": "../", "html_lang": "en",
@@ -543,9 +555,11 @@ PAGE = {
 }
 
 
-def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "ja") -> None:
+def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "ja",
+                 extras: dict | None = None) -> None:
     P = PAGE[lang]
     og = og_meta(P["title"], P["desc"])
+    extras = extras or {}
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
     # キャッシュ対策: 画像URLにビルド時刻を付け、更新のたびに再取得させる
@@ -556,6 +570,33 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         f'alt="Nikkei 225 candlestick, MACD, RSI, volume profile">'
         if charts.get("market") else ""
     )
+    if charts.get("vi"):
+        market_section += f'\n  <img src="{charts["vi"]}" alt="Nikkei VI">'
+
+    extra_kpi = ""
+    if extras.get("vi_last") is not None:
+        delta = extras.get("vi_delta")
+        dtxt = f" ({delta:+.1f})" if delta is not None else ""
+        extra_kpi += f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>{dtxt}</div>"
+    if extras.get("sq"):
+        sq = extras["sq"]
+        t = sq["type_ja"] if lang == "ja" else sq["type_en"]
+        days = (f"あと{sq['days']}日" if lang == "ja" else f"in {sq['days']}d")
+        extra_kpi += (f"<div>{P['kpi_sq']}<br><b>{sq['date'].month}/{sq['date'].day}</b>"
+                      f" {t}・{days}</div>")
+
+    mini_section = ""
+    if charts.get("mini"):
+        mini_section = (f'<h2 id="mini">{P["sec_mini"].format(exp=extras.get("mini_label", ""))}</h2>\n'
+                        f'  <p>{P["mini_lead"]}</p>\n'
+                        f'  <img src="{charts["mini"]}" alt="Mini options OI">')
+
+    flows_section = ""
+    if charts.get("investor"):
+        flows_section = (f'<h2 id="flows">{P["sec_flows"]}</h2>\n'
+                         f'  <p>{P["flows_lead"].format(latest=extras.get("flows_latest", ""))}</p>\n'
+                         f'  <img src="{charts["investor"]}" alt="Foreign investor flows">')
+
     weekly_section = ""
     if tables.get("weekly"):
         chart_part = (
@@ -593,6 +634,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     <div>{P['kpi'][0]}<br><b>{pcr['pcr']}</b></div>
     <div>{P['kpi'][1]}<br><b>{pcr['put_volume']:,}</b>{P['unit']}</div>
     <div>{P['kpi'][2]}<br><b>{pcr['call_volume']:,}</b>{P['unit']}</div>
+    {extra_kpi}
   </div>
 
   {market_section}
@@ -604,7 +646,11 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <p>{P['oi_lead']}</p>
   <img src="{charts['oi']}" alt="Open interest by strike">
 
+  {mini_section}
+
   {weekly_section}
+
+  {flows_section}
 
   <h2 id="pcr">{P['sec_pcr']}</h2>
   <p>{P['pcr_lead']}</p>
@@ -732,7 +778,36 @@ def chart_risk(series: dict, lang: str) -> str | None:
     return f"img/{name}"
 
 
-def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
+def chart_rates(series: dict, lang: str) -> str | None:
+    """日米10年金利差とドル円(3年)。"""
+    suffix = L[lang]["suffix"]
+    us10 = series.get("DGS10")
+    jp10 = series.get("IRLTLT01JPM156N")
+    fx = series.get("DEXJPUS")
+    if us10 is None or jp10 is None or fx is None:
+        return None
+    jp_d = jp10.reindex(us10.index, method="ffill")
+    spread = (us10 - jp_d).dropna()
+    spread = spread[spread.index >= spread.index[-1] - pd.Timedelta(days=365 * 3)]
+    fx3 = fx[fx.index >= fx.index[-1] - pd.Timedelta(days=365 * 3)]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 3.8))
+    ax1.plot(spread.index, spread.values, color=DOWN, linewidth=1.3)
+    ax1.set_title("日米10年金利差(%pt)" if lang == "ja" else "US-Japan 10y Yield Spread (%pt)",
+                  fontsize=10)
+    ax1.grid(alpha=0.25)
+    ax2.plot(fx3.index, fx3.values, color=ACCENT, linewidth=1.3)
+    ax2.set_title("ドル円" if lang == "ja" else "USD/JPY", fontsize=10)
+    ax2.grid(alpha=0.25)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    name = f"rates{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def render_risk(risk: dict, lang: str, chart_rel: str | None,
+                rates_rel: str | None = None) -> None:
     P = RISKPAGE[lang]
     og = og_meta(P["title"])
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
@@ -759,6 +834,10 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None) -> None:
     if chart_rel:
         chart_html = (f"<h2>{P['sec_chart']}</h2>\n"
                       f'<img src="{P["prefix"]}{chart_rel}?v={ver}" alt="macro risk indicators">')
+    if rates_rel:
+        sec = "日米金利差とドル円" if lang == "ja" else "US-Japan Rate Spread & USD/JPY"
+        chart_html += (f"\n<h2>{sec}</h2>\n"
+                       f'<img src="{P["prefix"]}{rates_rel}?v={ver}" alt="rates and USDJPY">')
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="{lang}">
@@ -896,6 +975,9 @@ USPAGE = {
         "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
+        "sec_etf": "SPY・QQQ 建玉の壁",
+        "etf_lead": "米国の代表的ETFオプションの行使価格別建玉(45日以内の限月・現値±10%)。SPXと同様、建玉の集中する水準は意識されやすい価格帯の目安です。",
+        "kpi_0dte": "SPX最短限月の出来高シェア",
         "sec_spx": "SPXオプション: 建玉の壁とガンマエクスポージャー(推定)",
         "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。ガンマエクスポージャーは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
         "spx_kpi": ["SPX終値", "合計ガンマエクスポージャー($bn/1%)", "ガンマフリップ"],
@@ -917,6 +999,9 @@ USPAGE = {
         "pcr_rows": {"total": "Total", "index": "Index", "equity": "Equity",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["Category", "Put/Call Ratio"],
+        "sec_etf": "SPY & QQQ OI Walls",
+        "etf_lead": "Open interest by strike for the major US ETF options (expiries within 45 days, strikes within ±10% of spot).",
+        "kpi_0dte": "SPX Nearest-Expiry Volume Share",
         "sec_spx": "SPX Options: OI Walls & Gamma Exposure (Estimate)",
         "spx_lead": "From Cboe delayed data (as of last US close), expiries within 45 days, strikes within ±10% of spot. GEX uses the standard naive assumption (dealers long calls, short puts) and is an estimate, not actual dealer positioning. Positive GEX tends to dampen volatility; negative GEX tends to amplify it.",
         "spx_kpi": ["SPX Close", "Total GEX ($bn/1%)", "Gamma Flip"],
@@ -928,28 +1013,142 @@ USPAGE = {
 }
 
 
-def chart_cot(cot: dict, lang: str) -> str:
-    """6市場のネットポジション推移(スモールマルチプル)。"""
+def chart_cot(cot: dict, lang: str, usdjpy: pd.Series | None = None) -> str:
+    """全市場のネットポジション推移(スモールマルチプル)。円パネルにはドル円を重ねる。"""
     import us_data
     suffix = L[lang]["suffix"]
-    fig, axes = plt.subplots(2, 3, figsize=(11, 6), sharex=False)
-    for ax, m in zip(axes.flat, us_data.COT_MARKETS):
+    markets = [m for m in us_data.COT_MARKETS if m["key"] in cot["markets"]]
+    ncols = 3
+    nrows = (len(markets) + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(11, 3 * nrows), sharex=False)
+    axes = np.atleast_2d(axes)
+    for ax, m in zip(axes.flat, markets):
         df = cot["markets"][m["key"]]
         x = pd.to_datetime(df["date"])
         color = ACCENT if df["net"].iloc[-1] >= 0 else UP
         ax.plot(x, df["net"], color=color, linewidth=1.3)
         ax.fill_between(x, df["net"], 0, color=color, alpha=0.15)
         ax.axhline(0, color=INK2, linewidth=0.7)
-        ax.set_title(m[lang], fontsize=9)
+        if m["key"] == "jpy" and usdjpy is not None and len(usdjpy):
+            u = usdjpy[(usdjpy.index >= x.min()) & (usdjpy.index <= x.max())]
+            if len(u):
+                axp = ax.twinx()
+                axp.plot(u.index, u.values, color="#8a97ad", alpha=0.55, linewidth=1)
+                axp.axis("off")
+        title = m[lang] + (" (灰線: ドル円)" if m["key"] == "jpy" and lang == "ja"
+                           and usdjpy is not None else
+                           (" (gray: USD/JPY)" if m["key"] == "jpy" and lang == "en"
+                            and usdjpy is not None else ""))
+        ax.set_title(title, fontsize=9)
         ax.grid(alpha=0.25)
         ax.tick_params(labelsize=7)
         ax.yaxis.set_major_formatter(lambda v, _: f"{v/1000:,.0f}k")
+    for ax in axes.flat[len(markets):]:
+        ax.axis("off")
     sup = ("COT 投機筋ネットポジション(直近1年・枚)" if lang == "ja"
            else "COT Speculator Net Positions (1 year, contracts)")
     fig.suptitle(sup, fontsize=11)
     fig.tight_layout()
     os.makedirs(IMG, exist_ok=True)
     name = f"cot{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def next_sq(today: datetime) -> dict:
+    """次回SQ(第2金曜)の日付・残日数・種別(メジャー/マイナー)を返す。"""
+    d = today.date()
+    for add_month in range(0, 3):
+        y = d.year + (d.month - 1 + add_month) // 12
+        m = (d.month - 1 + add_month) % 12 + 1
+        first = pd.Timestamp(y, m, 1)
+        # 第2金曜 = 月内の金曜日リストの2番目
+        fridays = [x.date() for x in pd.date_range(first, periods=14, freq="D")
+                   if x.weekday() == 4]
+        sq = fridays[1]
+        if sq >= d:
+            major = m in (3, 6, 9, 12)
+            return {"date": sq, "days": (sq - d).days,
+                    "type_ja": "メジャーSQ" if major else "オプションSQ",
+                    "type_en": "Major SQ" if major else "Options SQ"}
+    raise RuntimeError("SQ calc failed")
+
+
+def chart_vi(vi: pd.DataFrame, lang: str) -> str:
+    """日経VIの1年チャート(警戒水準ライン付き)。"""
+    suffix = L[lang]["suffix"]
+    s = vi["Close"]
+    s = s[s.index >= s.index[-1] - pd.Timedelta(days=365)]
+    fig, ax = plt.subplots(figsize=(10, 3.6))
+    ax.plot(s.index, s.values, color=ACCENT, linewidth=1.4)
+    ax.fill_between(s.index, s.values, s.values.min() * 0.95, color=ACCENT, alpha=0.08)
+    for lv in (20, 30):
+        ax.axhline(lv, color=UP if lv == 30 else INK2, linestyle="--", linewidth=0.9)
+    ax.set_title("日経VI(日経平均ボラティリティー・インデックス、1年)" if lang == "ja"
+                 else "Nikkei VI (Nikkei Volatility Index, 1 year)", fontsize=10)
+    ax.grid(alpha=0.25)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"vi{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def chart_mini_oi(mini: pd.DataFrame, spot: float | None, lang: str) -> tuple[str, str] | None:
+    """ミニオプション(直近ウィークリー限月)の建玉分布チャート。"""
+    suffix = L[lang]["suffix"]
+    totals = mini.groupby("expiry")["oi"].sum()
+    cands = [e for e in sorted(totals.index) if totals[e] > 500]
+    if not cands:
+        return None
+    exp = cands[0]
+    df = mini[mini["expiry"] == exp]
+    strikes = sorted(df["strike"].unique())
+    if spot:
+        strikes = [s for s in strikes if 0.92 * spot <= s <= 1.08 * spot]
+    puts = df[df["type"] == "P"].set_index("strike")["oi"].reindex(strikes).fillna(0)
+    calls = df[df["type"] == "C"].set_index("strike")["oi"].reindex(strikes).fillna(0)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    width = (strikes[1] - strikes[0]) * 0.4 if len(strikes) > 1 else 50
+    ax.barh([s - width / 2 for s in strikes], -puts.values, height=width, color=UP,
+            label=L[lang]["put_oi"])
+    ax.barh([s + width / 2 for s in strikes], calls.values, height=width, color=DOWN,
+            label=L[lang]["call_oi"])
+    if spot:
+        ax.axhline(spot, color=INK, linestyle="--", linewidth=1,
+                   label=L[lang]["spot_line"].format(spot=spot))
+    exp_label = f"{exp.month}/{exp.day}"
+    ax.set_title((f"日経225ミニオプション 建玉分布({exp_label}限)" if lang == "ja"
+                  else f"Nikkei 225 mini Options OI ({exp_label} expiry)"), fontsize=10)
+    ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
+    ax.legend(loc="lower right")
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    name = f"mini_oi{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}", exp_label
+
+
+def chart_investor(flows: pd.DataFrame, lang: str) -> str:
+    """海外投資家の週次ネット売買(東証プライム・金額)。"""
+    suffix = L[lang]["suffix"]
+    x = pd.to_datetime(flows["week"], format="%y%m%d")
+    vals = flows["net"] / 1e12  # 兆円
+    fig, ax = plt.subplots(figsize=(10, 3.6))
+    colors = [ACCENT if v >= 0 else UP for v in vals]
+    ax.bar(x, vals, width=4.5, color=colors)
+    ax.axhline(0, color=INK2, linewidth=0.8)
+    ax.set_title("海外投資家の週次ネット売買(東証プライム・現物、兆円)" if lang == "ja"
+                 else "Foreign Investors Weekly Net Buying (TSE Prime cash equities, tn yen)",
+                 fontsize=10)
+    ax.grid(alpha=0.25)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    name = f"investor{suffix}.png"
     fig.savefig(os.path.join(IMG, name), dpi=120)
     plt.close(fig)
     return f"img/{name}"
@@ -993,6 +1192,48 @@ def chart_participants(hist: pd.DataFrame, n225: pd.DataFrame | None, lang: str)
     fig.savefig(os.path.join(IMG, name_f), dpi=120)
     plt.close(fig)
     return f"img/{name_f}"
+
+
+def chart_etf_walls(chains: dict, lang: str) -> str | None:
+    """SPY・QQQの建玉の壁(2パネル)。chains: {"SPY": chain_dict, "QQQ": chain_dict}"""
+    suffix = L[lang]["suffix"]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 6))
+    drawn = 0
+    for ax, sym in zip(axes, ("SPY", "QQQ")):
+        c = chains.get(sym)
+        if not c:
+            ax.axis("off")
+            continue
+        spot = c["spot"]
+        df = c["chain"]
+        cutoff = datetime.now(timezone.utc).date() + timedelta(days=45)
+        df = df[(df["expiry"] <= cutoff) & (df["oi"] > 0)
+                & (df["strike"] >= spot * 0.9) & (df["strike"] <= spot * 1.1)].copy()
+        df["bin"] = (df["strike"] // 5) * 5
+        puts = df[df["type"] == "P"].groupby("bin")["oi"].sum()
+        calls = df[df["type"] == "C"].groupby("bin")["oi"].sum()
+        bins = sorted(set(puts.index) | set(calls.index))
+        ax.barh(bins, -puts.reindex(bins).fillna(0), height=4,
+                color=UP, label="Put OI" if lang == "en" else "プット建玉")
+        ax.barh(bins, calls.reindex(bins).fillna(0), height=4,
+                color=DOWN, label="Call OI" if lang == "en" else "コール建玉")
+        ax.axhline(spot, color=INK, linestyle="--", linewidth=1)
+        ax.set_title(f"{sym}  (spot {spot:,.0f})", fontsize=10)
+        ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x)/1000:,.0f}k")
+        ax.legend(loc="lower left", fontsize=8)
+        ax.grid(alpha=0.25)
+        drawn += 1
+    if drawn == 0:
+        plt.close(fig)
+        return None
+    sup = ("SPY・QQQ 行使価格別建玉(45日以内・±10%)" if lang == "ja"
+           else "SPY & QQQ Open Interest by Strike (45d expiries, ±10%)")
+    fig.suptitle(sup, fontsize=11)
+    fig.tight_layout()
+    name = f"etf_walls{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
 
 
 def chart_spx(res: dict, lang: str) -> str:
@@ -1048,7 +1289,8 @@ def chart_spx(res: dict, lang: str) -> str:
 
 
 def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
-              spx_res: dict | None = None, spx_chart: str | None = None) -> None:
+              spx_res: dict | None = None, spx_chart: str | None = None,
+              etf_chart: str | None = None, share: dict | None = None) -> None:
     import us_data
     P = USPAGE[lang]
     og = og_meta(P["title"])
@@ -1074,15 +1316,26 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
         flip_txt = f"{spx_res['flip']:,.0f}" if spx_res["flip"] else "-"
         gex_bn = spx_res["total_gex"] / 1e9
         spx_src = f"{P['prefix']}{spx_chart}?v={ver}"
+        share_kpi = ""
+        if share:
+            exp_lbl = f"{share['expiry'].month}/{share['expiry'].day}"
+            share_kpi = (f"<div>{P['kpi_0dte']}<br><b>{share['share']*100:.0f}%</b>"
+                         f" ({exp_lbl})</div>")
         spx_section = f"""
   <h2>{P['sec_spx']}</h2>
   <div class="kpi">
     <div>{P['spx_kpi'][0]}<br><b>{spx_res['spot']:,.0f}</b></div>
     <div>{P['spx_kpi'][1]}<br><b>{gex_bn:+,.1f}</b></div>
     <div>{P['spx_kpi'][2]}<br><b>{flip_txt}</b></div>
+    {share_kpi}
   </div>
   <p>{P['spx_lead']}</p>
   <img src="{spx_src}" alt="SPX OI walls and gamma exposure">"""
+
+    etf_section = ""
+    if etf_chart:
+        etf_section = (f"\n  <h2>{P['sec_etf']}</h2>\n  <p>{P['etf_lead']}</p>\n"
+                       f'  <img src="{P["prefix"]}{etf_chart}?v={ver}" alt="SPY QQQ OI walls">')
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="{lang}">
@@ -1122,6 +1375,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   </div></div></div>
 
   {spx_section}
+
+  {etf_section}
 </main>
 <footer>
   <p>{P['footer_src']}</p>
@@ -1185,7 +1440,8 @@ def render_seo_files() -> None:
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
              "fedwatch.html", "en/fedwatch.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html",
-             "guide-gex.html", "guide-cot.html",
+             "guide-gex.html", "guide-cot.html", "glossary.html",
+             "en/guide-participants.html", "en/guide-nikkei-options.html",
              "about.html", "privacy.html"]
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
@@ -1264,6 +1520,34 @@ def render_static_pages() -> None:
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
             f.write(shell(title, body))
 
+    def shell_en(title, body):
+        og = og_meta(f"{title} | Nikkei 225 Options Data")
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<title>{title} | Nikkei 225 Options Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{SUB_CSS}</style>
+</head>
+<body>
+{body}
+<footer>
+  <p><a href="./">← Back to the dashboard</a></p>
+  <p>This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.</p>
+</footer>
+</body>
+</html>
+"""
+
+    os.makedirs(os.path.join(SITE, "en"), exist_ok=True)
+    for fname, (title, body) in pages.EN_GUIDE_PAGES.items():
+        with open(os.path.join(SITE, "en", fname), "w", encoding="utf-8") as f:
+            f.write(shell_en(title, body))
+
 
 WARNINGS: list[str] = []
 
@@ -1322,18 +1606,63 @@ def main() -> None:
         warn(f"participant history failed: {e}")
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
+    # --- 日経VI・SQカレンダー・ミニオプション・海外投資家動向 ---
+    base_extras = {}
+    vi_df = None
+    try:
+        vi_df = jpx.fetch_nikkei_vi()
+        base_extras["vi_last"] = float(vi_df["Close"].iloc[-1])
+        if len(vi_df) > 1:
+            base_extras["vi_delta"] = float(vi_df["Close"].iloc[-1] - vi_df["Close"].iloc[-2])
+        print(f"nikkei VI: {base_extras['vi_last']:.2f}")
+    except Exception as e:
+        warn(f"nikkei VI failed: {e}")
+    try:
+        base_extras["sq"] = next_sq(datetime.now(JST))
+        print(f"next SQ: {base_extras['sq']['date']} ({base_extras['sq']['days']}d)")
+    except Exception as e:
+        warn(f"SQ calc failed: {e}")
+    mini_df = None
+    try:
+        mini_df = jpx.fetch_mini_oi(files["open_interest"])
+        print(f"mini OI rows: {len(mini_df)}")
+    except Exception as e:
+        warn(f"mini OI failed: {e}")
+    flows = None
+    try:
+        fl_path = os.path.join(DATA, "investor_flows.csv")
+        fl_cache = pd.read_csv(fl_path, dtype={"week": str}) if os.path.exists(fl_path) else None
+        flows = jpx.fetch_investor_flows(fl_cache)
+        flows.to_csv(fl_path, index=False)
+    except Exception as e:
+        warn(f"investor flows failed: {e}")
+
     for lang, market_chart in (("ja", market_ja), ("en", market_en)):
+        extras = dict(base_extras)
         charts = {
             "oi": chart_oi_distribution(oi, expiry, spot, lang),
             "pcr": chart_pcr(hist, lang),
             "market": market_chart,
             "participants": part_charts.get(lang),
         }
+        if vi_df is not None:
+            charts["vi"] = chart_vi(vi_df, lang)
+        if mini_df is not None:
+            mini_res = chart_mini_oi(mini_df, spot, lang)
+            if mini_res:
+                charts["mini"], extras["mini_label"] = mini_res
+        if flows is not None and len(flows):
+            charts["investor"] = chart_investor(flows, lang)
+            last = flows.iloc[-1]
+            net_tn = last["net"] / 1e12
+            extras["flows_latest"] = (
+                f"直近({last['label']}): {net_tn:+.2f}兆円" if lang == "ja"
+                else f"Latest ({last['label']}): {net_tn:+.2f} tn yen")
         tables = {
             "oi": oi_tables_html(oi, center, lang),
             "weekly": weekly_tables_html(weekly, lang) if weekly else None,
         }
-        render_index(date, pcr, charts, tables, lang)
+        render_index(date, pcr, charts, tables, lang, extras)
     render_static_pages()
     render_seo_files()
 
@@ -1349,8 +1678,29 @@ def main() -> None:
 
         # SPX建玉の壁+GEX(失敗してもCOT/PCRセクションは出す)
         spx_res = None
+        spx_share = None
+        etf_chains = {}
+        usdjpy = None
         try:
-            spx_res = us_data.spx_walls_and_gex(us_data.fetch_spx_chain())
+            import fred
+            usdjpy = fred.fetch_series("DEXJPUS")
+        except Exception as e:
+            print(f"WARN: USDJPY fetch failed: {e}")
+        for sym in ("SPY", "QQQ"):
+            try:
+                etf_chains[sym] = us_data.fetch_chain(sym)
+                print(f"{sym}: spot {etf_chains[sym]['spot']:,.0f}, "
+                      f"rows {len(etf_chains[sym]['chain'])}")
+            except Exception as e:
+                warn(f"{sym} chain failed: {e}")
+        try:
+            spx_chain = us_data.fetch_spx_chain()
+            try:
+                spx_share = us_data.nearest_expiry_share(spx_chain)
+                print(f"SPX nearest-expiry share: {spx_share['share']*100:.0f}%")
+            except Exception as e:
+                print(f"WARN: 0DTE share failed: {e}")
+            spx_res = us_data.spx_walls_and_gex(spx_chain)
             print(f"SPX: spot {spx_res['spot']:,.0f}, GEX {spx_res['total_gex']/1e9:+,.1f}bn, "
                   f"flip {spx_res['flip']}")
             hist_path = os.path.join(DATA, "spx_gex_history.csv")
@@ -1368,7 +1718,9 @@ def main() -> None:
 
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
-            render_us(cot, pcr_us, lang, chart_cot(cot, lang), spx_res, spx_chart)
+            etf_chart = chart_etf_walls(etf_chains, lang) if etf_chains else None
+            render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy), spx_res, spx_chart,
+                      etf_chart, spx_share)
 
         # 米国データ版のX投稿下書き(site/post_us.txt)
         lines = [f"【米国市場データ {int(pcr_us['date'][5:7])}/{int(pcr_us['date'][8:])}】", ""]
@@ -1408,7 +1760,8 @@ def main() -> None:
             f.write(f"sources: {src_counts}\n")
         print(f"fred sources: {src_counts}")
         for lang in ("ja", "en"):
-            render_risk(risk, lang, chart_risk(risk["series"], lang))
+            render_risk(risk, lang, chart_risk(risk["series"], lang),
+                        chart_rates(risk["series"], lang))
     except Exception as e:
         warn(f"risk monitor failed: {e!r}")
 

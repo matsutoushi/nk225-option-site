@@ -27,10 +27,20 @@ COT_MARKETS = [
      "ds": "gpe5-46if", "code": "240743", "cat": "lev"},
     {"key": "jpy", "ja": "日本円先物", "en": "Japanese Yen",
      "ds": "gpe5-46if", "code": "097741", "cat": "lev"},
+    {"key": "eur", "ja": "ユーロ先物", "en": "Euro FX",
+     "ds": "gpe5-46if", "code": "099741", "cat": "lev"},
+    {"key": "gbp", "ja": "ポンド先物", "en": "British Pound",
+     "ds": "gpe5-46if", "code": "096742", "cat": "lev"},
     {"key": "gold", "ja": "金先物", "en": "Gold",
      "ds": "72hh-3qpy", "code": "088691", "cat": "mm"},
+    {"key": "silver", "ja": "銀先物", "en": "Silver",
+     "ds": "72hh-3qpy", "code": "084691", "cat": "mm"},
+    {"key": "copper", "ja": "銅先物", "en": "Copper",
+     "ds": "72hh-3qpy", "code": "085692", "cat": "mm"},
     {"key": "wti", "ja": "WTI原油先物", "en": "WTI Crude Oil",
      "ds": "72hh-3qpy", "code": "067411", "cat": "mm"},
+    {"key": "natgas", "ja": "天然ガス先物", "en": "Natural Gas",
+     "ds": "72hh-3qpy", "code": "023651", "cat": "mm"},
 ]
 
 _FIELDS = {
@@ -47,39 +57,46 @@ def fetch_cot(weeks: int = 56) -> dict:
     out = {}
     latest = None
     for m in COT_MARKETS:
-        long_f, short_f = _FIELDS[m["cat"]]
-        r = requests.get(f"{COT_BASE}/{m['ds']}.json", params={
-            "$select": f"report_date_as_yyyy_mm_dd, {long_f}, {short_f}",
-            "$where": f"cftc_contract_market_code='{m['code']}'",
-            "$order": "report_date_as_yyyy_mm_dd DESC",
-            "$limit": weeks,
-        }, headers=UA, timeout=60)
-        r.raise_for_status()
-        rows = r.json()
-        if not rows:
-            raise RuntimeError(f"no COT rows for {m['key']}")
-        df = pd.DataFrame(rows)
-        df["date"] = pd.to_datetime(df["report_date_as_yyyy_mm_dd"]).dt.date
-        df["long"] = df[long_f].astype(float).astype(int)
-        df["short"] = df[short_f].astype(float).astype(int)
-        df["net"] = df["long"] - df["short"]
-        df = df[["date", "long", "short", "net"]].sort_values("date").reset_index(drop=True)
-        out[m["key"]] = df
-        d = df["date"].iloc[-1]
-        latest = max(latest, d) if latest else d
+        try:
+            long_f, short_f = _FIELDS[m["cat"]]
+            r = requests.get(f"{COT_BASE}/{m['ds']}.json", params={
+                "$select": f"report_date_as_yyyy_mm_dd, {long_f}, {short_f}",
+                "$where": f"cftc_contract_market_code='{m['code']}'",
+                "$order": "report_date_as_yyyy_mm_dd DESC",
+                "$limit": weeks,
+            }, headers=UA, timeout=60)
+            r.raise_for_status()
+            rows = r.json()
+            if not rows:
+                raise RuntimeError("no rows")
+            df = pd.DataFrame(rows)
+            df["date"] = pd.to_datetime(df["report_date_as_yyyy_mm_dd"]).dt.date
+            df["long"] = df[long_f].astype(float).astype(int)
+            df["short"] = df[short_f].astype(float).astype(int)
+            df["net"] = df["long"] - df["short"]
+            df = df[["date", "long", "short", "net"]].sort_values("date").reset_index(drop=True)
+            out[m["key"]] = df
+            d = df["date"].iloc[-1]
+            latest = max(latest, d) if latest else d
+        except Exception as e:
+            print(f"WARN: COT fetch failed for {m['key']}: {e}")
+    if not out:
+        raise RuntimeError("all COT markets failed")
     return {"date": str(latest), "markets": out}
 
 
-SPX_URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json"
-_OPT_RE = re.compile(r"^(SPXW?)(\d{6})([CP])(\d{8})$")
+CHAIN_URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/{sym}.json"
+_OPT_RE = re.compile(r"^([A-Z]+?)W?(\d{6})([CP])(\d{8})$")
 
 
-def fetch_spx_chain() -> dict:
-    """SPX全オプションチェーン(建玉・ガンマ入り)を取得する。
+def fetch_chain(symbol: str, index: bool = False) -> dict:
+    """CBOE遅延クオートからオプションチェーン(建玉・ガンマ・出来高入り)を取得する。
 
-    Returns: {"spot": float, "chain": DataFrame[expiry, type, strike, oi, gamma]}
+    symbol: "SPX"(index=True), "SPY", "QQQ" など
+    Returns: {"spot": float, "chain": DataFrame[expiry, type, strike, oi, gamma, volume]}
     """
-    r = requests.get(SPX_URL, headers=UA, timeout=90)
+    sym = ("_" + symbol) if index else symbol
+    r = requests.get(CHAIN_URL.format(sym=sym), headers=UA, timeout=90)
     r.raise_for_status()
     data = r.json()["data"]
     spot = float(data["close"])
@@ -89,7 +106,8 @@ def fetch_spx_chain() -> dict:
         if not m:
             continue
         oi = o.get("open_interest") or 0
-        if oi <= 0:
+        vol = o.get("volume") or 0
+        if oi <= 0 and vol <= 0:
             continue
         rows.append({
             "expiry": datetime.strptime(m.group(2), "%y%m%d").date(),
@@ -97,10 +115,29 @@ def fetch_spx_chain() -> dict:
             "strike": int(m.group(4)) / 1000,
             "oi": int(oi),
             "gamma": float(o.get("gamma") or 0),
+            "volume": int(vol),
         })
     if not rows:
-        raise RuntimeError("no SPX option rows parsed")
+        raise RuntimeError(f"no option rows parsed for {symbol}")
     return {"spot": spot, "chain": pd.DataFrame(rows)}
+
+
+def fetch_spx_chain() -> dict:
+    return fetch_chain("SPX", index=True)
+
+
+def nearest_expiry_share(spx: dict) -> dict:
+    """最短限月(次の満期)の出来高シェア。0DTE的な超短期活動の目安。
+
+    Returns: {"expiry": date, "share": float(0-1), "volume": int, "total": int}
+    """
+    df = spx["chain"]
+    total = int(df["volume"].sum())
+    if total == 0:
+        raise RuntimeError("no volume data")
+    nearest = df["expiry"].min()
+    vol = int(df[df["expiry"] == nearest]["volume"].sum())
+    return {"expiry": nearest, "share": vol / total, "volume": vol, "total": total}
 
 
 def spx_walls_and_gex(spx: dict, days: int = 45, band: float = 0.10) -> dict:
