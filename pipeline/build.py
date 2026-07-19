@@ -468,6 +468,10 @@ CSS_MAIN = """
                      border-top: 1px solid var(--line); margin-top: 6px; }
   .menu-panel a.lang { border-top: 1px solid var(--line); margin-top: 6px; border-radius: 0 0 6px 6px; }
   .sitemap { line-height: 2; }
+  a.dl { display: inline-block; font-size: 0.78em; color: var(--ink2); text-decoration: none;
+         border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; margin-left: 8px;
+         vertical-align: middle; }
+  a.dl:hover { color: var(--aqua); border-color: var(--aqua); }
   @media (max-width: 600px) {
     nav.pills { display: none; }
     .menu { display: block; }
@@ -616,7 +620,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
     flows_section = ""
     if charts.get("investor"):
-        flows_section = (f'<h2 id="flows">{P["sec_flows"]}</h2>\n'
+        flows_section = (f'<h2 id="flows">{P["sec_flows"]}'
+                         f'{dl_link("investor_flows.csv", lang, P["prefix"])}</h2>\n'
                          f'  <p>{P["flows_lead"].format(latest=extras.get("flows_latest", ""))}</p>\n'
                          f'  <img src="{charts["investor"]}" alt="Foreign investor flows">')
 
@@ -627,7 +632,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'alt="Net OI by participant">\n  '
             if charts.get("participants") else ""
         )
-        weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
+        weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}'
+                          f'{dl_link("participants_history.csv", lang, P["prefix"])}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
     nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
     nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
@@ -662,7 +668,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {market_section}
 
-  <h2 id="oitable">{P['sec_oitable']}</h2>
+  <h2 id="oitable">{P['sec_oitable']}{dl_link("oi_latest.csv", lang, P['prefix'])}</h2>
   {tables['oi']}
 
   <h2 id="oi">{P['sec_oi']}</h2>
@@ -675,7 +681,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {flows_section}
 
-  <h2 id="pcr">{P['sec_pcr']}</h2>
+  <h2 id="pcr">{P['sec_pcr']}{dl_link("pcr_history.csv", lang, P['prefix'])}</h2>
   <p>{P['pcr_lead']}</p>
   <img src="{charts['pcr']}" alt="Put/Call ratio trend">
 
@@ -1385,7 +1391,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
             share_kpi = (f"<div>{P['kpi_0dte']}<br><b>{share['share']*100:.0f}%</b>"
                          f" ({exp_lbl})</div>")
         spx_section = f"""
-  <h2>{P['sec_spx']}</h2>
+  <h2>{P['sec_spx']}{dl_link("spx_gex_history.csv", lang, P['prefix'])}</h2>
   <div class="kpi">
     <div>{P['spx_kpi'][0]}<br><b>{spx_res['spot']:,.0f}</b></div>
     <div>{P['spx_kpi'][1]}<br><b>{gex_bn:+,.1f}</b></div>
@@ -1424,7 +1430,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
     <div>{P['kpi'][2]}<br><b>{pcr_us['spx']:.2f}</b></div>
   </div>
 
-  <h2>{P['sec_cot']}</h2>
+  <h2>{P['sec_cot']}{dl_link("cot_history.csv", lang, P['prefix'])}</h2>
   <p>{P['cot_lead']}</p>
   <img src="{chart_src}" alt="COT net positions">
   <div class="tbl-pair"><div class="tbl-box"><div class="tbl-scroll">
@@ -1513,9 +1519,11 @@ def og_meta(title: str, desc: str = "") -> str:
 NAV_LINKS = {
     "ja": [("./", "日経ダッシュボード"), ("us.html", "米国市場"),
            ("risk.html", "リスクモニター"), ("fedwatch.html", "要人発言"),
+           ("tools.html", "データ分析ツール"),
            ("guide-start.html", "始め方ガイド"), ("glossary.html", "用語集")],
     "en": [("./", "Dashboard"), ("us.html", "US Markets"),
            ("risk.html", "Risk Monitor"), ("fedwatch.html", "Fed Watch"),
+           ("tools.html", "Data Explorer"),
            ("guide-nikkei-options.html", "Nikkei Guide"),
            ("guide-participants.html", "Positioning Guide")],
 }
@@ -1553,6 +1561,62 @@ def footer_sitemap(lang: str) -> str:
     return f'<p class="sitemap">{links}</p>'
 
 
+# 公開するデータファイル {出力名: (元ファイル, 日本語説明, 英語説明)}
+PUBLIC_DATA = {
+    "investor_flows.csv": ("investor_flows.csv",
+                           "海外投資家 週次ネット売買(2021年〜、単位:千円)",
+                           "Foreign investor weekly net buying (since 2021, thousand yen)"),
+    "participants_history.csv": ("participants_history.csv",
+                                 "先物 取引参加者別ネット建玉(週次・52週)",
+                                 "Futures net OI by trading participant (weekly, 52w)"),
+    "cot_history.csv": ("cot_history.csv",
+                        "CFTC COT 投機筋ネットポジション(週次)",
+                        "CFTC COT speculator net positions (weekly)"),
+    "pcr_history.csv": ("pcr_history.csv",
+                        "日経225オプション Put/Callレシオ(日次)",
+                        "Nikkei 225 options put/call ratio (daily)"),
+    "spx_gex_history.csv": ("spx_gex_history.csv",
+                            "SPX ガンマエクスポージャー推定(日次)",
+                            "SPX gamma exposure estimate (daily)"),
+    "risk_latest.csv": ("risk_latest.csv",
+                        "マクロリスク指標 最新値",
+                        "Macro risk indicators (latest)"),
+}
+
+
+def publish_data_files() -> list:
+    """data/ の履歴CSVを site/data/ に公開する。Returns: 公開できたキーの一覧。"""
+    out_dir = os.path.join(SITE, "data")
+    os.makedirs(out_dir, exist_ok=True)
+    published = []
+    for name, (src, _, _) in PUBLIC_DATA.items():
+        src_path = os.path.join(DATA, src)
+        if not os.path.exists(src_path):
+            continue
+        with open(src_path, "rb") as f:
+            content = f.read()
+        with open(os.path.join(out_dir, name), "wb") as f:
+            f.write(content)
+        published.append(name)
+    # 当日の建玉スナップショットも公開
+    latest_oi = sorted(x for x in os.listdir(DATA) if x.startswith("oi_") and x.endswith(".csv"))
+    if latest_oi:
+        with open(os.path.join(DATA, latest_oi[-1]), "rb") as f:
+            content = f.read()
+        with open(os.path.join(out_dir, "oi_latest.csv"), "wb") as f:
+            f.write(content)
+        published.append("oi_latest.csv")
+    print(f"published data files: {len(published)}")
+    return published
+
+
+def dl_link(name: str, lang: str, prefix: str = "") -> str:
+    """CSVダウンロードリンクの小さなHTML片。"""
+    label = "CSVダウンロード" if lang == "ja" else "Download CSV"
+    return (f'<a class="dl" href="{prefix}data/{name}" download>'
+            f'⭳ {label}</a>')
+
+
 def render_favicon() -> None:
     """シンプルなファビコン(ダーク地に3色のバー)を生成する。"""
     from PIL import Image, ImageDraw
@@ -1569,6 +1633,7 @@ def render_seo_files() -> None:
     """sitemap.xml と robots.txt(検索エンジン向け)。"""
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
              "fedwatch.html", "en/fedwatch.html",
+             "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
@@ -1919,6 +1984,25 @@ def main() -> None:
         warn(f"fed watch failed: {e!r}")
 
     render_favicon()
+
+    # データ公開(CSV)とインタラクティブなデータ分析ページ
+    try:
+        publish_data_files()
+    except Exception as e:
+        warn(f"publish data files failed: {e!r}")
+    try:
+        import tools_page
+        import us_data
+        for lang in ("ja", "en"):
+            tools_page.render_tools(
+                SITE, lang, DATA, n225_hist, us_data.COT_MARKETS,
+                CSS_MAIN, GSV_META,
+                og_meta(tools_page.T[lang]["title"]),
+                site_nav(lang, tools_page.T[lang]["lang"]),
+                footer_sitemap(lang), PAGE[lang]["footer_disclaimer"])
+        print("tools page generated")
+    except Exception as e:
+        warn(f"tools page failed: {e!r}")
 
     # 部分失敗の診断用(data/はCIがコミットするので後から確認できる)
     with open(os.path.join(DATA, "build_warnings.txt"), "w", encoding="utf-8") as f:
