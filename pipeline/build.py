@@ -532,8 +532,8 @@ PAGE = {
         "kpi_sq": "次回SQ",
         "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
         "mini_lead": "日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。",
-        "sec_flows": "海外投資家の売買動向(月次)",
-        "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より、海外投資家の月次ネット売買と累積。プラス=買い越し、マイナス=売り越し。{latest}",
+        "sec_flows": "海外投資家の売買動向(週次)",
+        "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より。上段=累積ネット売買(日経平均を重ね描き)、下段=直近1年の週次。プラス=買い越し、マイナス=売り越し。{latest}",
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)',
@@ -561,8 +561,8 @@ PAGE = {
         "kpi_sq": "Next SQ",
         "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
         "mini_lead": "Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines.",
-        "sec_flows": "Foreign Investor Flows (Monthly)",
-        "flows_lead": "Monthly net buying by foreign investors in TSE Prime cash equities (and cumulative), from JPX trading-by-investor-type data. Positive = net buying. {latest}",
+        "sec_flows": "Foreign Investor Flows (Weekly)",
+        "flows_lead": "Weekly net buying by foreign investors in TSE Prime cash equities, shown as a cumulative line (top) and weekly bars (bottom), from JPX trading-by-investor-type data. Positive = net buying. {latest}",
         "sec_oitable": "Options Open Interest by Expiry",
         "sec_oi": "Open Interest Distribution by Strike",
         "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
@@ -1158,39 +1158,56 @@ def chart_mini_oi(mini: pd.DataFrame, spot: float | None, lang: str) -> tuple[st
     return f"img/{name}", exp_label
 
 
-def chart_investor(flows: pd.DataFrame, lang: str) -> str:
-    """海外投資家の月次ネット売買: 月次(棒)+累積(線・右軸)。単位: 千円→兆円は/1e9。"""
+def chart_investor(flows: pd.DataFrame, lang: str, n225: pd.DataFrame | None = None) -> str:
+    """海外投資家の週次ネット売買(棒)と累積(線)。単位: 千円→兆円は/1e9。
+
+    上段: 累積ネット(線)+日経平均(灰線)。下段: 直近1年の週次ネット(棒)。
+    """
     suffix = L[lang]["suffix"]
-    ms = flows["month"].astype(str).str.zfill(4)
-    labels = [f"{m[:2]}/{m[2:]}" for m in ms]  # YY/MM
-    xi = list(range(len(labels)))
-    vals = (flows["net_kyen"] / 1e9).tolist()  # 兆円
-    cum = pd.Series(vals).cumsum().tolist()
-    fig, ax = plt.subplots(figsize=(10, 4.2))
-    colors = [ACCENT if v >= 0 else UP for v in vals]
-    ax.bar(xi, vals, width=0.6, color=colors,
-           label="月次ネット" if lang == "ja" else "Monthly net")
-    for xx, v in zip(xi, vals):
-        ax.text(xx, v + (0.02 if v >= 0 else -0.02), f"{v:+.2f}",
-                ha="center", va="bottom" if v >= 0 else "top", fontsize=8, color=INK2)
-    ax2 = ax.twinx()
-    ax2.plot(xi, cum, color=DOWN, linewidth=2, marker="o", markersize=5,
-             label="累積" if lang == "ja" else "Cumulative")
-    ax2.set_ylabel("累積(兆円)" if lang == "ja" else "Cumulative (tn yen)",
-                   color=DOWN, fontsize=9)
-    ax2.tick_params(axis="y", labelcolor=DOWN)
-    ax.axhline(0, color=INK2, linewidth=0.8)
-    ax.set_xticks(xi)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel("月次ネット(兆円)" if lang == "ja" else "Monthly net (tn yen)", fontsize=9)
-    ax.set_title("海外投資家の月次ネット売買と累積(東証プライム・現物)"
-                 if lang == "ja" else
-                 "Foreign Investors: Monthly Net Buying & Cumulative (TSE Prime cash)",
-                 fontsize=10)
-    l1, la1 = ax.get_legend_handles_labels()
-    l2, la2 = ax2.get_legend_handles_labels()
-    ax.legend(l1 + l2, la1 + la2, loc="upper left", fontsize=8)
-    ax.grid(alpha=0.2)
+    df = flows.copy()
+    df["dt"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["dt"]).sort_values("dt")
+    df["tn"] = df["net_kyen"] / 1e9  # 兆円
+    df["cum"] = df["tn"].cumsum()
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6.4),
+                                   gridspec_kw={"height_ratios": [1.5, 1]})
+
+    # 上段: 累積 + 日経平均
+    ax1.plot(df["dt"], df["cum"], color=ACCENT, linewidth=2)
+    ax1.fill_between(df["dt"], df["cum"], 0, color=ACCENT, alpha=0.12)
+    ax1.axhline(0, color=INK2, linewidth=0.8)
+    ax1.set_ylabel("累積(兆円)" if lang == "ja" else "Cumulative (tn yen)", fontsize=9)
+    if n225 is not None and len(n225):
+        n = n225[(n225.index >= df["dt"].min()) & (n225.index <= df["dt"].max())]
+        if len(n):
+            axp = ax1.twinx()
+            axp.plot(n.index, n["Close"], color="#8a97ad", alpha=0.6, linewidth=1)
+            axp.set_ylabel("日経平均" if lang == "ja" else "Nikkei 225",
+                           color="#8a97ad", fontsize=8)
+            axp.tick_params(axis="y", labelcolor="#8a97ad", labelsize=7)
+    ax1.set_title(("海外投資家の累積ネット売買(東証プライム・現物、灰線=日経平均)"
+                   if lang == "ja" else
+                   "Foreign Investors: Cumulative Net Buying (TSE Prime cash; gray = Nikkei 225)"),
+                  fontsize=10)
+    ax1.grid(alpha=0.2)
+
+    # 下段: 直近1年の週次
+    recent = df[df["dt"] >= df["dt"].max() - pd.Timedelta(days=365)]
+    colors = [ACCENT if v >= 0 else UP for v in recent["tn"]]
+    ax2.bar(recent["dt"], recent["tn"], width=5, color=colors)
+    ax2.axhline(0, color=INK2, linewidth=0.8)
+    ax2.set_ylabel("週次(兆円)" if lang == "ja" else "Weekly (tn yen)", fontsize=9)
+    ax2.set_title(("週次ネット売買(直近1年)" if lang == "ja"
+                   else "Weekly Net Buying (last 12 months)"), fontsize=9)
+    ax2.grid(alpha=0.2)
+
+    # 上下でx軸の期間が異なるため、それぞれにラベルを出す
+    for ax in (ax1, ax2):
+        for lb in ax.get_xticklabels():
+            lb.set_rotation(30)
+            lb.set_ha("right")
+        ax.tick_params(axis="x", labelsize=8)
     fig.tight_layout()
     name = f"investor{suffix}.png"
     fig.savefig(os.path.join(IMG, name), dpi=120)
@@ -1746,7 +1763,10 @@ def main() -> None:
     flows = None
     try:
         fl_path = os.path.join(DATA, "investor_flows.csv")
-        fl_cache = pd.read_csv(fl_path, dtype={"month": str}) if os.path.exists(fl_path) else None
+        fl_cache = (pd.read_csv(fl_path, dtype={"week": str, "date": str})
+                    if os.path.exists(fl_path) else None)
+        if fl_cache is not None and "week" not in fl_cache.columns:
+            fl_cache = None  # 旧・月次形式のキャッシュは破棄
         flows = jpx.fetch_investor_flows(fl_cache)
         flows.to_csv(fl_path, index=False)
     except Exception as e:
@@ -1767,15 +1787,18 @@ def main() -> None:
             if mini_res:
                 charts["mini"], extras["mini_label"] = mini_res
         if flows is not None and len(flows):
-            charts["investor"] = chart_investor(flows, lang)
+            charts["investor"] = chart_investor(flows, lang, n225_hist)
             last = flows.iloc[-1]
-            lm = str(last["month"]).zfill(4)
+            lw = str(last["week"]).zfill(6)
+            first_yy = str(flows.iloc[0]["week"]).zfill(6)[:2]
             net_tn = last["net_kyen"] / 1e9
             cum_tn = flows["net_kyen"].sum() / 1e9
             extras["flows_latest"] = (
-                f"直近(20{lm[:2]}年{int(lm[2:])}月): {net_tn:+.2f}兆円 / 掲載期間の累積: {cum_tn:+.2f}兆円"
+                f"直近週(20{lw[:2]}年{int(lw[2:4])}月第{int(lw[4:])}週): {net_tn:+.2f}兆円 / "
+                f"20{first_yy}年以降の累積: {cum_tn:+.2f}兆円"
                 if lang == "ja" else
-                f"Latest (20{lm[:2]}-{lm[2:]}): {net_tn:+.2f} tn / cumulative: {cum_tn:+.2f} tn yen")
+                f"Latest week (20{lw[:2]}-{lw[2:4]} W{int(lw[4:])}): {net_tn:+.2f} tn / "
+                f"cumulative since 20{first_yy}: {cum_tn:+.2f} tn yen")
         tables = {
             "oi": oi_tables_html(oi, center, lang),
             "weekly": weekly_tables_html(weekly, lang) if weekly else None,

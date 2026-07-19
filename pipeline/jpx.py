@@ -278,46 +278,93 @@ def _parse_investor_foreign_net(content: bytes) -> float | None:
     return None
 
 
-def _investor_month_files() -> dict:
-    """アーカイブ含め、月次の投資部門別ファイル一覧 {YYMM: path} を返す。"""
-    months = {}
-    for arch in ("index.html", "00-01.html"):
-        url = INVESTOR_URL.rsplit("/", 1)[0] + "/" + arch
+INVESTOR_DIR = "/markets/statistics-equities/investor-type/"
+
+
+def _investor_week_files(years_back: int = 5) -> dict:
+    """週次の投資部門別ファイル一覧 {YYMMW: path} を返す。
+
+    JPXはトップに直近5週、アーカイブ(00-00-archives-NN.html、NN=0が今年)に年別で
+    2016年分まで掲載している。years_back でどこまで遡るかを指定する。
+    """
+    weeks = {}
+    pages = ["index.html"] + [f"00-00-archives-{n:02d}.html" for n in range(years_back + 1)]
+    for p in pages:
         try:
-            r = requests.get(url, headers=UA, timeout=60)
-            r.raise_for_status()
+            r = requests.get(BASE + INVESTOR_DIR + p, headers=UA, timeout=60)
+            if r.status_code != 200:
+                continue
         except Exception:
             continue
-        for path, ym in re.findall(r'href="([^"]+stock_val_1_m(\d+)\.xls)"', r.text):
-            months[ym] = path
-    return months
+        for path, code in re.findall(r'href="([^"]+stock_val_1_(\d{6})\.xls)"', r.text):
+            weeks[code] = path
+    return weeks
 
 
-def fetch_investor_flows(cache: pd.DataFrame | None) -> pd.DataFrame:
-    """投資部門別売買状況(東証プライム・金額)から海外投資家の月次ネット売買を取得する。
+def _parse_investor_weekly(content: bytes) -> tuple[float, str] | None:
+    """週次xlsから海外投資家のネット売買(千円)と週末日付を返す。
 
-    JPXは月次を約6ヶ月分オンライン掲載。未取得分だけ取り込みキャッシュに蓄積する。
-    Returns: DataFrame[month(str YYMM), net_kyen(千円)]
+    週次ファイルは2週分を並記し、ファイル名の週(見出し週)は右ブロック(col8)。
+    行10のcol7に「MM/DD～MM/DD」の期間、行3に「YYYY年M月第N週」がある。
     """
-    months = _investor_month_files()
-    have = set(cache["month"].astype(str)) if cache is not None and len(cache) else set()
-    frames = [cache] if cache is not None and len(cache) else []
-    fetched = 0
-    for ym, path in months.items():
-        if ym in have:
+    raw = pd.read_excel(io.BytesIO(content), header=None)
+    net = None
+    for i in raw.index:
+        if str(raw.iloc[i, 0]).strip() == "海外投資家":
+            try:
+                sales = float(str(raw.iloc[i, 8]).replace(",", ""))
+                purchases = float(str(raw.iloc[i + 1, 8]).replace(",", ""))
+                net = purchases - sales
+            except (ValueError, TypeError, KeyError):
+                return None
+            break
+    if net is None:
+        return None
+
+    # 週末日付(YYYY-MM-DD)を組み立てる
+    year = None
+    for i in range(min(6, len(raw))):
+        m = re.search(r"(\d{4})年", str(raw.iloc[i, 0]))
+        if m:
+            year = int(m.group(1))
+            break
+    date = ""
+    if year:
+        for i in range(min(14, len(raw))):
+            m = re.search(r"(\d{2})/(\d{2})[~～](\d{2})/(\d{2})", str(raw.iloc[i, 7]))
+            if m:
+                mm, dd = int(m.group(3)), int(m.group(4))
+                date = f"{year:04d}-{mm:02d}-{dd:02d}"
+                break
+    return net, date
+
+
+def fetch_investor_flows(cache: pd.DataFrame | None, years_back: int = 5) -> pd.DataFrame:
+    """海外投資家の週次ネット売買(東証プライム・現物金額)を取得・蓄積する。
+
+    Returns: DataFrame[week(str YYMMW), date(str YYYY-MM-DD), net_kyen(千円)]
+    """
+    files = _investor_week_files(years_back)
+    have = set(cache["week"].astype(str)) if cache is not None and len(cache) else set()
+    rows = []
+    for code, path in sorted(files.items()):
+        if code in have:
             continue
-        net = _parse_investor_foreign_net(_download(BASE + path))
-        if net is None:
-            print(f"WARN: investor xls parse failed for {ym}")
+        parsed = _parse_investor_weekly(_download(BASE + path))
+        if parsed is None:
+            print(f"WARN: investor weekly parse failed for {code}")
             continue
-        frames.append(pd.DataFrame([{"month": ym, "net_kyen": net}]))
-        fetched += 1
-    print(f"investor flows: fetched {fetched} new monthly files")
+        net, date = parsed
+        rows.append({"week": code, "date": date, "net_kyen": net})
+    print(f"investor flows: fetched {len(rows)} new weekly files")
+    frames = ([cache] if cache is not None and len(cache) else []) + \
+             ([pd.DataFrame(rows)] if rows else [])
     if not frames:
         raise RuntimeError("no investor flow data")
     hist = pd.concat(frames, ignore_index=True)
-    hist = hist[hist["month"].astype(str).str.fullmatch(r"\d{4}")]
-    return hist.drop_duplicates("month").sort_values("month").reset_index(drop=True)
+    hist["week"] = hist["week"].astype(str).str.zfill(6)
+    hist = hist[hist["week"].str.fullmatch(r"\d{6}")]
+    return hist.drop_duplicates("week").sort_values("week").reset_index(drop=True)
 
 
 def fetch_n225_official() -> pd.DataFrame:
