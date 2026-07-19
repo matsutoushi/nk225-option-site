@@ -451,6 +451,27 @@ CSS_MAIN = """
   nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
            padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
   nav a:hover { color: var(--ink); border-color: var(--aqua); }
+  .tagline { color: var(--ink2); font-size: 0.82em; margin: 4px 0 0; }
+  .menu { display: none; position: relative; margin-top: 6px; }
+  .menu summary { list-style: none; cursor: pointer; color: var(--ink2); font-size: 0.85em;
+                  border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px;
+                  display: inline-block; user-select: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu[open] summary { color: var(--ink); border-color: var(--aqua); }
+  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel2);
+                border: 1px solid var(--line); border-radius: 10px; padding: 8px; z-index: 30;
+                min-width: 230px; box-shadow: 0 10px 28px rgba(0,0,0,0.55); }
+  .menu-panel a { display: block; padding: 9px 12px; color: var(--ink); text-decoration: none;
+                  border-radius: 6px; font-size: 0.95em; }
+  .menu-panel a:hover { background: var(--panel); }
+  .menu-panel .sub { color: var(--ink2); font-size: 0.75em; padding: 8px 12px 2px;
+                     border-top: 1px solid var(--line); margin-top: 6px; }
+  .menu-panel a.lang { border-top: 1px solid var(--line); margin-top: 6px; border-radius: 0 0 6px 6px; }
+  .sitemap { line-height: 2; }
+  @media (max-width: 600px) {
+    nav.pills { display: none; }
+    .menu { display: block; }
+  }
   .kpi { display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
               padding: 10px 20px; flex: 1 1 140px; font-size: 0.82em; color: var(--ink2); }
@@ -506,6 +527,7 @@ PAGE = {
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
+        "tagline": "日経225オプションの建玉・米国市場のポジション・マクロリスク指標を、JPX・CFTC・CBOE・FREDなどの公式データから毎営業日自動更新するデータサイトです。",
         "kpi_vi": "日経VI(前日差)",
         "kpi_sq": "次回SQ",
         "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
@@ -534,6 +556,7 @@ PAGE = {
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
+        "tagline": "Nikkei 225 options open interest, US positioning and macro risk gauges — auto-updated every business day from official JPX, CFTC, CBOE and FRED data.",
         "kpi_vi": "Nikkei VI (DoD)",
         "kpi_sq": "Next SQ",
         "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
@@ -607,8 +630,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
     nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
-    nav = "".join(f'<a href="{i}">{label}</a>' for i, label in zip(nav_ids, P["nav"]))
-    nav += P["guide_link"] + P["lang_switch"]
+    nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
     html_doc = f"""<!DOCTYPE html>
 <html lang="{P['html_lang']}">
 <head>
@@ -627,7 +649,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(d=d, now=now)}</p>
-  <nav>{nav}</nav>
+  <p class="tagline">{P['tagline']}</p>
+  {nav}
 </header>
 <main>
   <div class="kpi">
@@ -659,7 +682,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
 </main>
 <footer>
-  <p>{P['footer_links']}</p>
+  {footer_sitemap(lang)}
   <p>{P['footer_src']}</p>
   <p>{P['footer_disclaimer']}</p>
 </footer>
@@ -854,7 +877,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(now=now)}</p>
-  <nav>{P['back']}{P['lang_switch']}</nav>
+  {site_nav(lang, P['lang_switch'])}
 </header>
 <main>
   <p>{P['lead']}</p>
@@ -869,6 +892,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
   {chart_html}
 </main>
 <footer>
+  {footer_sitemap(lang)}
   <p>{P['footer_src']}</p>
   <p>{PAGE[lang]['footer_disclaimer']}</p>
 </footer>
@@ -942,13 +966,14 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(now=now)}</p>
-  <nav>{P['back']}{P['lang_switch']}</nav>
+  {site_nav(lang, P['lang_switch'])}
 </header>
 <main>
   <p>{P['lead']}</p>
   {''.join(sections)}
 </main>
 <footer>
+  {footer_sitemap(lang)}
   <p>{P['footer_src']}</p>
   <p>{PAGE[lang]['footer_disclaimer']}</p>
 </footer>
@@ -1134,17 +1159,23 @@ def chart_mini_oi(mini: pd.DataFrame, spot: float | None, lang: str) -> tuple[st
 
 
 def chart_investor(flows: pd.DataFrame, lang: str) -> str:
-    """海外投資家の週次ネット売買(東証プライム・金額)。"""
+    """海外投資家のネット売買: 週次(棒)+累積(線)。"""
     suffix = L[lang]["suffix"]
     x = pd.to_datetime(flows["week"], format="%y%m%d")
     vals = flows["net"] / 1e12  # 兆円
-    fig, ax = plt.subplots(figsize=(10, 3.6))
+    cum = vals.cumsum()
+    fig, ax = plt.subplots(figsize=(10, 4))
     colors = [ACCENT if v >= 0 else UP for v in vals]
-    ax.bar(x, vals, width=4.5, color=colors)
+    ax.bar(x, vals, width=4.5, color=colors, alpha=0.6,
+           label="週次" if lang == "ja" else "Weekly")
+    ax.plot(x, cum, color=DOWN, linewidth=2, marker="o", markersize=4,
+            label="累積" if lang == "ja" else "Cumulative")
     ax.axhline(0, color=INK2, linewidth=0.8)
-    ax.set_title("海外投資家の週次ネット売買(東証プライム・現物、兆円)" if lang == "ja"
-                 else "Foreign Investors Weekly Net Buying (TSE Prime cash equities, tn yen)",
+    ax.set_title("海外投資家のネット売買: 週次(棒)と累積(線)(東証プライム・現物、兆円)"
+                 if lang == "ja" else
+                 "Foreign Investors Net Buying: Weekly (bars) & Cumulative (line) — TSE Prime, tn yen",
                  fontsize=10)
+    ax.legend(loc="upper left", fontsize=8)
     ax.grid(alpha=0.25)
     fig.autofmt_xdate()
     fig.tight_layout()
@@ -1354,7 +1385,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(cot_date=cot['date'], pcr_date=pcr_us['date'], now=now)}</p>
-  <nav>{P['back']}{P['lang_switch']}</nav>
+  {site_nav(lang, P['lang_switch'])}
 </header>
 <main>
   <div class="kpi">
@@ -1381,6 +1412,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   {etf_section}
 </main>
 <footer>
+  {footer_sitemap(lang)}
   <p>{P['footer_src']}</p>
   <p>{PAGE[lang]['footer_disclaimer']}</p>
 </footer>
@@ -1394,8 +1426,30 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 
 
 SUB_CSS = """
-  :root { --bg: #0d1117; --panel: #151b26; --ink: #e8eef7; --ink2: #9aa7ba;
+  :root { --bg: #0d1117; --panel: #151b26; --panel2: #1a2232; --ink: #e8eef7; --ink2: #9aa7ba;
           --line: #2a3247; --aqua: #199e70; }
+  nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
+          padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
+  nav a:hover { color: var(--ink); border-color: var(--aqua); }
+  .site-header { padding-top: 14px; }
+  .menu { display: none; position: relative; margin-top: 6px; }
+  .menu summary { list-style: none; cursor: pointer; color: var(--ink2); font-size: 0.85em;
+                  border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px;
+                  display: inline-block; user-select: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu[open] summary { color: var(--ink); border-color: var(--aqua); }
+  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel2);
+                border: 1px solid var(--line); border-radius: 10px; padding: 8px; z-index: 30;
+                min-width: 230px; box-shadow: 0 10px 28px rgba(0,0,0,0.55); }
+  .menu-panel a { display: block; padding: 9px 12px; color: var(--ink); text-decoration: none;
+                  border-radius: 6px; font-size: 0.95em; border: none; margin: 0; }
+  .menu-panel a:hover { background: var(--panel); }
+  .menu-panel .sub { color: var(--ink2); font-size: 0.75em; padding: 8px 12px 2px;
+                     border-top: 1px solid var(--line); margin-top: 6px; }
+  @media (max-width: 600px) {
+    nav.pills { display: none; }
+    .menu { display: block; }
+  }
   * { box-sizing: border-box; }
   body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
          max-width: 820px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.9; }
@@ -1423,6 +1477,50 @@ def og_meta(title: str, desc: str = "") -> str:
             f'<meta property="og:type" content="website">\n'
             f'<meta name="twitter:card" content="summary_large_image">\n'
             f'<link rel="icon" type="image/png" href="{SITE_URL}favicon.png">')
+
+
+# 全ページ共通のナビゲーションリンク(各言語のページからの相対パス)
+NAV_LINKS = {
+    "ja": [("./", "日経ダッシュボード"), ("us.html", "米国市場"),
+           ("risk.html", "リスクモニター"), ("fedwatch.html", "要人発言"),
+           ("guide-start.html", "始め方ガイド"), ("glossary.html", "用語集")],
+    "en": [("./", "Dashboard"), ("us.html", "US Markets"),
+           ("risk.html", "Risk Monitor"), ("fedwatch.html", "Fed Watch"),
+           ("guide-nikkei-options.html", "Nikkei Guide"),
+           ("guide-participants.html", "Positioning Guide")],
+}
+
+
+def site_nav(lang: str, lang_switch: str = "", anchors: list | None = None) -> str:
+    """共通ナビ: PC=ピル型 / スマホ=ハンバーガー(details要素・JS不要)。"""
+    links = NAV_LINKS[lang]
+    pills = "".join(f'<a href="{h}">{t}</a>' for h, t in links) + lang_switch
+    menu_items = "".join(f'<a href="{h}">{t}</a>' for h, t in links)
+    if anchors:
+        label = "このページ内" if lang == "ja" else "On this page"
+        menu_items += f'<div class="sub">{label}</div>'
+        menu_items += "".join(f'<a href="{h}">{t}</a>' for h, t in anchors)
+    menu_items += lang_switch.replace("<a ", '<a class="lang" ')
+    menu_label = "☰ メニュー" if lang == "ja" else "☰ Menu"
+    return (f'<nav class="pills">{pills}</nav>'
+            f'<details class="menu"><summary>{menu_label}</summary>'
+            f'<div class="menu-panel">{menu_items}</div></details>')
+
+
+def footer_sitemap(lang: str) -> str:
+    """フッターのサイトマップ(全コンテンツへの回遊リンク)。"""
+    if lang == "ja":
+        items = NAV_LINKS["ja"] + [
+            ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
+            ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
+            ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
+            ("en/", "English")]
+    else:
+        items = NAV_LINKS["en"] + [
+            ("../about.html", "About"), ("../privacy.html", "Privacy"),
+            ("../", "日本語")]
+    links = " ｜ ".join(f'<a href="{h}" style="color:#3987e5">{t}</a>' for h, t in items)
+    return f'<p class="sitemap">{links}</p>'
 
 
 def render_favicon() -> None:
@@ -1472,9 +1570,10 @@ def render_static_pages() -> None:
 <style>{SUB_CSS}</style>
 </head>
 <body>
+<header class="site-header">{site_nav("ja")}</header>
 {body}
 <footer>
-  <p><a href="./">トップページへ戻る</a></p>
+  {footer_sitemap("ja")}
   <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
 </footer>
 </body>
@@ -1536,9 +1635,10 @@ def render_static_pages() -> None:
 <style>{SUB_CSS}</style>
 </head>
 <body>
+<header class="site-header">{site_nav("en")}</header>
 {body}
 <footer>
-  <p><a href="./">← Back to the dashboard</a></p>
+  {footer_sitemap("en")}
   <p>This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.</p>
 </footer>
 </body>
@@ -1657,9 +1757,11 @@ def main() -> None:
             charts["investor"] = chart_investor(flows, lang)
             last = flows.iloc[-1]
             net_tn = last["net"] / 1e12
+            cum_tn = flows["net"].sum() / 1e12
             extras["flows_latest"] = (
-                f"直近({last['label']}): {net_tn:+.2f}兆円" if lang == "ja"
-                else f"Latest ({last['label']}): {net_tn:+.2f} tn yen")
+                f"直近({last['label']}): {net_tn:+.2f}兆円 / 掲載期間の累積: {cum_tn:+.2f}兆円"
+                if lang == "ja" else
+                f"Latest ({last['label']}): {net_tn:+.2f} tn / cumulative over shown period: {cum_tn:+.2f} tn yen")
         tables = {
             "oi": oi_tables_html(oi, center, lang),
             "weekly": weekly_tables_html(weekly, lang) if weekly else None,
