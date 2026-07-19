@@ -264,48 +264,60 @@ def fetch_mini_oi(url: str) -> pd.DataFrame:
     return pd.DataFrame(rows).groupby(["type", "expiry", "strike"], as_index=False)["oi"].sum()
 
 
-def fetch_investor_flows(cache: pd.DataFrame | None) -> pd.DataFrame:
-    """投資部門別売買状況(東証プライム・金額)から海外投資家の週次ネット売買を取得する。
+def _parse_investor_foreign_net(content: bytes) -> float | None:
+    """投資部門別xlsから海外投資家のネット売買(買い−売り、単位:千円)を返す。"""
+    raw = pd.read_excel(io.BytesIO(content), header=None)
+    for i in raw.index:
+        if str(raw.iloc[i, 0]).strip() == "海外投資家":
+            try:
+                sales = float(str(raw.iloc[i, 4]).replace(",", ""))
+                purchases = float(str(raw.iloc[i + 1, 4]).replace(",", ""))
+                return purchases - sales
+            except (ValueError, TypeError, KeyError):
+                return None
+    return None
 
-    ページに掲載中の週次Excelのうち未取得分を取り込み、履歴を返す。
-    Returns: DataFrame[week(str), label(str), sales(円), purchases(円), net(円)]
+
+def _investor_month_files() -> dict:
+    """アーカイブ含め、月次の投資部門別ファイル一覧 {YYMM: path} を返す。"""
+    months = {}
+    for arch in ("index.html", "00-01.html"):
+        url = INVESTOR_URL.rsplit("/", 1)[0] + "/" + arch
+        try:
+            r = requests.get(url, headers=UA, timeout=60)
+            r.raise_for_status()
+        except Exception:
+            continue
+        for path, ym in re.findall(r'href="([^"]+stock_val_1_m(\d+)\.xls)"', r.text):
+            months[ym] = path
+    return months
+
+
+def fetch_investor_flows(cache: pd.DataFrame | None) -> pd.DataFrame:
+    """投資部門別売買状況(東証プライム・金額)から海外投資家の月次ネット売買を取得する。
+
+    JPXは月次を約6ヶ月分オンライン掲載。未取得分だけ取り込みキャッシュに蓄積する。
+    Returns: DataFrame[month(str YYMM), net_kyen(千円)]
     """
-    r = requests.get(INVESTOR_URL, headers=UA, timeout=60)
-    r.raise_for_status()
-    links = re.findall(r'href="([^"]+stock_val_1_(\d+)\.xls)"', r.text)
-    have = set(cache["week"].astype(str)) if cache is not None and len(cache) else set()
+    months = _investor_month_files()
+    have = set(cache["month"].astype(str)) if cache is not None and len(cache) else set()
     frames = [cache] if cache is not None and len(cache) else []
     fetched = 0
-    for path, ymd in links:
-        if ymd in have:
+    for ym, path in months.items():
+        if ym in have:
             continue
-        raw = pd.read_excel(io.BytesIO(_download(BASE + path)), header=None)
-        label = ""
-        for i in range(min(6, len(raw))):
-            s = str(raw.iloc[i, 0])
-            if "週" in s:
-                label = s.split()[0]
-                break
-        sales = purchases = None
-        for i in raw.index:
-            if str(raw.iloc[i, 0]).strip() == "海外投資家":
-                # 同じ行が「売り」、次の行が「買い」。右ブロック(col8)が表題週の金額
-                sales = float(str(raw.iloc[i, 8]).replace(",", ""))
-                purchases = float(str(raw.iloc[i + 1, 8]).replace(",", ""))
-                break
-        if sales is None or purchases is None:
-            print(f"WARN: investor xls parse failed for {ymd}")
+        net = _parse_investor_foreign_net(_download(BASE + path))
+        if net is None:
+            print(f"WARN: investor xls parse failed for {ym}")
             continue
-        frames.append(pd.DataFrame([{
-            "week": ymd, "label": label,
-            "sales": sales, "purchases": purchases, "net": purchases - sales,
-        }]))
+        frames.append(pd.DataFrame([{"month": ym, "net_kyen": net}]))
         fetched += 1
-    print(f"investor flows: fetched {fetched} new weekly files")
+    print(f"investor flows: fetched {fetched} new monthly files")
     if not frames:
         raise RuntimeError("no investor flow data")
     hist = pd.concat(frames, ignore_index=True)
-    return hist.drop_duplicates("week").sort_values("week").reset_index(drop=True)
+    hist = hist[hist["month"].astype(str).str.fullmatch(r"\d{4}")]
+    return hist.drop_duplicates("month").sort_values("month").reset_index(drop=True)
 
 
 def fetch_n225_official() -> pd.DataFrame:
