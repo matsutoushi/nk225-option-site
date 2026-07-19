@@ -1161,7 +1161,8 @@ def chart_mini_oi(mini: pd.DataFrame, spot: float | None, lang: str) -> tuple[st
 def chart_investor(flows: pd.DataFrame, lang: str) -> str:
     """海外投資家の月次ネット売買: 月次(棒)+累積(線・右軸)。単位: 千円→兆円は/1e9。"""
     suffix = L[lang]["suffix"]
-    labels = [f"{m[:2]}/{m[2:]}" for m in flows["month"]]  # YY/MM
+    ms = flows["month"].astype(str).str.zfill(4)
+    labels = [f"{m[:2]}/{m[2:]}" for m in ms]  # YY/MM
     xi = list(range(len(labels)))
     vals = (flows["net_kyen"] / 1e9).tolist()  # 兆円
     cum = pd.Series(vals).cumsum().tolist()
@@ -1745,7 +1746,7 @@ def main() -> None:
     flows = None
     try:
         fl_path = os.path.join(DATA, "investor_flows.csv")
-        fl_cache = pd.read_csv(fl_path, dtype={"week": str}) if os.path.exists(fl_path) else None
+        fl_cache = pd.read_csv(fl_path, dtype={"month": str}) if os.path.exists(fl_path) else None
         flows = jpx.fetch_investor_flows(fl_cache)
         flows.to_csv(fl_path, index=False)
     except Exception as e:
@@ -1768,13 +1769,13 @@ def main() -> None:
         if flows is not None and len(flows):
             charts["investor"] = chart_investor(flows, lang)
             last = flows.iloc[-1]
+            lm = str(last["month"]).zfill(4)
             net_tn = last["net_kyen"] / 1e9
             cum_tn = flows["net_kyen"].sum() / 1e9
-            mlabel = f"20{last['month'][:2]}年{int(last['month'][2:])}月"
             extras["flows_latest"] = (
-                f"直近({mlabel}): {net_tn:+.2f}兆円 / 掲載期間の累積: {cum_tn:+.2f}兆円"
+                f"直近(20{lm[:2]}年{int(lm[2:])}月): {net_tn:+.2f}兆円 / 掲載期間の累積: {cum_tn:+.2f}兆円"
                 if lang == "ja" else
-                f"Latest (20{last['month'][:2]}-{last['month'][2:]}): {net_tn:+.2f} tn / cumulative: {cum_tn:+.2f} tn yen")
+                f"Latest (20{lm[:2]}-{lm[2:]}): {net_tn:+.2f} tn / cumulative: {cum_tn:+.2f} tn yen")
         tables = {
             "oi": oi_tables_html(oi, center, lang),
             "weekly": weekly_tables_html(weekly, lang) if weekly else None,
