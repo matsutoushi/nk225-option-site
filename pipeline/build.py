@@ -1300,6 +1300,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 
     rows = []
     for m in us_data.COT_MARKETS:
+        if m["key"] not in cot["markets"]:
+            continue
         df = cot["markets"][m["key"]]
         net = int(df["net"].iloc[-1])
         wow = net - int(df["net"].iloc[-2])
@@ -1734,9 +1736,11 @@ def main() -> None:
             lines.append(f"コール最大壁 {cw['strike']:,.0f} / プット最大壁 {pw['strike']:,.0f}")
             lines.append("")
         lines.append(f"CBOE Put/Callレシオ: {pcr_us['total']:.2f}(株式 {pcr_us['equity']:.2f})")
-        es = cot["markets"]["es"]
-        es_net, es_wow = int(es["net"].iloc[-1]), int(es["net"].iloc[-1] - es["net"].iloc[-2])
-        lines.append(f"COT: ES投機筋ネット {es_net:+,}枚(前週比 {es_wow:+,})")
+        if "es" in cot["markets"]:
+            es = cot["markets"]["es"]
+            es_net = int(es["net"].iloc[-1])
+            es_wow = es_net - int(es["net"].iloc[-2])
+            lines.append(f"COT: ES投機筋ネット {es_net:+,}枚(前週比 {es_wow:+,})")
         with open(os.path.join(SITE, "post_us.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
     except Exception as e:
