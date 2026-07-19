@@ -43,7 +43,7 @@ T = {
         "cot": "COT 投機筋ネットポジション(週次)",
         "cot_note": "凡例をクリックすると市場の表示/非表示を切り替えられます(ダブルクリックでその市場だけ表示)。",
         "part": "先物 取引参加者別ネット建玉(週次)",
-        "part_note": "凡例クリックで会社を絞り込めます。プラス=買い越し、マイナス=売り越し。",
+        "part_note": "凡例クリックで会社を絞り込めます(プラス=買い越し、マイナス=売り越し)。「日経平均」をクリックすると右軸に重ねて表示できます。",
         "pcr": "日経225オプション Put/Callレシオ(日次)",
         "pcr_note": "データは日々蓄積されます。",
         "dl": "元データ(CSV)",
@@ -60,7 +60,7 @@ T = {
         "cot": "COT Speculator Net Positions (weekly)",
         "cot_note": "Click legend entries to toggle markets (double-click to isolate one).",
         "part": "Nikkei Futures: Net OI by Trading Participant (weekly)",
-        "part_note": "Click legend entries to filter firms. Positive = net long, negative = net short.",
+        "part_note": "Click legend entries to filter firms (positive = net long, negative = net short). Click \"Nikkei 225\" to overlay the index on the right axis.",
         "pcr": "Nikkei 225 Options Put/Call Ratio (daily)",
         "pcr_note": "This series accumulates daily.",
         "dl": "Source data (CSV)",
@@ -130,7 +130,8 @@ def _cot_fig(cot_hist: pd.DataFrame, markets: list, lang: str):
     return fig
 
 
-def _participants_fig(hist: pd.DataFrame, lang: str):
+def _participants_fig(hist: pd.DataFrame, lang: str, n225: pd.DataFrame | None = None):
+    ja = lang == "ja"
     df = hist[hist["product"] == "日経225先物"].copy()
     df["dt"] = pd.to_datetime(df["date"], format="%Y%m%d", errors="coerce")
     df = df.dropna(subset=["dt"])
@@ -139,16 +140,27 @@ def _participants_fig(hist: pd.DataFrame, lang: str):
              .sort_values("mag", ascending=False)["participant"].tolist())
     palette = [DOWN, ACCENT, UP, "#c98500", "#9085e9", "#d55181",
                "#1baf7a", "#eb6834", "#86b6ef", "#e6a23c"]
-    fig = go.Figure()
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
     for i, name in enumerate(order[:20]):
         sub = df[df["participant"] == name].sort_values("dt")
         fig.add_trace(go.Scatter(
             x=sub["dt"], y=sub["net"], name=name,
             line=dict(color=palette[i % len(palette)], width=1.6),
             hovertemplate="%{y:+,.0f}<extra></extra>",
-            visible=True if i < 4 else "legendonly"))
+            visible=True if i < 4 else "legendonly"), secondary_y=False)
+    if n225 is not None and len(n225):
+        n = n225[(n225.index >= df["dt"].min()) & (n225.index <= df["dt"].max())]
+        if len(n):
+            fig.add_trace(go.Scatter(
+                x=n.index, y=n["Close"], name="日経平均" if ja else "Nikkei 225",
+                line=dict(color="#8a97ad", width=1.4), opacity=0.75,
+                hovertemplate="%{y:,.0f}<extra></extra>",
+                visible="legendonly"), secondary_y=True)
     fig.update_layout(**LAYOUT, height=460)
-    fig.update_yaxes(title_text="ネット建玉(枚)" if lang == "ja" else "Net OI (contracts)")
+    fig.update_yaxes(title_text="ネット建玉(枚)" if ja else "Net OI (contracts)",
+                     secondary_y=False)
+    fig.update_yaxes(title_text="日経平均" if ja else "Nikkei 225", secondary_y=True,
+                     showgrid=False)
     return fig
 
 
@@ -205,7 +217,7 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
         part = pd.read_csv(p, dtype={"date": str})
         if len(part):
             blocks.append(block(t["part"], t["part_note"],
-                                _participants_fig(part, lang), "plot-part",
+                                _participants_fig(part, lang, n225), "plot-part",
                                 "participants_history.csv"))
 
     # PCR
