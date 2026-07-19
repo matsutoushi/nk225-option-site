@@ -1,1 +1,1 @@
-none
+US market section failed: 'nikkei'
