@@ -1,0 +1,19 @@
+JPX data date: 20260717
+PCR: {'put_volume': 33283, 'call_volume': 23733, 'pcr': 1.402}
+OI rows: 732
+weekly participants: 86 (date 20260710)
+participant history: fetched 0 new weekly files
+nikkei VI: 36.86
+next SQ: 2026-08-14 (26d)
+mini OI rows: 176
+investor flows: fetched 0 new monthly files
+Traceback (most recent call last):
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1911, in <module>
+    main()
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1769, in main
+    charts["investor"] = chart_investor(flows, lang)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1164, in chart_investor
+    labels = [f"{m[:2]}/{m[2:]}" for m in flows["month"]]  # YY/MM
+                 ~^^^^
+TypeError: 'int' object is not subscriptable
