@@ -1501,7 +1501,10 @@ SUB_CSS = """
 
 
 SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
-GSV_META = '<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymCE5AgMGsKG0uu4BI5QdwWz24">'
+GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymCE5AgMGsKG0uu4BI5QdwWz24">\n'
+            '<script async src="https://www.googletagmanager.com/gtag/js?id=G-B0F8KB2KW7"></script>\n'
+            '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+            'gtag("js",new Date());gtag("config","G-B0F8KB2KW7");</script>')
 
 
 def og_meta(title: str, desc: str = "") -> str:
