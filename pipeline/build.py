@@ -1006,6 +1006,10 @@ USPAGE = {
         "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
+        "sec_letf": "レバレッジETF 推定リバランス・フロー",
+        "letf_lead": "レバレッジETF(TQQQ・SOXL等)は一定倍率を保つため、引けにかけて原資産を売買します。上昇日は買い・下落日は売りで、値動きを増幅する方向(モメンタム/負のガンマ的)に働きます。下記は主要な株価指数レバレッジETFの純資産と当日リターンから推定した引けのリバランス額です(推定値)。<b>これはオプションのガンマエクスポージャーとは別のメカニズムで、単純に足し合わせられるものではありません。</b>両方を並べて総合的に見る指標としてご利用ください。",
+        "letf_kpi": "推定リバランス額 合計($bn)",
+        "letf_cols": ["ETF", "原資産", "レバレッジ", "純資産($bn)", "当日%", "推定フロー($bn)"],
         "sec_etf": "SPY・QQQ 建玉の壁",
         "etf_lead": "米国の代表的ETFオプションの行使価格別建玉(45日以内の限月・現値±10%)。SPXと同様、建玉の集中する水準は意識されやすい価格帯の目安です。",
         "kpi_0dte": "SPX最短限月の出来高シェア",
@@ -1030,6 +1034,10 @@ USPAGE = {
         "pcr_rows": {"total": "Total", "index": "Index", "equity": "Equity",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["Category", "Put/Call Ratio"],
+        "sec_letf": "Leveraged ETF Estimated Rebalancing Flow",
+        "letf_lead": "Leveraged ETFs (TQQQ, SOXL, etc.) rebalance into the close to maintain constant leverage: buying on up days, selling on down days — a momentum (negative-gamma-like) force. Below is the estimated end-of-day rebalancing flow from major equity-index leveraged ETFs, based on their AUM and daily return (an estimate). <b>This is a different mechanism from options gamma exposure and cannot simply be added to it.</b> Use both side by side for a fuller picture.",
+        "letf_kpi": "Estimated total rebalancing flow ($bn)",
+        "letf_cols": ["ETF", "Underlying", "Leverage", "AUM($bn)", "Day%", "Est. flow($bn)"],
         "sec_etf": "SPY & QQQ OI Walls",
         "etf_lead": "Open interest by strike for the major US ETF options (expiries within 45 days, strikes within ±10% of spot).",
         "kpi_0dte": "SPX Nearest-Expiry Volume Share",
@@ -1357,7 +1365,8 @@ def chart_spx(res: dict, lang: str) -> str:
 
 def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
               spx_res: dict | None = None, spx_chart: str | None = None,
-              etf_chart: str | None = None, share: dict | None = None) -> None:
+              etf_chart: str | None = None, share: dict | None = None,
+              letf: dict | None = None) -> None:
     import us_data
     P = USPAGE[lang]
     og = og_meta(P["title"])
@@ -1406,6 +1415,30 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
         etf_section = (f"\n  <h2>{P['sec_etf']}</h2>\n  <p>{P['etf_lead']}</p>\n"
                        f'  <img src="{P["prefix"]}{etf_chart}?v={ver}" alt="SPY QQQ OI walls">')
 
+    letf_section = ""
+    if letf and letf.get("items"):
+        total = letf["total_bn"]
+        dir_ja = "引けに買い(上昇を増幅)" if total > 0 else "引けに売り(下落を増幅)"
+        dir_en = "net buying into close (amplifies up-moves)" if total > 0 \
+            else "net selling into close (amplifies down-moves)"
+        rows = []
+        for it in letf["items"]:
+            cls = "pos" if it["flow_bn"] > 0 else ("neg" if it["flow_bn"] < 0 else "")
+            rows.append(f"<tr><td class='name'>{it['sym']}</td><td class='name'>{it['underlying']}</td>"
+                        f"<td>{it['lev']:+d}x</td><td>{it['aum_bn']:,.1f}</td>"
+                        f"<td>{it['ret_pct']:+.2f}</td>"
+                        f"<td class='{cls}'>{it['flow_bn']:+.3f}</td></tr>")
+        head = "".join(f"<th>{c}</th>" for c in P["letf_cols"])
+        letf_section = f"""
+  <h2>{P['sec_letf']}</h2>
+  <div class="kpi">
+    <div>{P['letf_kpi']}<br><b>{total:+,.2f}</b> ({dir_ja if lang == 'ja' else dir_en})</div>
+  </div>
+  <p>{P['letf_lead']}</p>
+  <div class="tbl-pair"><div class="tbl-box" style="flex:1 1 100%"><div class="tbl-scroll">
+    <table><tr>{head}</tr>{''.join(rows)}</table>
+  </div></div></div>"""
+
     html_doc = f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -1444,6 +1477,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   </div></div></div>
 
   {spx_section}
+
+  {letf_section}
 
   {etf_section}
 </main>
@@ -1925,11 +1960,18 @@ def main() -> None:
         except Exception as e:
             warn(f"SPX section failed: {e}")
 
+        try:
+            letf = us_data.fetch_letf_rebalance()
+            print(f"LETF flow: {letf['total_bn']:+.2f}bn ({len(letf['items'])} ETFs)")
+        except Exception as e:
+            warn(f"LETF flow failed: {e!r}")
+            letf = None
+
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
             etf_chart = chart_etf_walls(etf_chains, lang) if etf_chains else None
             render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy), spx_res, spx_chart,
-                      etf_chart, spx_share)
+                      etf_chart, spx_share, letf)
 
         # 米国データ版のX投稿下書き(site/post_us.txt)
         lines = [f"【米国市場データ {int(pcr_us['date'][5:7])}/{int(pcr_us['date'][8:])}】", ""]

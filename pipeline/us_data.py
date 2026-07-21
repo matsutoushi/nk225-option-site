@@ -7,6 +7,7 @@
 - CBOE 日次Put/Callレシオ: 公式CDNのJSON
 """
 
+import os
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -170,6 +171,63 @@ def spx_walls_and_gex(spx: dict, days: int = 45, band: float = 0.10) -> dict:
             break
     return {"spot": spot, "walls": walls, "gex": gex,
             "total_gex": total_gex, "flip": flip}
+
+
+# レバレッジETF(株価指数): (ティッカー, 符号付きレバレッジ, 原資産ラベル)
+LETFS = [
+    ("TQQQ", 3, "NASDAQ100"), ("SQQQ", -3, "NASDAQ100"), ("QLD", 2, "NASDAQ100"),
+    ("SOXL", 3, "半導体(SOX)"), ("SOXS", -3, "半導体(SOX)"),
+    ("SPXL", 3, "S&P500"), ("SPXS", -3, "S&P500"),
+    ("UPRO", 3, "S&P500"), ("SPXU", -3, "S&P500"), ("SSO", 2, "S&P500"),
+    ("TNA", 3, "ラッセル2000"), ("TZA", -3, "ラッセル2000"),
+    ("UDOW", 3, "NYダウ"), ("SDOW", -3, "NYダウ"),
+]
+_LETF_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "data", "letf_flow.json")
+
+
+def fetch_letf_rebalance() -> dict:
+    """レバレッジETFの引け推定リバランス・フローを計算する。
+
+    一定レバレッジを保つための引けの売買額 = 純資産 × レバレッジ × (レバレッジ-1) × 原資産リターン。
+    ブル・ベア問わず係数は正で、上昇日は買い・下落日は売り(値動きを増幅)。
+    原資産リターンは ETFリターン ÷ レバレッジ で近似。
+
+    取得失敗時はキャッシュにフォールバックする。
+    Returns: {"total_bn": float, "items": [{sym, lev, underlying, aum_bn, ret_pct, flow_bn}...]}
+    """
+    import json
+    import yfinance as yf
+    items, total = [], 0.0
+    for sym, lev, und in LETFS:
+        try:
+            t = yf.Ticker(sym)
+            aum = t.info.get("totalAssets")
+            hist = t.history(period="5d")
+            if not aum or len(hist) < 2:
+                continue
+            etf_ret = float(hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1)
+            flow = aum * (lev - 1) * etf_ret  # = AUM×L(L-1)×原資産リターン
+            total += flow
+            items.append({"sym": sym, "lev": lev, "underlying": und,
+                          "aum_bn": round(aum / 1e9, 2), "ret_pct": round(etf_ret * 100, 2),
+                          "flow_bn": round(flow / 1e9, 3)})
+        except Exception as e:
+            print(f"WARN: LETF {sym} failed: {e}")
+    if items:
+        items.sort(key=lambda r: abs(r["flow_bn"]), reverse=True)
+        result = {"total_bn": round(total / 1e9, 2), "items": items}
+        try:
+            os.makedirs(os.path.dirname(_LETF_CACHE), exist_ok=True)
+            with open(_LETF_CACHE, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False)
+        except Exception:
+            pass
+        return result
+    if os.path.exists(_LETF_CACHE):
+        print("INFO: using cached LETF flow")
+        return json.load(open(_LETF_CACHE, encoding="utf-8"))
+    raise RuntimeError("no LETF data and no cache")
 
 
 def fetch_cboe_pcr() -> dict:
