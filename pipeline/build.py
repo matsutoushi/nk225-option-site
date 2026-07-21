@@ -620,8 +620,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
     flows_section = ""
     if charts.get("investor"):
-        flows_section = (f'<h2 id="flows">{P["sec_flows"]}'
-                         f'{dl_link("investor_flows.csv", lang, P["prefix"])}</h2>\n'
+        flows_section = (f'<h2 id="flows">{P["sec_flows"]}</h2>\n'
                          f'  <p>{P["flows_lead"].format(latest=extras.get("flows_latest", ""))}</p>\n'
                          f'  <img src="{charts["investor"]}" alt="Foreign investor flows">')
 
@@ -632,8 +631,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'alt="Net OI by participant">\n  '
             if charts.get("participants") else ""
         )
-        weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}'
-                          f'{dl_link("participants_history.csv", lang, P["prefix"])}</h2>\n  '
+        weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
     nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
     nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
@@ -668,7 +666,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {market_section}
 
-  <h2 id="oitable">{P['sec_oitable']}{dl_link("oi_latest.csv", lang, P['prefix'])}</h2>
+  <h2 id="oitable">{P['sec_oitable']}</h2>
   {tables['oi']}
 
   <h2 id="oi">{P['sec_oi']}</h2>
@@ -681,7 +679,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {flows_section}
 
-  <h2 id="pcr">{P['sec_pcr']}{dl_link("pcr_history.csv", lang, P['prefix'])}</h2>
+  <h2 id="pcr">{P['sec_pcr']}</h2>
   <p>{P['pcr_lead']}</p>
   <img src="{charts['pcr']}" alt="Put/Call ratio trend">
 
@@ -1631,19 +1629,12 @@ def footer_sitemap(lang: str) -> str:
 
 
 # 公開するデータファイル {出力名: (元ファイル, 日本語説明, 英語説明)}
+# 注意: JPX(東証)公表データは2次配布がライセンス上問題となりうるため、生CSVは公開しない
+# (サイト上での可視化・加工表示のみ)。ここに載せるのは非JPX由来のみ。
 PUBLIC_DATA = {
-    "investor_flows.csv": ("investor_flows.csv",
-                           "海外投資家 週次ネット売買(2021年〜、単位:千円)",
-                           "Foreign investor weekly net buying (since 2021, thousand yen)"),
-    "participants_history.csv": ("participants_history.csv",
-                                 "先物 取引参加者別ネット建玉(週次・52週)",
-                                 "Futures net OI by trading participant (weekly, 52w)"),
     "cot_history.csv": ("cot_history.csv",
                         "CFTC COT 投機筋ネットポジション(週次)",
                         "CFTC COT speculator net positions (weekly)"),
-    "pcr_history.csv": ("pcr_history.csv",
-                        "日経225オプション Put/Callレシオ(日次)",
-                        "Nikkei 225 options put/call ratio (daily)"),
     "spx_gex_history.csv": ("spx_gex_history.csv",
                             "SPX ガンマエクスポージャー推定(日次)",
                             "SPX gamma exposure estimate (daily)"),
@@ -1655,13 +1646,24 @@ PUBLIC_DATA = {
                         "Macro risk indicators (latest)"),
 }
 
+# JPX由来でダウンロード提供しない出力名(念のため除外を明示)
+JPX_NO_DOWNLOAD = {"oi_latest.csv", "participants_history.csv",
+                   "pcr_history.csv", "investor_flows.csv"}
+
 
 def publish_data_files() -> list:
-    """data/ の履歴CSVを site/data/ に公開する。Returns: 公開できたキーの一覧。"""
+    """非JPX由来の履歴CSVのみ site/data/ に公開する。Returns: 公開できたキーの一覧。"""
     out_dir = os.path.join(SITE, "data")
     os.makedirs(out_dir, exist_ok=True)
+    # 過去にJPXデータを公開してしまっていた場合に備え、site/data/内の該当ファイルを削除
+    for name in JPX_NO_DOWNLOAD:
+        stale = os.path.join(out_dir, name)
+        if os.path.exists(stale):
+            os.remove(stale)
     published = []
     for name, (src, _, _) in PUBLIC_DATA.items():
+        if name in JPX_NO_DOWNLOAD:
+            continue
         src_path = os.path.join(DATA, src)
         if not os.path.exists(src_path):
             continue
@@ -1670,15 +1672,7 @@ def publish_data_files() -> list:
         with open(os.path.join(out_dir, name), "wb") as f:
             f.write(content)
         published.append(name)
-    # 当日の建玉スナップショットも公開
-    latest_oi = sorted(x for x in os.listdir(DATA) if x.startswith("oi_") and x.endswith(".csv"))
-    if latest_oi:
-        with open(os.path.join(DATA, latest_oi[-1]), "rb") as f:
-            content = f.read()
-        with open(os.path.join(out_dir, "oi_latest.csv"), "wb") as f:
-            f.write(content)
-        published.append("oi_latest.csv")
-    print(f"published data files: {len(published)}")
+    print(f"published data files: {len(published)} (JPX data excluded)")
     return published
 
 

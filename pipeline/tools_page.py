@@ -198,11 +198,11 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
     if os.path.exists(p):
         flows = pd.read_csv(p, dtype={"week": str, "date": str})
         if len(flows):
+            # JPX由来のため生CSVダウンロードは提供しない(csv_name=None)
             blocks.append(block(t["flows"], t["flows_note"],
-                                _flows_fig(flows, n225, lang), "plot-flows",
-                                "investor_flows.csv"))
+                                _flows_fig(flows, n225, lang), "plot-flows", None))
 
-    # COT
+    # COT(CFTC=米政府データ、ダウンロード可)
     p = os.path.join(data_dir, "cot_history.csv")
     if os.path.exists(p):
         cot = pd.read_csv(p)
@@ -211,22 +211,21 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
                                 _cot_fig(cot, cot_markets, lang), "plot-cot",
                                 "cot_history.csv"))
 
-    # 参加者別建玉
+    # 参加者別建玉(JPX由来のためダウンロード不可)
     p = os.path.join(data_dir, "participants_history.csv")
     if os.path.exists(p):
         part = pd.read_csv(p, dtype={"date": str})
         if len(part):
             blocks.append(block(t["part"], t["part_note"],
-                                _participants_fig(part, lang, n225), "plot-part",
-                                "participants_history.csv"))
+                                _participants_fig(part, lang, n225), "plot-part", None))
 
-    # PCR
+    # PCR(JPX出来高由来のためダウンロード不可)
     p = os.path.join(data_dir, "pcr_history.csv")
     if os.path.exists(p):
         pcr = pd.read_csv(p, dtype={"date": str})
         if len(pcr) >= 2:
             blocks.append(block(t["pcr"], t["pcr_note"], _pcr_fig(pcr, lang),
-                                "plot-pcr", "pcr_history.csv"))
+                                "plot-pcr", None))
 
     body = "\n".join(blocks) if blocks else f"<p>{t['nodata']}</p>"
 
