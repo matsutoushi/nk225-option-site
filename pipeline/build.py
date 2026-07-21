@@ -1269,6 +1269,32 @@ def chart_participants(hist: pd.DataFrame, n225: pd.DataFrame | None, lang: str)
     return f"img/{name_f}"
 
 
+def chart_letf(history: pd.DataFrame, lang: str) -> str | None:
+    """レバレッジETF推定リバランス額の日次推移(棒)。"""
+    suffix = L[lang]["suffix"]
+    df = history.copy()
+    df = df[df["date"].astype(str).str.fullmatch(r"20\d{6}")]
+    if len(df) < 2:
+        return None
+    x = pd.to_datetime(df["date"], format="%Y%m%d")
+    vals = df["total_bn"].astype(float)
+    fig, ax = plt.subplots(figsize=(10, 3.6))
+    colors = [ACCENT if v >= 0 else UP for v in vals]
+    ax.bar(x, vals, width=0.8, color=colors)
+    ax.axhline(0, color=INK2, linewidth=0.8)
+    ax.set_ylabel("推定フロー($bn)" if lang == "ja" else "Est. flow ($bn)", fontsize=9)
+    ax.set_title(("レバレッジETF 推定リバランス額の推移(+買い/−売り)" if lang == "ja"
+                  else "Leveraged ETF Estimated Rebalancing Flow (+buy / -sell)"), fontsize=10)
+    ax.grid(alpha=0.25)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"letf{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
 def chart_etf_walls(chains: dict, lang: str) -> str | None:
     """SPY・QQQの建玉の壁(2パネル)。chains: {"SPY": chain_dict, "QQQ": chain_dict}"""
     suffix = L[lang]["suffix"]
@@ -1429,12 +1455,17 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
                         f"<td>{it['ret_pct']:+.2f}</td>"
                         f"<td class='{cls}'>{it['flow_bn']:+.3f}</td></tr>")
         head = "".join(f"<th>{c}</th>" for c in P["letf_cols"])
+        letf_dl = dl_link("letf_history.csv", lang, P["prefix"])
+        letf_chart_html = ""
+        if letf.get("chart"):
+            letf_chart_html = (f'\n  <img src="{P["prefix"]}{letf["chart"]}?v={ver}" '
+                               f'alt="LETF rebalancing flow history">')
         letf_section = f"""
-  <h2>{P['sec_letf']}</h2>
+  <h2>{P['sec_letf']}{letf_dl}</h2>
   <div class="kpi">
     <div>{P['letf_kpi']}<br><b>{total:+,.2f}</b> ({dir_ja if lang == 'ja' else dir_en})</div>
   </div>
-  <p>{P['letf_lead']}</p>
+  <p>{P['letf_lead']}</p>{letf_chart_html}
   <div class="tbl-pair"><div class="tbl-box" style="flex:1 1 100%"><div class="tbl-scroll">
     <table><tr>{head}</tr>{''.join(rows)}</table>
   </div></div></div>"""
@@ -1616,6 +1647,9 @@ PUBLIC_DATA = {
     "spx_gex_history.csv": ("spx_gex_history.csv",
                             "SPX ガンマエクスポージャー推定(日次)",
                             "SPX gamma exposure estimate (daily)"),
+    "letf_history.csv": ("letf_history.csv",
+                         "レバレッジETF 推定リバランス額(日次)",
+                         "Leveraged ETF estimated rebalancing flow (daily)"),
     "risk_latest.csv": ("risk_latest.csv",
                         "マクロリスク指標 最新値",
                         "Macro risk indicators (latest)"),
@@ -1963,6 +1997,15 @@ def main() -> None:
         try:
             letf = us_data.fetch_letf_rebalance()
             print(f"LETF flow: {letf['total_bn']:+.2f}bn ({len(letf['items'])} ETFs)")
+            # 日次履歴に蓄積(データ基準日=JPXの前営業日に合わせる)
+            lh_path = os.path.join(DATA, "letf_history.csv")
+            lh = pd.read_csv(lh_path, dtype={"date": str}) if os.path.exists(lh_path) else \
+                pd.DataFrame(columns=["date", "total_bn"])
+            lh = lh[lh["date"].astype(str) != date]
+            lh = pd.concat([lh, pd.DataFrame([{"date": date, "total_bn": letf["total_bn"]}])],
+                           ignore_index=True).sort_values("date")
+            lh.to_csv(lh_path, index=False)
+            letf["history"] = lh
         except Exception as e:
             warn(f"LETF flow failed: {e!r}")
             letf = None
@@ -1970,6 +2013,8 @@ def main() -> None:
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
             etf_chart = chart_etf_walls(etf_chains, lang) if etf_chains else None
+            if letf is not None and letf.get("history") is not None:
+                letf["chart"] = chart_letf(letf["history"], lang)
             render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy), spx_res, spx_chart,
                       etf_chart, spx_share, letf)
 
