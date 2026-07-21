@@ -245,13 +245,21 @@ GUIDE_PAGES = {
 <li><b>取引ツール</b>: オプションのボード表示・リスク管理機能の使いやすさ</li>
 <li><b>ミニ・週次限月への対応</b>: 小さく始めたい場合はミニオプションの取扱い有無</li>
 </ul>
-<p>主要ネット証券(SBI証券、楽天証券、松井証券など)はいずれも先物・オプション口座を提供しています。
+<p>主要ネット証券(松井証券、SBI証券、楽天証券など)はいずれも先物・オプション口座を提供しています。
 手数料・ツールの詳細は各社公式サイトで最新情報をご確認ください。</p>
+<p>たとえば<b>松井証券</b>は先物・オプション取引に対応しており、取引ツールや情報提供も充実しています。
+口座開設は無料・ネット完結で、まず総合口座を開いてから先物・オプション口座を申請する流れです。
+→ <a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+64C3M" rel="nofollow">松井証券の口座開設(公式・PR)</a><img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+64C3M" alt=""></p>
+<div style="text-align:center; margin: 16px 0;">
+<a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+6HMHT" rel="nofollow">
+<img border="0" width="300" height="250" alt="松井証券" src="https://www21.a8.net/svt/bgt?aid=260718089257&wid=001&eno=01&mid=s00000018318001090000&mc=1"></a>
+<img border="0" width="1" height="1" src="https://www11.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+6HMHT" alt="">
+</div>
 <p>なお、現物株・信用取引の口座を手数料重視で選びたい方には次のような選択肢もあります:
 <a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4CL0VM+1WP2+15QHIA" rel="nofollow">日本株を始めるなら【DMM 株】!(PR)</a><img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+4CL0VM+1WP2+15QHIA" alt=""></p>
 
-<!-- 【アフィリエイトリンク: SBI証券 口座開設(アクセストレード)】 -->
-<!-- 【アフィリエイトリンク: 楽天証券 口座開設(TGアフィリエイト)】 -->
+<!-- 【アフィリエイトリンク: SBI証券 口座開設(アクセストレード・提携申請中)】 -->
+<!-- 【アフィリエイトリンク: 楽天証券 口座開設(TGアフィリエイト・審査中)】 -->
 
 <h2>オプション以外の選択肢: CFDで日経225を取引する</h2>
 <p>「オプションはまだ難しそうだが、日経平均の指数そのものをレバレッジをかけて取引したい」という場合、
