@@ -189,11 +189,12 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     n = len(hist)
     x = np.arange(n)
 
-    fig = plt.figure(figsize=(11, 9))
-    gs = fig.add_gridspec(4, 1, height_ratios=[3, 1, 1, 0.001], hspace=0.08)
+    fig = plt.figure(figsize=(11, 10))
+    gs = fig.add_gridspec(4, 1, height_ratios=[3, 1, 1, 1], hspace=0.08)
     ax1 = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1], sharex=ax1)
     ax3 = fig.add_subplot(gs[2], sharex=ax1)
+    ax4 = fig.add_subplot(gs[3], sharex=ax1)
 
     # --- ローソク足 ---
     up = c >= o
@@ -255,12 +256,21 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     ax3.set_ylim(0, 100)
     ax3.set_ylabel("RSI(14)")
     ax3.grid(alpha=0.3)
+    plt.setp(ax3.get_xticklabels(), visible=False)
 
-    # 月初の位置に日付ラベル
+    # --- 日次出来高(棒) ---
+    # 未取得日(0)はマスクして棒を描かない。色はローソク足と同じ上げ下げ配色。
+    volm = np.ma.masked_where(vol <= 0, vol)
+    ax4.bar(x, volm / 1e8, width=0.65, color=colors, alpha=0.6)
+    ax4.set_ylabel(tx["vol_axis"])
+    ax4.set_ylim(bottom=0)
+    ax4.grid(alpha=0.3)
+
+    # 月初の位置に日付ラベル(最下段のみ)
     dates = hist.index
     ticks = [i for i in range(n) if i == 0 or dates[i].month != dates[i - 1].month]
-    ax3.set_xticks(ticks)
-    ax3.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
+    ax4.set_xticks(ticks)
+    ax4.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
 
     name = f"market{tx['suffix']}.png"
     fig.savefig(os.path.join(IMG, name), dpi=120, bbox_inches="tight")
@@ -320,6 +330,7 @@ L = {
         "mkt_title": "日経平均(日足6ヶ月) + 価格帯別出来高 + オプション最大建玉",
         "max_call": "コール最大建玉", "max_put": "プット最大建玉",
         "signal": "シグナル",
+        "vol_axis": "出来高(億株)",
         "strike": "行使価格",
         "tbl_note": "前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。JPXが日次公開する直近3限月分。増減は前日比。",
         "tbl_caption": "左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)",
@@ -340,6 +351,7 @@ L = {
         "mkt_title": "Nikkei 225 (daily, 6 months) + Volume Profile + Max Option OI",
         "max_call": "Max Call OI", "max_put": "Max Put OI",
         "signal": "Signal",
+        "vol_axis": "Volume (100M sh)",
         "strike": "Strike",
         "tbl_note": "Strikes within ±3,000 yen of the previous close ({lo:,.0f}–{hi:,.0f}). Nearest 3 expiries published daily by JPX. Change is day-over-day.",
         "tbl_caption": "Left: Open Interest (green = largest per expiry) / Right: DoD Change (increase = green, decrease = red)",
