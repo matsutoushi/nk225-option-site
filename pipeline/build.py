@@ -138,10 +138,15 @@ def chart_pcr(hist: pd.DataFrame, lang: str = "ja") -> str:
     ax.axhline(1.0, color=INK2, linestyle="--", linewidth=1)
     ax.set_title(t["pcr_title"])
     ax.grid(alpha=0.3)
-    # 各月最初の営業日にのみ目盛りを立てる(ローソク足チャートと同じ流儀)
-    ticks = [i for i in range(n) if i == 0 or dates[i].month != dates[i - 1].month]
+    # 日付(月/日)が読めるように目盛りを立てる。点が多い場合は最大約12個に間引き、
+    # 最新営業日は必ずラベル表示する。
+    step = max(1, n // 12)
+    ticks = list(range(0, n, step))
+    if ticks[-1] != n - 1:
+        ticks.append(n - 1)
     ax.set_xticks(ticks)
-    ax.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
+    ax.set_xticklabels([f"{dates[i].month}/{dates[i].day}" for i in ticks],
+                       rotation=45, ha="right")
     ax.set_xlim(-0.5, n - 0.5)
     fig.tight_layout()
     name = f"pcr{t['suffix']}.png"
