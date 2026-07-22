@@ -168,13 +168,16 @@ def _pcr_fig(pcr_hist: pd.DataFrame, lang: str):
     df = pcr_hist.copy()
     df["dt"] = pd.to_datetime(df["date"].astype(str), format="%Y%m%d", errors="coerce")
     df = df.dropna(subset=["dt"]).sort_values("dt")
+    # 営業日のみをカテゴリ軸として等間隔に並べる(土日祝の空白を作らない)
+    df["label"] = df["dt"].dt.strftime("%Y-%m-%d")
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=df["dt"], y=df["pcr"], name="PCR", mode="lines+markers",
+        x=df["label"], y=df["pcr"], name="PCR", mode="lines+markers",
         line=dict(color=ACCENT, width=2), marker=dict(size=6),
         hovertemplate="%{y:.3f}<extra></extra>"))
     fig.add_hline(y=1.0, line_dash="dash", line_color=INK2)
     fig.update_layout(**LAYOUT, height=360)
+    fig.update_xaxes(type="category", nticks=10)
     return fig
 
 

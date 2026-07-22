@@ -131,12 +131,18 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
 def chart_pcr(hist: pd.DataFrame, lang: str = "ja") -> str:
     t = L[lang]
     fig, ax = plt.subplots(figsize=(10, 4))
-    x = pd.to_datetime(hist["date"], format="%Y%m%d")
-    ax.plot(x, hist["pcr"], marker="o", color=ACCENT, linewidth=1.5)
+    dates = pd.to_datetime(hist["date"], format="%Y%m%d").reset_index(drop=True)
+    n = len(dates)
+    x = np.arange(n)  # 営業日のみを等間隔に並べる(土日祝の空白を作らない)
+    ax.plot(x, hist["pcr"].to_numpy(), marker="o", color=ACCENT, linewidth=1.5)
     ax.axhline(1.0, color=INK2, linestyle="--", linewidth=1)
     ax.set_title(t["pcr_title"])
     ax.grid(alpha=0.3)
-    fig.autofmt_xdate()
+    # 各月最初の営業日にのみ目盛りを立てる(ローソク足チャートと同じ流儀)
+    ticks = [i for i in range(n) if i == 0 or dates[i].month != dates[i - 1].month]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
+    ax.set_xlim(-0.5, n - 0.5)
     fig.tight_layout()
     name = f"pcr{t['suffix']}.png"
     fig.savefig(os.path.join(IMG, name), dpi=120)
@@ -260,6 +266,31 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     fig.savefig(os.path.join(IMG, name), dpi=120, bbox_inches="tight")
     plt.close(fig)
     return f"img/{name}", spot
+
+
+def latest_n225_volume(data_date: str) -> dict | None:
+    """日経225の直近営業日(<=基準日)の売買高と前日比を返す。
+
+    出来高はYahoo由来で、当日夜は未確定(0)のことがあるため、
+    0・欠測は除外し取得できた最新営業日を採用する。失敗時はNone。
+    Returns: {"value": 株数, "date": Timestamp, "pct": 前日比%|None}
+    """
+    try:
+        yvol = yf.Ticker("^N225").history(period="2mo")["Volume"].copy()
+    except Exception as e:
+        print(f"WARN: N225 volume fetch failed: {e}")
+        return None
+    yvol.index = yvol.index.tz_localize(None).normalize()
+    yvol = yvol[(yvol.index <= pd.Timestamp(data_date)) & (yvol > 0)].dropna()
+    if len(yvol) == 0:
+        return None
+    latest = float(yvol.iloc[-1])
+    prev = float(yvol.iloc[-2]) if len(yvol) > 1 else None
+    return {
+        "value": latest,
+        "date": yvol.index[-1],
+        "pct": ((latest - prev) / prev * 100) if prev else None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +564,8 @@ PAGE = {
         "sec_market": "マーケット概況",
         "tagline": "日経225オプションの建玉・米国市場のポジション・マクロリスク指標を、JPX・CFTC・CBOE・FREDなどの公式データから毎営業日自動更新するデータサイトです。",
         "kpi_vi": "日経VI(前日差)",
+        "kpi_vol": "日経売買高(前日比)",
+        "vol_unit": " 億株",
         "kpi_sq": "次回SQ",
         "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
         "mini_lead": "日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。",
@@ -562,6 +595,8 @@ PAGE = {
         "sec_market": "Market Overview",
         "tagline": "Nikkei 225 options open interest, US positioning and macro risk gauges — auto-updated every business day from official JPX, CFTC, CBOE and FRED data.",
         "kpi_vi": "Nikkei VI (DoD)",
+        "kpi_vol": "Nikkei Volume (DoD)",
+        "vol_unit": " M sh",
         "kpi_sq": "Next SQ",
         "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
         "mini_lead": "Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines.",
@@ -605,6 +640,18 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         delta = extras.get("vi_delta")
         dtxt = f" ({delta:+.1f})" if delta is not None else ""
         extra_kpi += f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>{dtxt}</div>"
+    if extras.get("n225_vol"):
+        v = extras["n225_vol"]
+        pct = v.get("pct")
+        dtxt = f" ({pct:+.0f}%)" if pct is not None else ""
+        div, fmt = (1e8, "{:.2f}") if lang == "ja" else (1e6, "{:.0f}")
+        val = fmt.format(v["value"] / div)
+        # Yahoo未更新で基準日と出来高日がズレる場合のみ日付を併記(誤認防止)
+        vd = v.get("date")
+        asof = (f" <small>({vd.month}/{vd.day})</small>"
+                if vd is not None and vd.strftime("%Y%m%d") != date else "")
+        extra_kpi += (f"<div>{P['kpi_vol']}<br><b>{val}</b>{P['vol_unit']}"
+                      f"{dtxt}{asof}</div>")
     if extras.get("sq"):
         sq = extras["sq"]
         t = sq["type_ja"] if lang == "ja" else sq["type_en"]
@@ -700,7 +747,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
 
 def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
-                 spot: float | None) -> str:
+                 spot: float | None, vol_info: dict | None = None) -> str:
     """X投稿用の下書きテキストを生成し、site/post.txt にも出力する。"""
     d = f"{int(date[4:6])}/{int(date[6:])}"
     exp_label = f"{int(expiry[2:])}月限"
@@ -725,6 +772,13 @@ def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
     if spot:
         lines.append("")
         lines.append(f"日経平均終値: {spot:,.0f}円")
+    if vol_info:
+        pct = vol_info.get("pct")
+        pct_txt = f"(前日比 {pct:+.0f}%)" if pct is not None else ""
+        vd = vol_info.get("date")
+        asof = (f" ※{vd.month}/{vd.day}時点"
+                if vd is not None and vd.strftime("%Y%m%d") != date else "")
+        lines.append(f"日経売買高: {vol_info['value'] / 1e8:.2f}億株{pct_txt}{asof}")
     text = "\n".join(lines)
     os.makedirs(SITE, exist_ok=True)
     with open(os.path.join(SITE, "post.txt"), "w", encoding="utf-8") as f:
@@ -1885,6 +1939,14 @@ def main() -> None:
         print(f"next SQ: {base_extras['sq']['date']} ({base_extras['sq']['days']}d)")
     except Exception as e:
         warn(f"SQ calc failed: {e}")
+    try:
+        vol_info = latest_n225_volume(date)
+        if vol_info:
+            base_extras["n225_vol"] = vol_info
+            print(f"N225 volume: {vol_info['value']:,.0f} "
+                  f"({vol_info['date'].date()}, {vol_info['pct']}%)")
+    except Exception as e:
+        warn(f"N225 volume failed: {e}")
     mini_df = None
     try:
         mini_df = jpx.fetch_mini_oi(files["open_interest"])
@@ -2091,7 +2153,7 @@ def main() -> None:
     # 部分失敗の診断用(data/はCIがコミットするので後から確認できる)
     with open(os.path.join(DATA, "build_warnings.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(WARNINGS) if WARNINGS else "none")
-    post = compose_post(date, pcr, oi, expiry, spot)
+    post = compose_post(date, pcr, oi, expiry, spot, base_extras.get("n225_vol"))
     print("--- post draft ---")
     print(post)
     with open(last_path, "w") as f:
