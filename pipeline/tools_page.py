@@ -30,7 +30,10 @@ LAYOUT = dict(
     yaxis=dict(gridcolor=GRID, zerolinecolor=GRID),
     margin=dict(l=60, r=60, t=50, b=40),
     hovermode="x unified",
-    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11)),
+    # 凡例はチャート上部に横並び。右側縦並び(既定)はスマホで幅を食い潰すため使わない。
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11),
+                orientation="h", yanchor="bottom", y=1.02,
+                xanchor="left", x=0),
 )
 
 T = {
@@ -50,6 +53,7 @@ T = {
         "back": "← 日経ダッシュボード",
         "lang": '<a href="en/tools.html" lang="en">English</a>',
         "nodata": "データ蓄積中です。数日後に再度ご覧ください。",
+        "legend_show": "凡例を表示", "legend_hide": "凡例を隠す",
     },
     "en": {
         "title": "Data Explorer | Nikkei 225 Options Data",
@@ -67,11 +71,17 @@ T = {
         "back": "← Dashboard",
         "lang": '<a href="../tools.html" lang="ja">日本語</a>',
         "nodata": "Data is still accumulating. Please check back in a few days.",
+        "legend_show": "Show legend", "legend_hide": "Hide legend",
     },
 }
 
 
 def _fig_html(fig, div_id: str) -> str:
+    # 凡例は必ず上部の横並びにする(右側縦並びだとスマホでチャートが潰れる)。
+    # 各図の update_layout 後に強制するため、ここで最終指定する。
+    fig.update_layout(legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11),
+                                  orientation="h", yanchor="bottom", y=1.02,
+                                  xanchor="left", x=0))
     return fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id,
                        config={"displaylogo": False, "responsive": True,
                                "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
@@ -245,6 +255,11 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
 <style>{css}
   .plot {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
            padding: 6px; margin-bottom: 8px; overflow-x: auto; }}
+  /* スマホでは凡例が幅を食うため、モードバーとホバーも含めて詰める */
+  @media (max-width: 600px) {{
+    .plot {{ padding: 4px; }}
+    .plot .modebar {{ transform: scale(0.85); transform-origin: top right; }}
+  }}
 </style>
 </head>
 <body>
@@ -260,6 +275,72 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
   {sitemap}
   <p>{disclaimer}</p>
 </footer>
+<script>
+// スマホでは凡例がチャート面積を奪うため、画面幅に応じてレイアウトを詰める。
+// 凡例は上部に横並び(既定の右側縦並びだと375px幅でチャートがほぼ潰れる)。
+(function () {{
+  function tune() {{
+    var narrow = window.innerWidth <= 600;
+    document.querySelectorAll('.plot .js-plotly-plot').forEach(function (gd) {{
+      if (!window.Plotly || !gd.layout) return;
+      var n = (gd.data || []).length;
+      Plotly.relayout(gd, narrow ? {{
+        'legend.orientation': 'h',
+        'legend.yanchor': 'bottom',
+        'legend.y': 1.02,
+        'legend.xanchor': 'left',
+        'legend.x': 0,
+        'legend.font.size': 9,
+        // 系列が多い図(参加者別20社など)は凡例が積み上がるので既定で畳む
+        'showlegend': n <= 6,
+        'margin.l': 44, 'margin.r': 12, 'margin.t': n <= 6 ? 54 : 24, 'margin.b': 34,
+        'font.size': 10,
+        'hovermode': 'closest',
+        'xaxis.tickfont.size': 9, 'yaxis.tickfont.size': 9,
+        'xaxis.nticks': 5
+      }} : {{
+        'legend.orientation': 'h',
+        'legend.yanchor': 'bottom',
+        'legend.y': 1.02,
+        'legend.xanchor': 'left',
+        'legend.x': 0,
+        'legend.font.size': 11,
+        'showlegend': true,
+        'margin.l': 60, 'margin.r': 60, 'margin.t': 50, 'margin.b': 40,
+        'font.size': 12,
+        'hovermode': 'x unified',
+        'xaxis.tickfont.size': 12, 'yaxis.tickfont.size': 12
+      }});
+    }});
+  }}
+  // 系列が多い図はスマホで凡例を畳むため、開閉ボタンを添える(畳んだままだと系列名が分からない)
+  function addLegendToggles() {{
+    if (window.innerWidth > 600) return;
+    document.querySelectorAll('.plot').forEach(function (box) {{
+      var gd = box.querySelector('.js-plotly-plot');
+      if (!gd || !gd.data || gd.data.length <= 6 || box.querySelector('.lgd-btn')) return;
+      var b = document.createElement('button');
+      b.className = 'lgd-btn';
+      b.textContent = '{t['legend_show']}';
+      b.style.cssText = 'display:block;margin:4px auto 2px;padding:5px 12px;font-size:12px;'
+        + 'background:transparent;color:#9aa7ba;border:1px solid #2a3247;border-radius:6px;';
+      b.addEventListener('click', function () {{
+        var on = !gd.layout.showlegend;
+        Plotly.relayout(gd, {{'showlegend': on, 'margin.t': on ? 54 : 24}});
+        b.textContent = on ? '{t['legend_hide']}' : '{t['legend_show']}';
+      }});
+      box.appendChild(b);
+    }});
+  }}
+  var t;
+  window.addEventListener('resize', function () {{
+    clearTimeout(t); t = setTimeout(function () {{ tune(); addLegendToggles(); }}, 200);
+  }});
+  function init() {{ tune(); addLegendToggles(); }}
+  if (document.readyState === 'complete') init();
+  else window.addEventListener('load', init);
+}})();
+</script>
 </body>
 </html>
 """
