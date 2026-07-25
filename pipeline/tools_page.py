@@ -54,6 +54,7 @@ T = {
         "lang": '<a href="en/tools.html" lang="en">English</a>',
         "nodata": "データ蓄積中です。数日後に再度ご覧ください。",
         "legend_show": "凡例を表示", "legend_hide": "凡例を隠す",
+        "zoom_on": "拡大操作 オフ", "zoom_off": "拡大操作 オン",
     },
     "en": {
         "title": "Data Explorer | Nikkei 225 Options Data",
@@ -72,6 +73,7 @@ T = {
         "lang": '<a href="../tools.html" lang="ja">日本語</a>',
         "nodata": "Data is still accumulating. Please check back in a few days.",
         "legend_show": "Show legend", "legend_hide": "Hide legend",
+        "zoom_on": "Zoom: off", "zoom_off": "Zoom: on",
     },
 }
 
@@ -84,7 +86,10 @@ def _fig_html(fig, div_id: str) -> str:
                                   xanchor="left", x=0))
     return fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id,
                        config={"displaylogo": False, "responsive": True,
-                               "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
+                               # スクロール中の誤ズームを防ぐ。ダブルタップで元の表示に戻す。
+                               "scrollZoom": False, "doubleClick": "reset",
+                               "modeBarButtonsToRemove": ["lasso2d", "select2d",
+                                                          "autoScale2d", "toggleSpikelines"]})
 
 
 def _flows_fig(flows: pd.DataFrame, n225: pd.DataFrame | None, lang: str):
@@ -283,19 +288,21 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
     var narrow = window.innerWidth <= 600;
     document.querySelectorAll('.plot .js-plotly-plot').forEach(function (gd) {{
       if (!window.Plotly || !gd.layout) return;
-      var n = (gd.data || []).length;
       Plotly.relayout(gd, narrow ? {{
+        // 凡例は常に表示(上部・横並び)。隠すのはユーザーがボタンで選んだときだけ。
         'legend.orientation': 'h',
         'legend.yanchor': 'bottom',
         'legend.y': 1.02,
         'legend.xanchor': 'left',
         'legend.x': 0,
         'legend.font.size': 9,
-        // 系列が多い図(参加者別20社など)は凡例が積み上がるので既定で畳む
-        'showlegend': n <= 6,
-        'margin.l': 44, 'margin.r': 12, 'margin.t': n <= 6 ? 54 : 24, 'margin.b': 34,
+        'showlegend': true,
+        'margin.l': 44, 'margin.r': 12, 'margin.t': 54, 'margin.b': 34,
         'font.size': 10,
         'hovermode': 'closest',
+        // 触れただけでズーム矩形が始まるのを防ぐ(指はページスクロールに使う)。
+        // 拡大したいときは下のボタンで明示的に有効化する。
+        'dragmode': false,
         'xaxis.tickfont.size': 9, 'yaxis.tickfont.size': 9,
         'xaxis.nticks': 5
       }} : {{
@@ -309,34 +316,53 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
         'margin.l': 60, 'margin.r': 60, 'margin.t': 50, 'margin.b': 40,
         'font.size': 12,
         'hovermode': 'x unified',
+        'dragmode': 'zoom',
         'xaxis.tickfont.size': 12, 'yaxis.tickfont.size': 12
       }});
     }});
   }}
-  // 系列が多い図はスマホで凡例を畳むため、開閉ボタンを添える(畳んだままだと系列名が分からない)
-  function addLegendToggles() {{
+  function btn(label) {{
+    var b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'padding:6px 12px;font-size:12px;background:transparent;color:#9aa7ba;'
+      + 'border:1px solid #2a3247;border-radius:6px;margin:0 4px;';
+    return b;
+  }}
+  // スマホ用の操作ボタン: ①凡例の表示/非表示 ②ズーム操作の有効/無効
+  function addControls() {{
     if (window.innerWidth > 600) return;
     document.querySelectorAll('.plot').forEach(function (box) {{
       var gd = box.querySelector('.js-plotly-plot');
-      if (!gd || !gd.data || gd.data.length <= 6 || box.querySelector('.lgd-btn')) return;
-      var b = document.createElement('button');
-      b.className = 'lgd-btn';
-      b.textContent = '{t['legend_show']}';
-      b.style.cssText = 'display:block;margin:4px auto 2px;padding:5px 12px;font-size:12px;'
-        + 'background:transparent;color:#9aa7ba;border:1px solid #2a3247;border-radius:6px;';
-      b.addEventListener('click', function () {{
+      if (!gd || box.parentNode.querySelector('.plot-ctl')) return;
+      var bar = document.createElement('div');
+      bar.className = 'plot-ctl';
+      bar.style.cssText = 'display:flex;justify-content:center;margin:2px 0 10px;';
+
+      var lb = btn('{t['legend_hide']}');
+      lb.addEventListener('click', function () {{
         var on = !gd.layout.showlegend;
         Plotly.relayout(gd, {{'showlegend': on, 'margin.t': on ? 54 : 24}});
-        b.textContent = on ? '{t['legend_hide']}' : '{t['legend_show']}';
+        lb.textContent = on ? '{t['legend_hide']}' : '{t['legend_show']}';
       }});
-      box.appendChild(b);
+
+      var zb = btn('{t['zoom_on']}');
+      zb.addEventListener('click', function () {{
+        var on = gd.layout.dragmode === false;
+        Plotly.relayout(gd, {{'dragmode': on ? 'zoom' : false}});
+        zb.textContent = on ? '{t['zoom_off']}' : '{t['zoom_on']}';
+        zb.style.color = on ? '#199e70' : '#9aa7ba';
+        zb.style.borderColor = on ? '#199e70' : '#2a3247';
+      }});
+
+      bar.appendChild(lb); bar.appendChild(zb);
+      box.parentNode.insertBefore(bar, box.nextSibling);
     }});
   }}
   var t;
   window.addEventListener('resize', function () {{
-    clearTimeout(t); t = setTimeout(function () {{ tune(); addLegendToggles(); }}, 200);
+    clearTimeout(t); t = setTimeout(function () {{ tune(); addControls(); }}, 200);
   }});
-  function init() {{ tune(); addLegendToggles(); }}
+  function init() {{ tune(); addControls(); }}
   if (document.readyState === 'complete') init();
   else window.addEventListener('load', init);
 }})();
