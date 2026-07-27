@@ -595,6 +595,22 @@ PAGE = {
         "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)',
+        "sec_guides": "データの読み方ガイド",
+        "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
+        "guides": [
+            ("guide-oi.html", "建玉分布の見方",
+             "行使価格に積み上がった建玉が「壁」として意識される仕組み"),
+            ("guide-pcr.html", "Put/Callレシオとは",
+             "市場心理の偏りを1つの数字で読む。水準より変化を見る"),
+            ("guide-gex.html", "ガンマエクスポージャーとは",
+             "ディーラーのヘッジが値動きを増幅・抑制する仕組み"),
+            ("guide-cot.html", "COT(投機筋ポジション)の見方",
+             "米国先物市場のポジションの偏りを週次で追う"),
+            ("glossary.html", "用語集",
+             "SQ・限月・デルタなど、オプションの基本用語"),
+            ("guide-start.html", "日経225オプションを始めるには",
+             "口座開設から取引開始までの一般的な流れ"),
+        ],
         "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#3987e5">用語集</a>',
         "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
         "footer_disclaimer": "本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。",
@@ -626,6 +642,14 @@ PAGE = {
         "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
         "sec_pcr": "Put/Call Ratio Trend",
         "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
+        "sec_guides": "Guides — How to Read This Data",
+        "guides_lead": "Background on each indicator and how traders actually use it.",
+        "guides": [
+            ("guide-participants.html", "JPX Participant Positioning",
+             "Japan's hidden COT — weekly futures positions by named firm"),
+            ("guide-nikkei-options.html", "Nikkei 225 Options: Field Guide",
+             "Contract basics, SQ, and what the official data covers"),
+        ],
         "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a> | <a href="guide-participants.html" style="color:#3987e5">Guide: Participant Positioning</a> | <a href="guide-nikkei-options.html" style="color:#3987e5">Guide: Nikkei Options</a>',
         "footer_src": "Data source: compiled from official Japan Exchange Group (JPX) publications. Nikkei 225 price data by Nikkei Inc. (copyright belongs to Nikkei Inc.).",
         "footer_disclaimer": "This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.",
@@ -697,6 +721,22 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         )
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
+    # データの読み方ガイドへの導線。GA4(2026-07-27)ではトップに64%のビューが集中し
+    # 解説記事まで回遊していなかったため、本文中の小さなリンクとは別にカード型で明示する。
+    guide_section = (
+        f'<h2 id="guides">{P["sec_guides"]}</h2>\n'
+        f'  <p>{P["guides_lead"]}</p>\n'
+        '  <div style="display:grid; gap:10px; '
+        'grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); margin-bottom:8px;">\n'
+        + "".join(
+            f'    <a href="{href}" '  # 日英ともガイドはトップと同じ階層に出力される
+            'style="display:block; padding:12px 14px; border:1px solid var(--line); '
+            'border-radius:10px; background:var(--panel); text-decoration:none;">'
+            f'<b style="color:#3987e5">{title}</b>'
+            f'<br><span style="font-size:0.88em; color:var(--ink2)">{desc}</span></a>\n'
+            for href, title, desc in P["guides"])
+        + '  </div>'
+    )
     nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
     nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
     html_doc = f"""<!DOCTYPE html>
@@ -747,7 +787,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <p>{P['pcr_lead']}</p>
   <img src="{charts['pcr']}" alt="Put/Call ratio trend">
 
-  <!-- 収益導線: /guide/ への内部リンクをここに設置(monetization.md参照) -->
+  {guide_section}
 </main>
 <footer>
   {footer_sitemap(lang)}

@@ -294,3 +294,40 @@ GUIDE_PAGES = {
 </div>
 """),
 }
+
+# ---------------------------------------------------------------------------
+# 解説記事の末尾に置く口座開設への導線
+#
+# GA4(2026-07-27)の実測: 解説記事は滞在1分超で読まれている一方、
+# guide-start.html は滞在11秒で直帰していた。読まれている記事の側に
+# 導線を置くほうが自然に届くため、記事末尾にこのブロックを追加する。
+# 広告を含むページには冒頭にPR表記を出す(景表法・ステマ規制対応)。
+# ---------------------------------------------------------------------------
+
+PR_NOTE = ('<p style="font-size:0.8em; color:#9aa7ba;">'
+           '※本ページにはプロモーションが含まれる場合があります</p>\n')
+
+_A8_MATSUI = "https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+64C3M"
+_A8_MATSUI_PIXEL = "https://www17.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+64C3M"
+
+CTA_BROKER = f"""
+<div style="margin:28px 0 8px; padding:14px 16px; border:1px solid #2a3247;
+            border-radius:10px; background:#151b26;">
+<p style="margin:0 0 8px;"><b>データを実際の取引に使うには</b></p>
+<p style="margin:0 0 10px; font-size:0.95em;">
+日経225オプション・先物の売買には、証券会社の総合口座に加えて
+<b>先物・オプション取引口座</b>の開設が必要です(無料・ネット完結)。
+建玉やPCRを見て「この水準で張ってみたい」と思ったときに、
+口座がないと動けないため、先に用意しておくのが一般的です。</p>
+<p style="margin:0 0 6px;">→ <a href="{_A8_MATSUI}" rel="nofollow">松井証券の口座開設(公式・PR)</a><img border="0" width="1" height="1" src="{_A8_MATSUI_PIXEL}" alt=""></p>
+<p style="margin:0; font-size:0.85em; color:#9aa7ba;">
+証券会社の比較や申込みの流れは
+<a href="guide-start.html" style="color:#3987e5">始め方ガイド</a>にまとめています。</p>
+</div>
+"""
+
+# 読まれている解説記事にPR表記+口座開設導線を付与する
+for _key in ("guide-oi.html", "guide-pcr.html", "guide-gex.html", "guide-cot.html"):
+    if _key in GUIDE_PAGES:
+        _title, _body = GUIDE_PAGES[_key]
+        GUIDE_PAGES[_key] = (_title, PR_NOTE + _body + CTA_BROKER)
