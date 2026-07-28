@@ -13,15 +13,15 @@ from plotly.subplots import make_subplots
 
 PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js"
 
-# ダークテーマ(サイト本体と合わせる)
-BG = "#0d1117"
-PANEL = "#151b26"
-INK = "#e8eef7"
-INK2 = "#9aa7ba"
-GRID = "#2a3247"
-UP = "#e66767"
-DOWN = "#3987e5"
-ACCENT = "#199e70"
+# ライトテーマ(サイト本体と合わせる)
+BG = "#f6f7f9"
+PANEL = "#ffffff"
+INK = "#111820"
+INK2 = "#4b5563"
+GRID = "#dfe3e9"
+UP = "#d1453b"
+DOWN = "#1f6fd0"
+ACCENT = "#0f8a5f"
 
 LAYOUT = dict(
     paper_bgcolor=PANEL, plot_bgcolor=PANEL,
@@ -104,7 +104,7 @@ def _flows_fig(flows: pd.DataFrame, n225: pd.DataFrame | None, lang: str):
     fig.add_trace(go.Scatter(
         x=df["dt"], y=df["cum"], name="累積(兆円)" if ja else "Cumulative (tn)",
         line=dict(color=ACCENT, width=2), fill="tozeroy",
-        fillcolor="rgba(25,158,112,0.12)",
+        fillcolor="rgba(15,138,95,0.12)",
         hovertemplate="%{y:.2f}兆円<extra></extra>" if ja else "%{y:.2f} tn<extra></extra>"))
     fig.add_trace(go.Bar(
         x=df["dt"], y=df["tn"], name="週次(兆円)" if ja else "Weekly (tn)",
@@ -116,7 +116,7 @@ def _flows_fig(flows: pd.DataFrame, n225: pd.DataFrame | None, lang: str):
         if len(n):
             fig.add_trace(go.Scatter(
                 x=n.index, y=n["Close"], name="日経平均" if ja else "Nikkei 225",
-                line=dict(color="#8a97ad", width=1), opacity=0.7,
+                line=dict(color="#6b7280", width=1), opacity=0.7,
                 hovertemplate="%{y:,.0f}<extra></extra>", visible="legendonly"))
     layout = {**LAYOUT, "xaxis": dict(gridcolor=GRID, zerolinecolor=GRID,
                                       rangeslider=dict(visible=True, thickness=0.08))}
@@ -129,8 +129,8 @@ def _flows_fig(flows: pd.DataFrame, n225: pd.DataFrame | None, lang: str):
 
 def _cot_fig(cot_hist: pd.DataFrame, markets: list, lang: str):
     fig = go.Figure()
-    palette = [DOWN, ACCENT, UP, "#c98500", "#9085e9", "#d55181",
-               "#1baf7a", "#eb6834", "#86b6ef", "#e6a23c", "#7ec8a9"]
+    palette = [DOWN, ACCENT, UP, "#b3730a", "#6b5fd0", "#d55181",
+               "#0f7a4a", "#eb6834", "#4a7fb5", "#b3730a", "#4a9b7a"]
     for i, m in enumerate(markets):
         sub = cot_hist[cot_hist["market"] == m["key"]].sort_values("date")
         if not len(sub):
@@ -153,8 +153,8 @@ def _participants_fig(hist: pd.DataFrame, lang: str, n225: pd.DataFrame | None =
     latest = df["dt"].max()
     order = (df[df["dt"] == latest].assign(mag=lambda x: x["net"].abs())
              .sort_values("mag", ascending=False)["participant"].tolist())
-    palette = [DOWN, ACCENT, UP, "#c98500", "#9085e9", "#d55181",
-               "#1baf7a", "#eb6834", "#86b6ef", "#e6a23c"]
+    palette = [DOWN, ACCENT, UP, "#b3730a", "#6b5fd0", "#d55181",
+               "#0f7a4a", "#eb6834", "#4a7fb5", "#b3730a"]
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     for i, name in enumerate(order[:20]):
         sub = df[df["participant"] == name].sort_values("dt")
@@ -168,7 +168,7 @@ def _participants_fig(hist: pd.DataFrame, lang: str, n225: pd.DataFrame | None =
         if len(n):
             fig.add_trace(go.Scatter(
                 x=n.index, y=n["Close"], name="日経平均" if ja else "Nikkei 225",
-                line=dict(color="#8a97ad", width=1.4), opacity=0.75,
+                line=dict(color="#6b7280", width=1.4), opacity=0.75,
                 hovertemplate="%{y:,.0f}<extra></extra>",
                 visible="legendonly"), secondary_y=True)
     fig.update_layout(**LAYOUT, height=460)
@@ -324,8 +324,8 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
   function btn(label) {{
     var b = document.createElement('button');
     b.textContent = label;
-    b.style.cssText = 'padding:6px 12px;font-size:12px;background:transparent;color:#9aa7ba;'
-      + 'border:1px solid #2a3247;border-radius:6px;margin:0 4px;';
+    b.style.cssText = 'padding:6px 12px;font-size:12px;background:transparent;color:#4b5563;'
+      + 'border:1px solid #dfe3e9;border-radius:6px;margin:0 4px;';
     return b;
   }}
   // スマホ用の操作ボタン: ①凡例の表示/非表示 ②ズーム操作の有効/無効
@@ -350,8 +350,8 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
         var on = gd.layout.dragmode === false;
         Plotly.relayout(gd, {{'dragmode': on ? 'zoom' : false}});
         zb.textContent = on ? '{t['zoom_off']}' : '{t['zoom_on']}';
-        zb.style.color = on ? '#199e70' : '#9aa7ba';
-        zb.style.borderColor = on ? '#199e70' : '#2a3247';
+        zb.style.color = on ? '#0f8a5f' : '#4b5563';
+        zb.style.borderColor = on ? '#0f8a5f' : '#dfe3e9';
       }});
 
       bar.appendChild(lb); bar.appendChild(zb);

@@ -35,16 +35,17 @@ IMG = os.path.join(SITE, "img")
 DATA = os.path.join(ROOT, "data")
 JST = timezone(timedelta(hours=9))
 
-# --- ダークテーマ配色(検証済みダークモードパレット由来) ---
-PAGE_BG = "#0d1117"   # ページ背景
-PANEL = "#151b26"     # カード・チャート面
-INK = "#e8eef7"       # 主要テキスト
-INK2 = "#9aa7ba"      # 補助テキスト
-GRID = "#2a3247"      # グリッド・罫線
-UP = "#e66767"        # 陽線・プット系(赤)
-DOWN = "#3987e5"      # 陰線・コール系(青)
-ACCENT = "#199e70"    # アクセント(アクア)
-WARN = "#c98500"      # シグナル線(黄)
+# --- ライトテーマ配色 ---
+# 白背景・濃い文字で可読性を優先。チャート画像もこの配色で生成する。
+PAGE_BG = "#f6f7f9"   # ページ背景(わずかにグレー)
+PANEL = "#ffffff"     # カード・チャート面
+INK = "#111820"       # 主要テキスト
+INK2 = "#5b6675"      # 補助テキスト(白地で十分なコントラスト)
+GRID = "#dfe3e9"      # グリッド・罫線
+UP = "#d1453b"        # 陽線・プット系(赤・白地向けに濃く)
+DOWN = "#1f6fd0"      # 陰線・コール系(青・白地向けに濃く)
+ACCENT = "#0f8a5f"    # アクセント(緑)
+WARN = "#b3730a"      # シグナル線(黄・白地向けに濃く)
 
 plt.rcParams.update({
     "figure.facecolor": PANEL,
@@ -215,7 +216,7 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
         prof, _ = np.histogram(c, bins=bins, weights=vol)
         axp = ax1.twiny()
         axp.barh(centers, prof, height=(bins[1] - bins[0]) * 0.9,
-                 color=INK2, alpha=0.22, zorder=0)
+                 color=INK2, alpha=0.35, zorder=0)
         axp.set_xlim(0, prof.max() * 4)  # 左1/4だけ使う
         axp.set_ylim(ax1.get_ylim())
         axp.axis("off")
@@ -231,7 +232,8 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
             if ymin * 0.9 <= k <= ymax * 1.1:
                 ax1.axhline(k, color=color, linestyle=":", linewidth=1.6)
                 ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
-                         va="bottom", ha="right")
+                         va="bottom", ha="right",
+                         bbox=dict(facecolor=PANEL, edgecolor="none", pad=1.5, alpha=0.85))
     ax1.set_ylim(ymin, ymax)
     ax1.set_title(tx["mkt_title"])
     ax1.grid(alpha=0.3)
@@ -244,7 +246,7 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     macd = ema12 - ema26
     signal = macd.ewm(span=9, adjust=False).mean()
     histo = macd - signal
-    ax2.bar(x, histo, width=0.65, color=np.where(histo >= 0, UP, DOWN), alpha=0.5)
+    ax2.bar(x, histo, width=0.65, color=np.where(histo >= 0, UP, DOWN), alpha=0.75)
     ax2.plot(x, macd, color=INK, linewidth=1.2, label="MACD")
     ax2.plot(x, signal, color=WARN, linewidth=1.2, label=tx["signal"])
     ax2.axhline(0, color=INK2, linewidth=0.8)
@@ -266,7 +268,7 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     # --- 日次出来高(棒) ---
     # 未取得日(0)はマスクして棒を描かない。色はローソク足と同じ上げ下げ配色。
     volm = np.ma.masked_where(vol <= 0, vol)
-    ax4.bar(x, volm / 1e8, width=0.65, color=colors, alpha=0.6)
+    ax4.bar(x, volm / 1e8, width=0.65, color=colors, alpha=0.8)
     ax4.set_ylabel(tx["vol_axis"])
     ax4.set_ylim(bottom=0)
     ax4.grid(alpha=0.3)
@@ -274,6 +276,8 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     # 月初の位置に日付ラベル(最下段のみ)
     dates = hist.index
     ticks = [i for i in range(n) if i == 0 or dates[i].month != dates[i - 1].month]
+    if len(ticks) > 1 and ticks[1] - ticks[0] < n * 0.05:
+        ticks = ticks[1:]  # 先頭ラベルが月初と重なるので省く
     ax4.set_xticks(ticks)
     ax4.set_xticklabels([dates[i].strftime("%y/%m") for i in ticks])
 
@@ -479,36 +483,38 @@ def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
 
 CSS_MAIN = """
   :root {
-    --bg: #0d1117; --panel: #151b26; --panel2: #1a2232;
-    --ink: #e8eef7; --ink2: #9aa7ba; --line: #2a3247;
-    --blue: #3987e5; --red: #e66767; --aqua: #199e70;
+    --bg: #f6f7f9; --panel: #ffffff; --panel2: #eef1f5;
+    --ink: #111820; --ink2: #4b5563; --line: #dfe3e9;
+    --blue: #1f6fd0; --red: #d1453b; --aqua: #0f8a5f;
   }
   * { box-sizing: border-box; }
   body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
-         max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink); line-height: 1.7; }
-  header { position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,0.92);
-            backdrop-filter: blur(6px); padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
-  h1 { font-size: 1.25em; margin: 0 0 2px; letter-spacing: 0.02em; }
+         max-width: 1100px; margin: 0 auto; padding: 0 20px 56px; color: var(--ink);
+         font-size: 16px; line-height: 1.85; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(246,247,249,0.94);
+            backdrop-filter: blur(6px); padding: 16px 0 12px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 1.4em; margin: 0 0 3px; letter-spacing: 0.02em; }
   h1::before { content: "▮"; color: var(--aqua); margin-right: 8px; }
-  h2 { font-size: 1.05em; margin: 40px 0 10px; padding-left: 10px;
-        border-left: 3px solid var(--aqua); letter-spacing: 0.03em; }
-  h3 { font-size: 0.92em; color: var(--ink2); font-weight: 500; margin: 12px 0 6px; }
-  p { color: var(--ink2); font-size: 0.9em; }
-  .updated { color: var(--ink2); font-size: 0.8em; margin: 0; }
-  nav { margin-top: 6px; }
-  nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
-           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
-  nav a:hover { color: var(--ink); border-color: var(--aqua); }
-  .tagline { color: var(--ink2); font-size: 0.82em; margin: 4px 0 0; }
+  h2 { font-size: 1.25em; margin: 52px 0 14px; padding-left: 12px;
+        border-left: 4px solid var(--aqua); letter-spacing: 0.02em; }
+  h3 { font-size: 1.02em; color: var(--ink); font-weight: 500; margin: 16px 0 8px; }
+  p { color: var(--ink2); font-size: 0.95em; }
+  .updated { color: var(--ink2); font-size: 0.85em; margin: 0; }
+  nav { margin-top: 8px; }
+  nav a { color: var(--ink2); text-decoration: none; font-size: 0.88em; margin-right: 6px;
+           padding: 5px 13px; border: 1px solid var(--line); border-radius: 999px;
+           display: inline-block; background: var(--panel); }
+  nav a:hover { color: var(--aqua); border-color: var(--aqua); }
+  .tagline { color: var(--ink2); font-size: 0.9em; margin: 6px 0 0; }
   .menu { display: none; position: relative; margin-top: 6px; }
   .menu summary { list-style: none; cursor: pointer; color: var(--ink2); font-size: 0.85em;
                   border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px;
                   display: inline-block; user-select: none; }
   .menu summary::-webkit-details-marker { display: none; }
   .menu[open] summary { color: var(--ink); border-color: var(--aqua); }
-  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel2);
+  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel);
                 border: 1px solid var(--line); border-radius: 10px; padding: 8px; z-index: 30;
-                min-width: 230px; box-shadow: 0 10px 28px rgba(0,0,0,0.55); }
+                min-width: 230px; box-shadow: 0 10px 28px rgba(17,24,32,0.14); }
   .menu-panel a { display: block; padding: 9px 12px; color: var(--ink); text-decoration: none;
                   border-radius: 6px; font-size: 0.95em; }
   .menu-panel a:hover { background: var(--panel); }
@@ -524,10 +530,11 @@ CSS_MAIN = """
     nav.pills { display: none; }
     .menu { display: block; }
   }
-  .kpi { display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }
+  .kpi { display: flex; gap: 12px; margin: 22px 0; flex-wrap: wrap; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-              padding: 10px 20px; flex: 1 1 140px; font-size: 0.82em; color: var(--ink2); }
-  .kpi b { font-size: 1.7em; color: var(--ink); font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }
+              padding: 14px 20px; flex: 1 1 150px; font-size: 0.9em; color: var(--ink2); }
+  .kpi b { font-size: 1.9em; color: var(--ink); font-variant-numeric: tabular-nums;
+            display: block; margin-top: 4px; line-height: 1.2; }
   .kpi div:first-child b { color: var(--aqua); }
   img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
   .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
@@ -536,23 +543,23 @@ CSS_MAIN = """
   .tbl-duo { display: flex; gap: 20px; max-height: 560px; overflow: auto;
               border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }
   .tbl-duo table { width: auto; }
-  table { border-collapse: collapse; font-size: 12px; white-space: nowrap; width: 100%;
-           font-variant-numeric: tabular-nums; }
-  th, td { border: 1px solid var(--line); padding: 2px 8px; text-align: right; }
+  table { border-collapse: collapse; font-size: 14px; white-space: nowrap; width: 100%;
+           font-variant-numeric: tabular-nums; background: var(--panel); }
+  th, td { border: 1px solid var(--line); padding: 5px 10px; text-align: right; }
   td { color: var(--ink); }
   th { background: var(--panel2); color: var(--ink2); position: sticky; top: 0; font-weight: 500; }
   tr > th:first-child { position: sticky; left: 0; background: var(--panel2); }
   td.name { text-align: left; }
-  td.pos { color: #4cc38a; }
-  td.neg { color: #f07878; }
-  td.na { color: #4a5568; }
-  tr.spot td { background: rgba(25,158,112,0.28); color: var(--ink); text-align: center;
+  td.pos { color: #0f7a4a; }
+  td.neg { color: #c0392b; }
+  td.na { color: #9aa3af; }
+  tr.spot td { background: rgba(15,138,95,0.14); color: var(--ink); text-align: center;
                 font-weight: 700; border-top: 2px solid var(--aqua); border-bottom: 2px solid var(--aqua);
                 letter-spacing: 0.05em; }
   .sig { font-size: 1.1em; }
-  .sig-green { color: #2ecc71; }
-  .sig-yellow { color: #f1c40f; }
-  .sig-red { color: #e74c3c; }
+  .sig-green { color: #0f7a4a; }
+  .sig-yellow { color: #b3730a; }
+  .sig-red { color: #c0392b; }
   td.basis { text-align: left; color: var(--ink2); font-size: 11px; white-space: normal; min-width: 200px; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
             font-size: 0.78em; color: var(--ink2); }
@@ -590,11 +597,11 @@ PAGE = {
         "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より。上段=累積ネット売買(日経平均を重ね描き)、下段=直近1年の週次。プラス=買い越し、マイナス=売り越し。{latest}",
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
-        "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#3987e5">→ 建玉分布の見方</a>)',
+        "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
         "sec_weekly": "先物 取引参加者別建玉(週次)",
         "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
         "sec_pcr": "Put/Call レシオの推移",
-        "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#3987e5">→ Put/Callレシオの見方</a>)',
+        "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
         "sec_guides": "データの読み方ガイド",
         "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
         "guides": [
@@ -611,7 +618,7 @@ PAGE = {
             ("guide-start.html", "日経225オプションを始めるには",
              "口座開設から取引開始までの一般的な流れ"),
         ],
-        "footer_links": '<a href="about.html" style="color:#3987e5">運営者情報</a> ｜ <a href="privacy.html" style="color:#3987e5">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#3987e5">用語集</a>',
+        "footer_links": '<a href="about.html" style="color:#1f6fd0">運営者情報</a> ｜ <a href="privacy.html" style="color:#1f6fd0">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#1f6fd0">用語集</a>',
         "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
         "footer_disclaimer": "本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。",
         "out": "index.html", "prefix": "", "html_lang": "ja",
@@ -650,7 +657,7 @@ PAGE = {
             ("guide-nikkei-options.html", "Nikkei 225 Options: Field Guide",
              "Contract basics, SQ, and what the official data covers"),
         ],
-        "footer_links": '<a href="../about.html" style="color:#3987e5">About</a> | <a href="../privacy.html" style="color:#3987e5">Privacy Policy</a> | <a href="guide-participants.html" style="color:#3987e5">Guide: Participant Positioning</a> | <a href="guide-nikkei-options.html" style="color:#3987e5">Guide: Nikkei Options</a>',
+        "footer_links": '<a href="../about.html" style="color:#1f6fd0">About</a> | <a href="../privacy.html" style="color:#1f6fd0">Privacy Policy</a> | <a href="guide-participants.html" style="color:#1f6fd0">Guide: Participant Positioning</a> | <a href="guide-nikkei-options.html" style="color:#1f6fd0">Guide: Nikkei Options</a>',
         "footer_src": "Data source: compiled from official Japan Exchange Group (JPX) publications. Nikkei 225 price data by Nikkei Inc. (copyright belongs to Nikkei Inc.).",
         "footer_disclaimer": "This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.",
         "out": os.path.join("en", "index.html"), "prefix": "../", "html_lang": "en",
@@ -732,7 +739,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'    <a href="{href}" '  # 日英ともガイドはトップと同じ階層に出力される
             'style="display:block; padding:12px 14px; border:1px solid var(--line); '
             'border-radius:10px; background:var(--panel); text-decoration:none;">'
-            f'<b style="color:#3987e5">{title}</b>'
+            f'<b style="color:#1f6fd0">{title}</b>'
             f'<br><span style="font-size:0.88em; color:var(--ink2)">{desc}</span></a>\n'
             for href, title, desc in P["guides"])
         + '  </div>'
@@ -1181,7 +1188,7 @@ def chart_cot(cot: dict, lang: str, usdjpy: pd.Series | None = None) -> str:
             u = usdjpy[(usdjpy.index >= x.min()) & (usdjpy.index <= x.max())]
             if len(u):
                 axp = ax.twinx()
-                axp.plot(u.index, u.values, color="#8a97ad", alpha=0.55, linewidth=1)
+                axp.plot(u.index, u.values, color="#6b7280", alpha=0.8, linewidth=1.2)
                 axp.axis("off")
         title = m[lang] + (" (灰線: ドル円)" if m["key"] == "jpy" and lang == "ja"
                            and usdjpy is not None else
@@ -1305,7 +1312,7 @@ def chart_investor(flows: pd.DataFrame, lang: str, n225: pd.DataFrame | None = N
         n = n225[(n225.index >= df["dt"].min()) & (n225.index <= df["dt"].max())]
         if len(n):
             axp = ax1.twinx()
-            axp.plot(n.index, n["Close"], color="#8a97ad", alpha=0.6, linewidth=1)
+            axp.plot(n.index, n["Close"], color="#6b7280", alpha=0.8, linewidth=1.2)
             axp.set_ylabel("日経平均" if lang == "ja" else "Nikkei 225",
                            color="#8a97ad", fontsize=8)
             axp.tick_params(axis="y", labelcolor="#8a97ad", labelsize=7)
@@ -1359,7 +1366,7 @@ def chart_participants(hist: pd.DataFrame, n225: pd.DataFrame | None, lang: str)
             n = n225[(n225.index >= sub["dt"].min()) & (n225.index <= latest)]
             if len(n):
                 axp = ax.twinx()
-                axp.plot(n.index, n["Close"], color="#8a97ad", alpha=0.55, linewidth=1)
+                axp.plot(n.index, n["Close"], color="#6b7280", alpha=0.8, linewidth=1.2)
                 axp.axis("off")
         ax.set_title(name, fontsize=8.5)
         ax.grid(alpha=0.2)
@@ -1637,8 +1644,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 
 
 SUB_CSS = """
-  :root { --bg: #0d1117; --panel: #151b26; --panel2: #1a2232; --ink: #e8eef7; --ink2: #9aa7ba;
-          --line: #2a3247; --aqua: #199e70; }
+  :root { --bg: #f6f7f9; --panel: #ffffff; --panel2: #eef1f5; --ink: #111820; --ink2: #4b5563;
+          --line: #dfe3e9; --aqua: #0f8a5f; }
   nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
   nav a:hover { color: var(--ink); border-color: var(--aqua); }
@@ -1649,9 +1656,9 @@ SUB_CSS = """
                   display: inline-block; user-select: none; }
   .menu summary::-webkit-details-marker { display: none; }
   .menu[open] summary { color: var(--ink); border-color: var(--aqua); }
-  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel2);
+  .menu-panel { position: absolute; left: 0; top: calc(100% + 6px); background: var(--panel);
                 border: 1px solid var(--line); border-radius: 10px; padding: 8px; z-index: 30;
-                min-width: 230px; box-shadow: 0 10px 28px rgba(0,0,0,0.55); }
+                min-width: 230px; box-shadow: 0 10px 28px rgba(17,24,32,0.14); }
   .menu-panel a { display: block; padding: 9px 12px; color: var(--ink); text-decoration: none;
                   border-radius: 6px; font-size: 0.95em; border: none; margin: 0; }
   .menu-panel a:hover { background: var(--panel); }
@@ -1668,7 +1675,7 @@ SUB_CSS = """
   h1::before { content: "▮"; color: var(--aqua); margin-right: 8px; }
   h2 { font-size: 1.0em; margin: 28px 0 8px; padding-left: 10px; border-left: 3px solid var(--aqua); }
   p, li { color: var(--ink2); font-size: 0.92em; }
-  a { color: #3987e5; }
+  a { color: #1f6fd0; }
   img { max-width: 100%; height: auto; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
            font-size: 0.78em; color: var(--ink2); }
@@ -1735,7 +1742,7 @@ def footer_sitemap(lang: str) -> str:
         items = NAV_LINKS["en"] + [
             ("../about.html", "About"), ("../privacy.html", "Privacy"),
             ("../", "日本語")]
-    links = " ｜ ".join(f'<a href="{h}" style="color:#3987e5">{t}</a>' for h, t in items)
+    links = " ｜ ".join(f'<a href="{h}" style="color:#1f6fd0">{t}</a>' for h, t in items)
     return f'<p class="sitemap">{links}</p>'
 
 
@@ -1797,11 +1804,11 @@ def dl_link(name: str, lang: str, prefix: str = "") -> str:
 def render_favicon() -> None:
     """シンプルなファビコン(ダーク地に3色のバー)を生成する。"""
     from PIL import Image, ImageDraw
-    img = Image.new("RGB", (64, 64), "#0d1117")
+    img = Image.new("RGB", (64, 64), "#ffffff")
     d = ImageDraw.Draw(img)
-    d.rectangle([14, 12, 26, 52], fill="#199e70")
-    d.rectangle([32, 22, 44, 52], fill="#3987e5")
-    d.rectangle([50, 30, 62, 52], fill="#e66767")
+    d.rectangle([14, 12, 26, 52], fill="#0f8a5f")
+    d.rectangle([32, 22, 44, 52], fill="#1f6fd0")
+    d.rectangle([50, 30, 62, 52], fill="#d1453b")
     os.makedirs(SITE, exist_ok=True)
     img.save(os.path.join(SITE, "favicon.png"))
 
