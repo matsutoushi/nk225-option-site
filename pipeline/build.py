@@ -497,7 +497,8 @@ def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
                         style = " style='background:rgba(25,158,112,0.45); font-weight:bold'" if is_max else ""
                         tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
-        return f"<table>{head1}{head2}{''.join(body)}</table>"
+        return (f"<table><thead>{head1}{head2}</thead>"
+                f"<tbody>{''.join(body)}</tbody></table>")
 
     note = f"<p>{tx['tbl_note'].format(lo=lo, hi=hi)}</p>"
     caption = f"<h3>{tx['tbl_caption']}</h3>"
@@ -678,7 +679,15 @@ CSS_MAIN = """
   th, td { border: 1px solid var(--line); padding: 5px 10px; text-align: right; }
   td { color: var(--ink); }
   th { background: var(--panel2); color: var(--ink2); position: sticky; top: 0; font-weight: 500; }
-  tr > th:first-child { position: sticky; left: 0; background: var(--panel2); }
+  tr > th:first-child { position: sticky; left: 0; background: var(--panel2); z-index: 3; }
+  /* ヘッダーが2段の表(建玉一覧)では、2段目を1段目の下に固定する。
+     両方 top:0 にすると2段目が1段目(Call/Put)を覆って見えなくなる。 */
+  thead th { line-height: 20px; padding: 5px 10px; z-index: 2; }
+  thead tr:first-child th { top: 0; height: 30px; }
+  /* 2段目は1段目の高さ分だけ下げる。わずかに小さめにして隙間からデータが覗くのを防ぐ
+     (1pxの重なりは見えないが、1pxの隙間は行が透けて見えてしまうため) */
+  thead tr:nth-child(2) th { top: 30px; height: 30px; }
+  thead tr:first-child th:first-child { z-index: 4; }
   td.name { text-align: left; }
   td.pos { color: #0f7a4a; }
   td.neg { color: #c0392b; }
