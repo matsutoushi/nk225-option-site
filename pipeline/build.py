@@ -47,6 +47,9 @@ DOWN = "#1f6fd0"      # 陰線・コール系(青・白地向けに濃く)
 ACCENT = "#0f8a5f"    # アクセント(緑)
 WARN = "#b3730a"      # シグナル線(黄・白地向けに濃く)
 
+# 参加者別建玉で使う合算商品名(mini建玉を1/10してラージと合計したもの)
+COMBINED_FUT = "日経225先物+mini(ラージ換算)"
+
 plt.rcParams.update({
     "figure.facecolor": PANEL,
     "axes.facecolor": PANEL,
@@ -68,7 +71,8 @@ plt.rcParams.update({
 # データ蓄積
 # ---------------------------------------------------------------------------
 
-def save_history(date: str, pcr: dict, oi: pd.DataFrame, weekly: dict | None) -> pd.DataFrame:
+def save_history(date: str, pcr: dict, oi: pd.DataFrame, weekly: dict | None,
+                 pcr_mini: dict | None = None) -> pd.DataFrame:
     os.makedirs(DATA, exist_ok=True)
     oi.to_csv(os.path.join(DATA, f"oi_{date}.csv"), index=False)
     if weekly:
@@ -81,6 +85,23 @@ def save_history(date: str, pcr: dict, oi: pd.DataFrame, weekly: dict | None) ->
     hist = pd.concat([hist, pd.DataFrame([{"date": date, **pcr}])], ignore_index=True)
     hist = hist.sort_values("date")
     hist.to_csv(hist_path, index=False)
+
+    # ミニ込みPCR(ラージ換算)は別系列として蓄積する。
+    # 既存のpcr_history.csvはラージのみで積み上げてきたため、途中で定義を変えると
+    # 過去と接続しない系列になる。よって上書きせず新しいCSVに分ける。
+    if pcr_mini:
+        put_all = pcr["put_volume"] + pcr_mini["put_volume"] / 10.0
+        call_all = pcr["call_volume"] + pcr_mini["call_volume"] / 10.0
+        row = {"date": date,
+               "put_volume": round(put_all, 1), "call_volume": round(call_all, 1),
+               "pcr": round(put_all / call_all, 3) if call_all else None,
+               "mini_put": pcr_mini["put_volume"], "mini_call": pcr_mini["call_volume"]}
+        p2 = os.path.join(DATA, "pcr_history_incl_mini.csv")
+        h2 = pd.read_csv(p2, dtype={"date": str}) if os.path.exists(p2) else \
+            pd.DataFrame(columns=list(row))
+        h2 = h2[h2["date"].astype(str).str.fullmatch(r"20\d{6}") & (h2["date"] != date)]
+        h2 = pd.concat([h2, pd.DataFrame([row])], ignore_index=True).sort_values("date")
+        h2.to_csv(p2, index=False)
     return hist
 
 
@@ -94,6 +115,42 @@ def nearest_expiry(oi: pd.DataFrame) -> str:
         if totals[exp] > 1000:
             return exp
     return sorted(totals.index)[0]
+
+
+def _sq_date(expiry: str) -> pd.Timestamp:
+    """限月コード(YYMM)のSQ日=第2金曜を返す。"""
+    y, m = 2000 + int(expiry[:2]), int(expiry[2:])
+    fridays = [x for x in pd.date_range(pd.Timestamp(y, m, 1), periods=14, freq="D")
+               if x.weekday() == 4]
+    return fridays[1]
+
+
+def merge_mini_into_oi(oi: pd.DataFrame, mini: pd.DataFrame | None,
+                       expiry: str) -> tuple[pd.DataFrame, int]:
+    """月限に対応するミニオプションをラージ換算(÷10)して建玉分布に合算する。
+
+    ミニは想定元本がラージの1/10。ミニはウィークリー限月なので、月限のSQと
+    同じ回号(最終売買日=SQ前日、またはSQ当日)のものだけを対象にする。
+    週次限月のミニは短期需給として別セクションに残すため、ここでは合算しない。
+
+    Returns: (合算後のoi, 合算したミニの枚数)。対象が無ければ元のoiをそのまま返す。
+    """
+    if mini is None or not len(mini):
+        return oi, 0
+    sq = _sq_date(expiry)
+    targets = {sq.date(), (sq - pd.Timedelta(days=1)).date()}
+    m = mini[mini["expiry"].isin(targets)]
+    if not len(m):
+        return oi, 0
+    raw_contracts = int(m["oi"].sum())
+    add = (m.groupby(["type", "strike"], as_index=False)["oi"].sum()
+             .assign(expiry=expiry, change=0))
+    add["oi"] = add["oi"] / 10.0  # ラージ換算
+    merged = pd.concat([oi, add[["type", "expiry", "strike", "oi", "change"]]],
+                       ignore_index=True)
+    merged = merged.groupby(["type", "expiry", "strike"], as_index=False)[["oi", "change"]].sum()
+    merged["oi"] = merged["oi"].round().astype(int)
+    return merged, raw_contracts
 
 
 def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
@@ -347,7 +404,8 @@ L = {
         "wk_note": "基準日: {date}(毎週第1営業日に更新される週次データ。前週比は1週間でのネット建玉の増減)",
         "wk_sellers": "{product} 売超上位", "wk_buyers": "{product} 買超上位",
         "wk_cols": ["参加者", "ネット建玉", "前週比"],
-        "products": {"日経225先物": "日経225先物", "日経225mini": "日経225mini"},
+        "products": {"日経225先物": "日経225先物", "日経225mini": "日経225mini",
+                     COMBINED_FUT: "日経225先物+mini(ラージ換算)"},
     },
     "en": {
         "suffix": "_en",
@@ -368,7 +426,8 @@ L = {
         "wk_note": "As of {date} (weekly data published on the first business day of each week; WoW = one-week change in net open interest)",
         "wk_sellers": "{product} — Top Net Sellers", "wk_buyers": "{product} — Top Net Buyers",
         "wk_cols": ["Participant", "Net OI", "WoW"],
-        "products": {"日経225先物": "Nikkei 225 Futures", "日経225mini": "Nikkei 225 mini Futures"},
+        "products": {"日経225先物": "Nikkei 225 Futures", "日経225mini": "Nikkei 225 mini Futures",
+                     COMBINED_FUT: "Nikkei 225 Futures + mini (large-equivalent)"},
     },
 }
 
@@ -441,6 +500,36 @@ def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
             f"{render(cur, False, True)}{render(chg, True, False)}</div>")
 
 
+def add_combined_futures(weekly: dict | None) -> dict | None:
+    """参加者別建玉に「日経225先物+mini(ラージ換算)」の合計を追加する。
+
+    miniは想定元本がラージの1/10。枚数のままでは規模を比較できないため、
+    mini建玉を1/10してラージと足し合わせた合計を1商品として持たせる。
+    """
+    if not weekly or "data" not in weekly:
+        return weekly
+    df = weekly["data"]
+    if "product" not in df.columns:
+        return weekly
+    lg = df[df["product"] == "日経225先物"].copy()
+    mn = df[df["product"] == "日経225mini"].copy()
+    if not len(lg) and not len(mn):
+        return weekly
+    for c in ("net", "net_prev", "change"):
+        if c in mn.columns:
+            mn[c] = mn[c] / 10.0
+    comb = pd.concat([lg, mn], ignore_index=True)
+    cols = [c for c in ("net", "net_prev", "change") if c in comb.columns]
+    comb = comb.groupby("participant", as_index=False)[cols].sum()
+    for c in cols:
+        comb[c] = comb[c].round().astype(int)
+    comb["product"] = COMBINED_FUT
+    weekly = dict(weekly)
+    weekly["data"] = pd.concat([df, comb[df.columns.intersection(comb.columns)]],
+                               ignore_index=True)
+    return weekly
+
+
 def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
     """参加者別建玉(週次)のテーブル。"""
     tx = L[lang]
@@ -448,7 +537,7 @@ def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
     date_label = f"{d[:4]}/{d[4:6]}/{d[6:]}"
     out = [f"<p>{tx['wk_note'].format(date=date_label)}</p>"]
     head = "".join(f"<th>{c}</th>" for c in tx["wk_cols"])
-    for product in ("日経225先物", "日経225mini"):
+    for product in (COMBINED_FUT, "日経225先物", "日経225mini"):
         df = weekly["data"][weekly["data"]["product"] == product]
         if len(df) == 0:
             continue
@@ -597,6 +686,11 @@ PAGE = {
         "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より。上段=累積ネット売買(日経平均を重ね描き)、下段=直近1年の週次。プラス=買い越し、マイナス=売り越し。{latest}",
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
+        "mini_note": "※ミニオプション({n:,}枚)を1/10のラージ換算で合算しています。",
+        "sec_fut": "先物の出来高(ラージ換算での比較)",
+        "fut_lead": "miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。",
+        "fut_cols": ["商品", "出来高(枚)", "ラージ換算", "取引代金"],
+        "fut_total": "合計",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
         "sec_weekly": "先物 取引参加者別建玉(週次)",
         "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
@@ -644,6 +738,11 @@ PAGE = {
         "flows_lead": "Weekly net buying by foreign investors in TSE Prime cash equities, shown as a cumulative line (top) and weekly bars (bottom), from JPX trading-by-investor-type data. Positive = net buying. {latest}",
         "sec_oitable": "Options Open Interest by Expiry",
         "sec_oi": "Open Interest Distribution by Strike",
+        "mini_note": "Includes mini options ({n:,} contracts) converted to large-equivalent (1/10).",
+        "sec_fut": "Futures Volume (large-equivalent comparison)",
+        "fut_lead": "Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown.",
+        "fut_cols": ["Product", "Volume (contracts)", "Large-equiv", "Turnover"],
+        "fut_total": "Total",
         "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
         "sec_weekly": "Futures Open Interest by Trading Participant (Weekly)",
         "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
@@ -728,6 +827,34 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         )
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
+    # 建玉分布にミニを合算した場合の注記
+    mini_note = ""
+    if extras.get("mini_merged"):
+        mini_note = " " + P["mini_note"].format(n=extras["mini_merged"])
+
+    # 先物の出来高: ラージ/mini/マイクロをラージ換算で並べる
+    fut_section = ""
+    if extras.get("fut_vol"):
+        rows, tot_eq, tot_val = [], 0.0, 0
+        for d in extras["fut_vol"]:
+            tot_eq += d["large_equiv"]
+            tot_val += d["value"]
+            rows.append(
+                f"<tr><td class='name'>{html.escape(d['product'])}</td>"
+                f"<td>{d['volume']:,}</td><td>{d['large_equiv']:,.0f}</td>"
+                f"<td>{d['value'] / 1e12:.2f}兆円</td></tr>"
+                if lang == "ja" else
+                f"<tr><td class='name'>{html.escape(d['product'])}</td>"
+                f"<td>{d['volume']:,}</td><td>{d['large_equiv']:,.0f}</td>"
+                f"<td>{d['value'] / 1e12:.2f} tn yen</td></tr>")
+        unit = "兆円" if lang == "ja" else " tn yen"
+        rows.append(f"<tr class='spot'><td>{P['fut_total']}</td><td>-</td>"
+                    f"<td>{tot_eq:,.0f}</td><td>{tot_val / 1e12:.2f}{unit}</td></tr>")
+        head = "".join(f"<th>{c}</th>" for c in P["fut_cols"])
+        fut_section = (f"<h2 id=\"fut\">{P['sec_fut']}</h2>\n  <p>{P['fut_lead']}</p>\n"
+                       f"  <div class='tbl-scroll'><table><tr>{head}</tr>"
+                       f"{''.join(rows)}</table></div>")
+
     # データの読み方ガイドへの導線。GA4(2026-07-27)ではトップに64%のビューが集中し
     # 解説記事まで回遊していなかったため、本文中の小さなリンクとは別にカード型で明示する。
     guide_section = (
@@ -781,10 +908,12 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   {tables['oi']}
 
   <h2 id="oi">{P['sec_oi']}</h2>
-  <p>{P['oi_lead']}</p>
+  <p>{P['oi_lead']}{mini_note}</p>
   <img src="{charts['oi']}" alt="Open interest by strike">
 
   {mini_section}
+
+  {fut_section}
 
   {weekly_section}
 
@@ -1959,13 +2088,36 @@ def main() -> None:
 
     try:
         weekly = jpx.fetch_weekly_participant_futures()
+        weekly = add_combined_futures(weekly)  # 先物+mini(ラージ換算)の合計を追加
         print(f"weekly participants: {len(weekly['data'])} (date {weekly['date']})")
     except Exception as e:
         warn(f"weekly participant data failed: {e}")
         weekly = None
 
-    hist = save_history(date, pcr, oi, weekly)
+    # ミニオプションのPCR(ラージ換算で合算した系列を別途蓄積する)
+    pcr_mini = None
+    try:
+        pcr_mini = jpx.fetch_mini_put_call_volume(files["whole_day"])
+        if pcr_mini:
+            print(f"PCR(mini): {pcr_mini}")
+    except Exception as e:
+        warn(f"mini PCR failed: {e}")
+
+    hist = save_history(date, pcr, oi, weekly, pcr_mini)
     expiry = nearest_expiry(oi)
+    # ミニオプション: 月限に対応する回号はラージ換算(÷10)で建玉分布に合算する。
+    # 週次限月のミニは短期需給として別セクションに残すため合算しない。
+    mini_df = None
+    mini_merged = 0
+    try:
+        mini_df = jpx.fetch_mini_oi(files["open_interest"])
+        print(f"mini OI rows: {len(mini_df)}")
+        oi, mini_merged = merge_mini_into_oi(oi, mini_df, expiry)
+        if mini_merged:
+            print(f"merged mini into OI: {mini_merged:,} contracts "
+                  f"({mini_merged / 10:,.0f} large-equiv)")
+    except Exception as e:
+        warn(f"mini OI/merge failed: {e}")
     try:
         n225_hist = jpx.fetch_n225_official()
     except Exception as e:
@@ -1989,6 +2141,8 @@ def main() -> None:
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     # --- 日経VI・SQカレンダー・ミニオプション・海外投資家動向 ---
     base_extras = {}
+    if mini_merged:
+        base_extras["mini_merged"] = mini_merged
     vi_df = None
     try:
         vi_df = jpx.fetch_nikkei_vi()
@@ -2011,12 +2165,15 @@ def main() -> None:
                   f"({vol_info['date'].date()}, {vol_info['pct']}%)")
     except Exception as e:
         warn(f"N225 volume failed: {e}")
-    mini_df = None
+    # 先物の出来高・取引代金(ラージ/mini/マイクロをラージ換算で比較)
     try:
-        mini_df = jpx.fetch_mini_oi(files["open_interest"])
-        print(f"mini OI rows: {len(mini_df)}")
+        fv = jpx.fetch_futures_volume(files["whole_day"])
+        if fv:
+            base_extras["fut_vol"] = fv
+            print("futures: " + " / ".join(
+                f"{d['product']} {d['volume']:,}枚(換算{d['large_equiv']:,.0f})" for d in fv))
     except Exception as e:
-        warn(f"mini OI failed: {e}")
+        warn(f"futures volume failed: {e}")
     flows = None
     try:
         fl_path = os.path.join(DATA, "investor_flows.csv")

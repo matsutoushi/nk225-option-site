@@ -71,6 +71,57 @@ def fetch_put_call_volume(url: str) -> dict:
     raise RuntimeError("Total row not found for Nikkei 225 Options")
 
 
+def fetch_mini_put_call_volume(url: str) -> dict | None:
+    """ミニオプションの日通しプット/コール出来高を返す。見つからなければNone。
+
+    ミニは想定元本がラージの1/10。ラージ換算で合算する用途を想定している。
+    """
+    raw = pd.read_excel(io.BytesIO(_download(url)), sheet_name="market_data_OP", header=None)
+    rows = raw.index[raw[1].astype(str).str.contains("mini Options", na=False, case=False)]
+    if len(rows) == 0:
+        return None
+    start = rows[0]
+    for i in range(start, min(start + 6, len(raw))):
+        if "Total" in str(raw.loc[i, 2]):
+            put_vol = int(raw.loc[i, 3])
+            call_vol = int(raw.loc[i, 5])
+            return {"put_volume": put_vol, "call_volume": call_vol,
+                    "pcr": round(put_vol / call_vol, 3) if call_vol else None}
+    return None
+
+
+# 日経225先物系の想定元本倍率(ラージ=1)。ラージ換算 = 枚数 / DIVISOR
+FUT_PRODUCTS = {
+    "日経225先物": 1,
+    "日経225mini": 10,
+    "日経225マイクロ先物": 100,
+}
+
+
+def fetch_futures_volume(url: str) -> list[dict]:
+    """whole_dayから日経225先物・mini・マイクロの出来高と取引代金を返す。
+
+    Returns: [{"product", "volume", "value", "divisor", "large_equiv"}] の一覧。
+    """
+    raw = pd.read_excel(io.BytesIO(_download(url)), sheet_name="market_data_Futures", header=None)
+    out, cur = [], None
+    for i in range(len(raw)):
+        name = str(raw.iloc[i, 2])
+        if name not in ("nan", ""):
+            cur = name.split("\n")[0].strip()
+        if cur in FUT_PRODUCTS and "Total" in str(raw.iloc[i, 3]):
+            try:
+                vol = int(raw.iloc[i, 4])
+                val = int(raw.iloc[i, 6])
+            except (ValueError, TypeError):
+                continue
+            div = FUT_PRODUCTS[cur]
+            out.append({"product": cur, "volume": vol, "value": val,
+                        "divisor": div, "large_equiv": vol / div})
+            cur = None  # 同一商品の重複行を拾わない
+    return out
+
+
 def fetch_open_interest(url: str) -> pd.DataFrame:
     """open_interestファイルから日経225オプションの行使価格別建玉と前日比を返す。
 
