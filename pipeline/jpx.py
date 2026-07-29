@@ -162,6 +162,60 @@ def fetch_open_interest(url: str) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# 日次: 取引参加者別取引高(手口上位一覧)
+#
+# JPXは平日17:45頃にこのデータを公表する(建玉残高は20:00頃で別系統)。
+# 建玉より早く出るため、当日の手口だけ先にサイトへ反映できる。
+# ---------------------------------------------------------------------------
+
+PV_JSON = BASE + "/automation/markets/derivatives/participant-volume/json/"
+# 手口データの分類コード → 表示名
+PV_CLASSES = {
+    "NK225F": "日経225先物",
+    "NK225MF": "日経225mini",
+    "NK225E": "日経225オプション",
+    "TOPIXF": "TOPIX先物",
+}
+
+
+def fetch_participant_volume() -> dict:
+    """最新営業日の手口上位一覧(日通し・立会)を返す。
+
+    Returns: {"date": "YYYYMMDD", "update": "YYYY/MM/DD HH:MM",
+              "data": DataFrame[cls, issue, rank, participant, volume]}
+    """
+    r = requests.get(PV_JSON + "participant-volume_monthlylist.json", headers=UA, timeout=30)
+    r.raise_for_status()
+    months = [m["Month"] for m in r.json().get("TableDatas", [])]
+    if not months:
+        raise RuntimeError("participant volume: month list empty")
+
+    r2 = requests.get(PV_JSON + f"participant_volume_{months[0]}.json", headers=UA, timeout=30)
+    r2.raise_for_status()
+    j = r2.json()
+    rows = [t for t in j.get("TableDatas", []) if t.get("WholeDay")]
+    if not rows:
+        raise RuntimeError("participant volume: no whole-day file")
+    latest = rows[0]  # 新しい順
+
+    raw = pd.read_excel(io.BytesIO(_download(BASE + latest["WholeDay"])), header=None)
+    out = []
+    for _, row in raw.iterrows():
+        cls = str(row[0])
+        if cls not in PV_CLASSES:
+            continue
+        try:
+            out.append({"cls": cls, "issue": str(row[2]), "rank": int(row[3]),
+                        "participant": str(row[5]).strip(), "volume": int(row[7])})
+        except (ValueError, TypeError):
+            continue
+    if not out:
+        raise RuntimeError("participant volume: no rows parsed")
+    return {"date": latest["TradeDate"], "update": j.get("UpdateDate", ""),
+            "data": pd.DataFrame(out)}
+
+
+# ---------------------------------------------------------------------------
 # 週次: 指数先物 取引参加者別建玉残高(旧・手口の後継データ)
 # ---------------------------------------------------------------------------
 

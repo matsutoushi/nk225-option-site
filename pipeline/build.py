@@ -11,6 +11,7 @@
 
 import html
 import os
+import re
 from datetime import datetime, timezone, timedelta
 
 import numpy as np
@@ -404,6 +405,8 @@ L = {
         "wk_note": "基準日: {date}(毎週第1営業日に更新される週次データ。前週比は1週間でのネット建玉の増減)",
         "wk_sellers": "{product} 売超上位", "wk_buyers": "{product} 買超上位",
         "wk_cols": ["参加者", "ネット建玉", "前週比"],
+        "pv_note": "取引日: {date}(JPX公表 {upd})。各社の当日の取引高と全体に占める割合です。売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。",
+        "pv_cols": ["参加者", "取引高(枚)", "シェア"],
         "products": {"日経225先物": "日経225先物", "日経225mini": "日経225mini",
                      COMBINED_FUT: "日経225先物+mini(ラージ換算)"},
     },
@@ -426,6 +429,8 @@ L = {
         "wk_note": "As of {date} (weekly data published on the first business day of each week; WoW = one-week change in net open interest)",
         "wk_sellers": "{product} — Top Net Sellers", "wk_buyers": "{product} — Top Net Buyers",
         "wk_cols": ["Participant", "Net OI", "WoW"],
+        "pv_note": "Trading date: {date} (published by JPX at {upd}). Volume and share by participant. Direction is not disclosed, but it shows who is most active.",
+        "pv_cols": ["Participant", "Volume", "Share"],
         "products": {"日経225先物": "Nikkei 225 Futures", "日経225mini": "Nikkei 225 mini Futures",
                      COMBINED_FUT: "Nikkei 225 Futures + mini (large-equivalent)"},
     },
@@ -530,6 +535,40 @@ def add_combined_futures(weekly: dict | None) -> dict | None:
     return weekly
 
 
+def participant_volume_html(pv: dict, lang: str = "ja") -> str:
+    """日次の手口上位一覧(取引参加者別取引高)。日経225先物とminiの上位を出す。
+
+    JPXは17:45頃にこのデータを公表する(建玉残高は20:00頃)。建玉より早いため、
+    夕方の時点ではこのセクションだけが当日データになることがある。
+    """
+    tx = L[lang]
+    df = pv["data"]
+    d = pv["date"]
+    date_label = f"{d[:4]}/{d[4:6]}/{d[6:]}"
+    out = [f"<p>{tx['pv_note'].format(date=date_label, upd=pv.get('update', ''))}</p>"]
+    head = "".join(f"<th>{c}</th>" for c in tx["pv_cols"])
+    blocks = []
+    for cls in ("NK225F", "NK225MF"):
+        sub = df[df["cls"] == cls]
+        if not len(sub):
+            continue
+        top = (sub.groupby("participant", as_index=False)["volume"].sum()
+                  .sort_values("volume", ascending=False).head(10))
+        total = int(sub["volume"].sum())
+        rows = "".join(
+            f"<tr><td class='name'>{html.escape(str(r['participant']))}</td>"
+            f"<td>{int(r['volume']):,}</td>"
+            f"<td>{int(r['volume']) / total * 100:.1f}%</td></tr>"
+            for _, r in top.iterrows()) if total else ""
+        label = jpx.PV_CLASSES.get(cls, cls)
+        blocks.append(f"<div class='tbl-box'><h3>{label}</h3><div class='tbl-scroll'>"
+                      f"<table><tr>{head}</tr>{rows}</table></div></div>")
+    if not blocks:
+        return ""
+    out.append(f"<div class='tbl-pair'>{''.join(blocks)}</div>")
+    return "".join(out)
+
+
 def weekly_tables_html(weekly: dict, lang: str = "ja") -> str:
     """参加者別建玉(週次)のテーブル。"""
     tx = L[lang]
@@ -621,6 +660,7 @@ CSS_MAIN = """
   }
   .kpi { display: flex; gap: 12px; margin: 22px 0 10px; flex-wrap: wrap; }
   .kpi-guide { font-size: 0.88em; color: var(--ink2); margin: 0 0 6px; }
+  .src-dates { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
               padding: 14px 20px; flex: 1 1 150px; font-size: 0.9em; color: var(--ink2); }
   .kpi b { font-size: 1.9em; color: var(--ink); font-variant-numeric: tabular-nums;
@@ -688,6 +728,10 @@ PAGE = {
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
         "mini_note": "※ミニオプション({n:,}枚)を1/10のラージ換算で合算しています。",
+        "src_volume": "出来高・価格 {d}",
+        "src_pv": "手口 {d}",
+        "src_oi": "建玉残高 {d}",
+        "sec_pv": "手口上位一覧(取引参加者別 取引高)",
         "sec_fut": "先物の出来高(ラージ換算での比較)",
         "fut_lead": "miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。",
         "fut_cols": ["商品", "出来高(枚)", "ラージ換算", "取引代金"],
@@ -743,6 +787,10 @@ PAGE = {
         "sec_oitable": "Options Open Interest by Expiry",
         "sec_oi": "Open Interest Distribution by Strike",
         "mini_note": "Includes mini options ({n:,} contracts) converted to large-equivalent (1/10).",
+        "src_volume": "Volume/price {d}",
+        "src_pv": "Participant volume {d}",
+        "src_oi": "Open interest {d}",
+        "sec_pv": "Trading Volume by Participant (daily ranking)",
         "sec_fut": "Futures Volume (large-equivalent comparison)",
         "fut_lead": "Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown.",
         "fut_cols": ["Product", "Volume (contracts)", "Large-equiv", "Turnover"],
@@ -834,6 +882,27 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         )
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
+    # データ源ごとの基準日。JPXは公表時刻が異なる(手口17:45頃 / 建玉20:00頃)ため、
+    # どのデータがいつ時点なのかを明示して誤読を防ぐ。
+    def _fmt(x):
+        x = str(x)
+        return f"{x[:4]}/{x[4:6]}/{x[6:]}" if len(x) == 8 and x.isdigit() else x
+    parts = []
+    if extras.get("src_volume"):
+        parts.append(P["src_volume"].format(d=_fmt(extras["src_volume"])))
+    if extras.get("pv"):
+        parts.append(P["src_pv"].format(d=_fmt(extras["pv"]["date"])))
+    if extras.get("src_oi"):
+        parts.append(P["src_oi"].format(d=_fmt(extras["src_oi"])))
+    src_dates = " ／ ".join(parts) if lang == "ja" else " / ".join(parts)
+
+    # 手口上位一覧(日次)。建玉より早く公表されるので独立セクションにする。
+    pv_section = ""
+    if extras.get("pv"):
+        inner = participant_volume_html(extras["pv"], lang)
+        if inner:
+            pv_section = f'<h2 id="pv">{P["sec_pv"]}</h2>\n  {inner}'
+
     # 建玉分布にミニを合算した場合の注記
     mini_note = ""
     if extras.get("mini_merged"):
@@ -898,6 +967,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(d=d, now=now)}</p>
+  <p class="updated src-dates">{src_dates}</p>
   {nav}
 </header>
 <p class="tagline">{P['tagline']}</p>
@@ -922,6 +992,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   {mini_section}
 
   {fut_section}
+
+  {pv_section}
 
   {weekly_section}
 
@@ -2080,12 +2152,27 @@ def main() -> None:
     date = files["date"]
     print(f"JPX data date: {date}")
 
-    # 既に処理済みの日付ならビルドせず終了(1日複数回のcronで新データの回だけ動かす)
-    # workflow_dispatch / push では FORCE_BUILD=1 が入り常にビルドする
+    # JPXは公表時刻が異なる(出来高16時台 / 手口17:45頃 / 建玉20:00頃)。
+    # 日付だけで判定すると、夕方にビルドした後に公表される建玉を当日中に取り込めない。
+    # そこで「出来高日付|手口日付|建玉日付」の組を鍵にし、どれかが進んだら再ビルドする。
+    oi_date = ""
+    m = re.search(r"/(\d{8})open_interest", files["open_interest"])
+    if m:
+        oi_date = m.group(1)
+    pv_head = None
+    pv_date = ""
+    try:
+        pv_head = jpx.fetch_participant_volume()
+        pv_date = pv_head["date"]
+    except Exception as e:
+        warn(f"participant volume failed: {e}")
+    key = f"{date}|{pv_date}|{oi_date}"
+    print(f"data key: {key} (volume|participant|open-interest)")
+
     last_path = os.path.join(DATA, "last_date.txt")
     last = open(last_path).read().strip() if os.path.exists(last_path) else ""
-    if last == date and not os.environ.get("FORCE_BUILD"):
-        print(f"NO_NEW_DATA: {date} is already processed")
+    if last == key and not os.environ.get("FORCE_BUILD"):
+        print(f"NO_NEW_DATA: {key} is already processed")
         return
 
     os.makedirs(IMG, exist_ok=True)  # site/はgitignore対象なのでCIでは毎回作る
@@ -2148,7 +2235,9 @@ def main() -> None:
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     # --- 日経VI・SQカレンダー・ミニオプション・海外投資家動向 ---
-    base_extras = {}
+    base_extras = {"src_volume": date, "src_oi": oi_date}
+    if pv_head:
+        base_extras["pv"] = pv_head
     if mini_merged:
         base_extras["mini_merged"] = mini_merged
     vi_df = None
@@ -2386,7 +2475,7 @@ def main() -> None:
     print("--- post draft ---")
     print(post)
     with open(last_path, "w") as f:
-        f.write(date)
+        f.write(key)
     print(f"site generated: {os.path.join(SITE, 'index.html')}")
 
 
