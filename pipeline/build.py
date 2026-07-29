@@ -843,17 +843,17 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     fut_section = ""
     if extras.get("fut_vol"):
         rows, tot_eq, tot_val = [], 0.0, 0
-        for d in extras["fut_vol"]:
-            tot_eq += d["large_equiv"]
-            tot_val += d["value"]
+        for fv in extras["fut_vol"]:
+            tot_eq += fv["large_equiv"]
+            tot_val += fv["value"]
             rows.append(
-                f"<tr><td class='name'>{html.escape(d['product'])}</td>"
-                f"<td>{d['volume']:,}</td><td>{d['large_equiv']:,.0f}</td>"
-                f"<td>{d['value'] / 1e12:.2f}兆円</td></tr>"
+                f"<tr><td class='name'>{html.escape(fv['product'])}</td>"
+                f"<td>{fv['volume']:,}</td><td>{fv['large_equiv']:,.0f}</td>"
+                f"<td>{fv['value'] / 1e12:.2f}兆円</td></tr>"
                 if lang == "ja" else
-                f"<tr><td class='name'>{html.escape(d['product'])}</td>"
-                f"<td>{d['volume']:,}</td><td>{d['large_equiv']:,.0f}</td>"
-                f"<td>{d['value'] / 1e12:.2f} tn yen</td></tr>")
+                f"<tr><td class='name'>{html.escape(fv['product'])}</td>"
+                f"<td>{fv['volume']:,}</td><td>{fv['large_equiv']:,.0f}</td>"
+                f"<td>{fv['value'] / 1e12:.2f} tn yen</td></tr>")
         unit = "兆円" if lang == "ja" else " tn yen"
         rows.append(f"<tr class='spot'><td>{P['fut_total']}</td><td>-</td>"
                     f"<td>{tot_eq:,.0f}</td><td>{tot_val / 1e12:.2f}{unit}</td></tr>")
