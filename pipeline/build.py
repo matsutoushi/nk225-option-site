@@ -619,7 +619,8 @@ CSS_MAIN = """
     nav.pills { display: none; }
     .menu { display: block; }
   }
-  .kpi { display: flex; gap: 12px; margin: 22px 0; flex-wrap: wrap; }
+  .kpi { display: flex; gap: 12px; margin: 22px 0 10px; flex-wrap: wrap; }
+  .kpi-guide { font-size: 0.88em; color: var(--ink2); margin: 0 0 6px; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
               padding: 14px 20px; flex: 1 1 150px; font-size: 0.9em; color: var(--ink2); }
   .kpi b { font-size: 1.9em; color: var(--ink); font-variant-numeric: tabular-nums;
@@ -696,6 +697,9 @@ PAGE = {
         "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
+        "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
+                     ' ・ <a href="guide-oi.html">建玉の「壁」の見方</a>'
+                     ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>',
         "sec_guides": "データの読み方ガイド",
         "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
         "guides": [
@@ -748,6 +752,9 @@ PAGE = {
         "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
         "sec_pcr": "Put/Call Ratio Trend",
         "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
+        "kpi_guide": 'What do these numbers mean? → '
+                     '<a href="guide-participants.html">JPX participant positioning</a>'
+                     ' ・ <a href="guide-nikkei-options.html">Nikkei options field guide</a>',
         "sec_guides": "Guides — How to Read This Data",
         "guides_lead": "Background on each indicator and how traders actually use it.",
         "guides": [
@@ -901,6 +908,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     <div>{P['kpi'][2]}<br><b>{pcr['call_volume']:,}</b>{P['unit']}</div>
     {extra_kpi}
   </div>
+  <p class="kpi-guide">{P['kpi_guide']}</p>
 
   {market_section}
 
