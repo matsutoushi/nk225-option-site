@@ -660,6 +660,10 @@ CSS_MAIN = """
     .menu { display: block; }
   }
   .kpi { display: flex; gap: 12px; margin: 22px 0 10px; flex-wrap: wrap; }
+  .summary { font-size: 1.02em; color: var(--ink); background: var(--panel);
+             border: 1px solid var(--line); border-left: 4px solid var(--aqua);
+             border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 18px 0 0; line-height: 1.9; }
+  .summary b { font-variant-numeric: tabular-nums; }
   .kpi-guide { font-size: 0.88em; color: var(--ink2); margin: 0 0 6px; }
   .src-dates { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
@@ -737,6 +741,11 @@ PAGE = {
         "sec_oitable": "オプション建玉一覧(限月別)",
         "sec_oi": "行使価格別 建玉分布",
         "mini_note": "※ミニオプション({n:,}枚)を1/10のラージ換算で合算しています。",
+        "sm_price": "日経平均は<b>{spot:,.0f}円</b>({chg:+,.0f}円)。",
+        "sm_price_only": "日経平均は<b>{spot:,.0f}円</b>。",
+        "sm_pcr_prev": "Put/Callレシオは<b>{v}</b>(前営業日 {p})。",
+        "sm_pcr": "Put/Callレシオは<b>{v}</b>。",
+        "sm_walls": "現値近辺で建玉が厚いのはコール<b>{c:,}円</b>・プット<b>{p:,}円</b>です。",
         "src_volume": "出来高・価格 {d}",
         "src_pv": "手口 {d}",
         "src_oi": "建玉残高 {d}",
@@ -796,6 +805,11 @@ PAGE = {
         "sec_oitable": "Options Open Interest by Expiry",
         "sec_oi": "Open Interest Distribution by Strike",
         "mini_note": "Includes mini options ({n:,} contracts) converted to large-equivalent (1/10).",
+        "sm_price": "Nikkei 225 closed at <b>{spot:,.0f}</b> ({chg:+,.0f}). ",
+        "sm_price_only": "Nikkei 225 closed at <b>{spot:,.0f}</b>. ",
+        "sm_pcr_prev": "Put/call ratio <b>{v}</b> (prev {p}). ",
+        "sm_pcr": "Put/call ratio <b>{v}</b>. ",
+        "sm_walls": "Heaviest open interest near spot: call <b>{c:,}</b>, put <b>{p:,}</b>.",
         "src_volume": "Volume/price {d}",
         "src_pv": "Participant volume {d}",
         "src_oi": "Open interest {d}",
@@ -891,6 +905,32 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         )
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
                           f'{chart_part}{tables["weekly"]}')
+    # 冒頭サマリー。数秒しか見ない訪問者に「今日の要点」だけ先に届ける。
+    summary_section = ""
+    try:
+        sp = extras.get("spot")
+        chg = extras.get("chg")
+        bits = []
+        if sp:
+            if chg is not None:
+                bits.append(P["sm_price"].format(spot=sp, chg=chg))
+            else:
+                bits.append(P["sm_price_only"].format(spot=sp))
+        if pcr.get("pcr"):
+            prev = extras.get("pcr_prev")
+            if prev:
+                bits.append(P["sm_pcr_prev"].format(v=pcr["pcr"], p=prev))
+            else:
+                bits.append(P["sm_pcr"].format(v=pcr["pcr"]))
+        w = extras.get("walls") or {}
+        if w.get("call") and w.get("put"):
+            bits.append(P["sm_walls"].format(c=w["call"][0], p=w["put"][0]))
+        if bits:
+            summary_section = (
+                '<p class="summary">' + "".join(bits) + '</p>')
+    except Exception:
+        summary_section = ""
+
     # データ源ごとの基準日。JPXは公表時刻が異なる(手口17:45頃 / 建玉20:00頃)ため、
     # どのデータがいつ時点なのかを明示して誤読を防ぐ。
     def _fmt(x):
@@ -981,6 +1021,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 </header>
 <p class="tagline">{P['tagline']}</p>
 <main>
+  {summary_section}
   <div class="kpi">
     <div>{P['kpi'][0]}<br><b>{pcr['pcr']}</b></div>
     <div>{P['kpi'][1]}<br><b>{pcr['put_volume']:,}</b>{P['unit']}</div>
@@ -2244,7 +2285,27 @@ def main() -> None:
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     # --- 日経VI・SQカレンダー・ミニオプション・海外投資家動向 ---
-    base_extras = {"src_volume": date, "src_oi": oi_date}
+    # 冒頭サマリー用の材料。X経由の訪問者は数秒で離脱するため、
+    # 最初の画面で「今日何が起きたか」を1〜2行で伝えられるようにする。
+    base_extras = {"src_volume": date, "src_oi": oi_date, "spot": spot}
+    try:
+        if n225_hist is not None and len(n225_hist) >= 2:
+            base_extras["chg"] = float(n225_hist["Close"].iloc[-1] - n225_hist["Close"].iloc[-2])
+        if spot:
+            near = oi[(oi["expiry"] == expiry)
+                      & (oi["strike"].between(spot * 0.8, spot * 1.2))]
+            walls = {}
+            for t, k in (("C", "call"), ("P", "put")):
+                d2 = near[near["type"] == t]
+                if len(d2):
+                    r = d2.loc[d2["oi"].idxmax()]
+                    walls[k] = (int(r["strike"]), int(r["oi"]))
+            if walls:
+                base_extras["walls"] = walls
+        if len(hist) >= 2:
+            base_extras["pcr_prev"] = float(hist["pcr"].iloc[-2])
+    except Exception as e:
+        warn(f"summary data failed: {e}")
     if pv_head:
         base_extras["pv"] = pv_head
     if mini_merged:
