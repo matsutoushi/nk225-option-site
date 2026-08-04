@@ -800,6 +800,8 @@ PAGE = {
              "ディーラーのヘッジが値動きを増幅・抑制する仕組み"),
             ("guide-teguchi.html", "先物の手口の見方",
              "ABNクリアリンやソシエテGは何者か。どこまで読めるか"),
+            ("guide-sq.html", "SQとは",
+             "満期の決済価格。SQ値は日経平均の始値とは別物"),
             ("guide-cot.html", "COT(投機筋ポジション)の見方",
              "米国先物市場のポジションの偏りを週次で追う"),
             ("glossary.html", "用語集",
@@ -2023,7 +2025,7 @@ def footer_sitemap(lang: str) -> str:
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
-            ("guide-teguchi.html", "手口の見方"),
+            ("guide-teguchi.html", "手口の見方"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             ("en/", "English")]
@@ -2108,6 +2110,7 @@ def render_seo_files() -> None:
              "fedwatch.html", "en/fedwatch.html",
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
+             "guide-sq.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "about.html", "privacy.html"]
