@@ -798,6 +798,8 @@ PAGE = {
              "市場心理の偏りを1つの数字で読む。水準より変化を見る"),
             ("guide-gex.html", "ガンマエクスポージャーとは",
              "ディーラーのヘッジが値動きを増幅・抑制する仕組み"),
+            ("guide-teguchi.html", "先物の手口の見方",
+             "ABNクリアリンやソシエテGは何者か。どこまで読めるか"),
             ("guide-cot.html", "COT(投機筋ポジション)の見方",
              "米国先物市場のポジションの偏りを週次で追う"),
             ("glossary.html", "用語集",
@@ -2021,6 +2023,7 @@ def footer_sitemap(lang: str) -> str:
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
+            ("guide-teguchi.html", "手口の見方"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             ("en/", "English")]
@@ -2104,7 +2107,7 @@ def render_seo_files() -> None:
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
              "fedwatch.html", "en/fedwatch.html",
              "tools.html", "en/tools.html",
-             "guide-start.html", "guide-oi.html", "guide-pcr.html",
+             "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "about.html", "privacy.html"]
