@@ -118,6 +118,32 @@ def nearest_expiry(oi: pd.DataFrame) -> str:
     return sorted(totals.index)[0]
 
 
+def wall_strikes(oi: pd.DataFrame, expiry: str, spot: float | None,
+                 band: float = 0.10) -> dict:
+    """「壁」として意味のある建玉水準を返す。
+
+    単純な建玉最大だと、深いテールヘッジ(現値-50%のプットなど)が選ばれてしまい
+    実際の攻防水準を表さない。またコールが現値より下・プットが現値より上にあると
+    すでにITMで壁として機能しない。そこで
+      上の壁 = 現値より上、現値+band以内で建玉最大のコール
+      下の壁 = 現値より下、現値-band以内で建玉最大のプット
+    と定義する。チャートの線とサマリー文で同じ定義を使う。
+
+    Returns: {"call": (strike, oi), "put": (strike, oi)} 該当なしのキーは省く。
+    """
+    out = {}
+    if not spot:
+        return out
+    near = oi[oi["expiry"] == expiry]
+    for t, key, lo, hi in (("C", "call", spot, spot * (1 + band)),
+                           ("P", "put", spot * (1 - band), spot)):
+        sub = near[(near["type"] == t) & (near["strike"] > lo) & (near["strike"] <= hi)]             if t == "C" else             near[(near["type"] == t) & (near["strike"] >= lo) & (near["strike"] < hi)]
+        if len(sub):
+            r = sub.loc[sub["oi"].idxmax()]
+            out[key] = (int(r["strike"]), int(r["oi"]))
+    return out
+
+
 def _sq_date(expiry: str) -> pd.Timestamp:
     """限月コード(YYMM)のSQ日=第2金曜を返す。"""
     y, m = 2000 + int(expiry[:2]), int(expiry[2:])
@@ -283,15 +309,16 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
     tx = L[lang]
     near = oi[oi["expiry"] == expiry]
     ymin, ymax = l.min() * 0.995, h.max() * 1.005
-    for t, color, label in (("C", DOWN, tx["max_call"]), ("P", UP, tx["max_put"])):
-        sub = near[near["type"] == t]
-        if len(sub):
-            k = int(sub.loc[sub["oi"].idxmax(), "strike"])
-            if ymin * 0.9 <= k <= ymax * 1.1:
-                ax1.axhline(k, color=color, linestyle=":", linewidth=1.6)
-                ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
-                         va="bottom", ha="right",
-                         bbox=dict(facecolor=PANEL, edgecolor="none", pad=1.5, alpha=0.85))
+    walls = wall_strikes(oi, expiry, spot)
+    for key, color, label in (("call", DOWN, tx["max_call"]), ("put", UP, tx["max_put"])):
+        if key not in walls:
+            continue
+        k = walls[key][0]
+        if ymin * 0.9 <= k <= ymax * 1.1:
+            ax1.axhline(k, color=color, linestyle=":", linewidth=1.6)
+            ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
+                     va="bottom", ha="right",
+                     bbox=dict(facecolor=PANEL, edgecolor="none", pad=1.5, alpha=0.85))
     ax1.set_ylim(ymin, ymax)
     ax1.set_title(tx["mkt_title"])
     ax1.grid(alpha=0.3)
@@ -394,8 +421,8 @@ L = {
         "put_oi": "プット建玉", "call_oi": "コール建玉",
         "spot_line": "日経平均 {spot:,.0f}",
         "pcr_title": "日経225オプション Put/Call レシオ(出来高ベース・日次)",
-        "mkt_title": "日経平均(日足6ヶ月) + 価格帯別出来高 + オプション最大建玉",
-        "max_call": "コール最大建玉", "max_put": "プット最大建玉",
+        "mkt_title": "日経平均(日足6ヶ月) + 価格帯別出来高 + オプションの壁",
+        "max_call": "上の壁(コール建玉)", "max_put": "下の壁(プット建玉)",
         "signal": "シグナル",
         "vol_axis": "出来高(億株)",
         "strike": "行使価格",
@@ -418,8 +445,8 @@ L = {
         "put_oi": "Put OI", "call_oi": "Call OI",
         "spot_line": "Nikkei 225: {spot:,.0f}",
         "pcr_title": "Nikkei 225 Options Put/Call Ratio (volume-based, daily)",
-        "mkt_title": "Nikkei 225 (daily, 6 months) + Volume Profile + Max Option OI",
-        "max_call": "Max Call OI", "max_put": "Max Put OI",
+        "mkt_title": "Nikkei 225 (daily, 6 months) + Volume Profile + Option Walls",
+        "max_call": "Upper wall (call OI)", "max_put": "Lower wall (put OI)",
         "signal": "Signal",
         "vol_axis": "Volume (100M sh)",
         "strike": "Strike",
@@ -2291,17 +2318,9 @@ def main() -> None:
     try:
         if n225_hist is not None and len(n225_hist) >= 2:
             base_extras["chg"] = float(n225_hist["Close"].iloc[-1] - n225_hist["Close"].iloc[-2])
-        if spot:
-            near = oi[(oi["expiry"] == expiry)
-                      & (oi["strike"].between(spot * 0.8, spot * 1.2))]
-            walls = {}
-            for t, k in (("C", "call"), ("P", "put")):
-                d2 = near[near["type"] == t]
-                if len(d2):
-                    r = d2.loc[d2["oi"].idxmax()]
-                    walls[k] = (int(r["strike"]), int(r["oi"]))
-            if walls:
-                base_extras["walls"] = walls
+        w = wall_strikes(oi, expiry, spot)
+        if w:
+            base_extras["walls"] = w
         if len(hist) >= 2:
             base_extras["pcr_prev"] = float(hist["pcr"].iloc[-2])
     except Exception as e:
