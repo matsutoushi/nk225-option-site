@@ -1,17 +1,17 @@
 group,key,ja,disp,date,signal
 recession,sahm,Sahmルール,0.07,2026-06-01,green
 recession,claims,新規失業保険申請(4週平均),203k,2026-07-25,green
-recession,t10y3m,イールドカーブ(10年-3ヶ月),+0.74%,2026-08-04,green
-recession,t10y2y,イールドカーブ(10年-2年),+0.43%,2026-08-04,green
+recession,t10y3m,イールドカーブ(10年-3ヶ月),+0.74%,2026-08-05,green
+recession,t10y2y,イールドカーブ(10年-2年),+0.45%,2026-08-05,green
 recession,cp_prob,景気後退確率(Chauvet-Piger),0.6%,2026-06-01,green
 recession,nyfed_prob,NY連銀 12ヶ月先景気後退確率,16.1%,2027-06,green
-inflation,bei10,期待インフレ率(10年BEI),2.23%,2026-08-04,green
-inflation,f5y5y,期待インフレ率(5年先5年),2.27%,2026-08-04,green
+inflation,bei10,期待インフレ率(10年BEI),2.22%,2026-08-05,green
+inflation,f5y5y,期待インフレ率(5年先5年),2.26%,2026-08-05,green
 inflation,cpi,米CPI(前年比),3.7%,2026-06,yellow
 inflation,corepce,米コアPCE(前年比),3.3%,2026-06,yellow
 inflation,jpcpi,日本CPI(前年比),-0.4%,2021-06,green
-inflation,wti,WTI原油(前年比),$84 (+27%),2026-07-27,yellow
-stress,nfci,シカゴ連銀 金融環境指数,-0.55,2026-07-24,green
-stress,stlfsi,セントルイス連銀 金融ストレス指数,-0.83,2026-07-24,green
-stress,hy,ハイイールド債スプレッド,2.78%,2026-08-03,green
-stress,vix,VIX指数,15.9,2026-08-03,green
+inflation,wti,WTI原油(前年比),$82 (+20%),2026-08-03,green
+stress,nfci,シカゴ連銀 金融環境指数,-0.53,2026-07-31,green
+stress,stlfsi,セントルイス連銀 金融ストレス指数,-0.51,2026-07-31,green
+stress,hy,ハイイールド債スプレッド,2.73%,2026-08-04,green
+stress,vix,VIX指数,16.5,2026-08-04,green
