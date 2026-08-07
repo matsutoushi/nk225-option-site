@@ -238,16 +238,26 @@ def _smooth(x: list, y, window: int = 31, std: float = 7.0):
     """行使価格の系列をなめらかな曲線にする。
 
     行使価格は等間隔ではない(現値付近は125円刻み、遠いと500〜1000円刻み)ため、
-    まず等間隔の格子に載せ替えてからガウス窓で平滑化する。scipy等の追加依存は使わない。
+    まず等間隔の格子に載せ替えてからガウス窓で平滑化する。
     窓は「概形が分かる程度」に広めに取り、個々の行使価格の棘を均す。
+
+    平滑化はnumpyだけで完結させる。pandasのrolling(win_type="gaussian")は
+    内部でscipyを必要とし、scipyはrequirements.txtに入っていないためCIで落ちる。
     """
     if len(x) < 3:
         return np.array(x), np.array(y)
     grid = np.linspace(min(x), max(x), 240)
     vals = np.interp(grid, x, np.asarray(y, dtype=float))
-    sm = pd.Series(vals).rolling(window, win_type="gaussian", center=True,
-                                 min_periods=1).mean(std=std)
-    return grid, sm.to_numpy()
+
+    half = window // 2
+    offs = np.arange(-half, half + 1)
+    w = np.exp(-0.5 * (offs / std) ** 2)
+
+    # 端は窓が外にはみ出すぶん重みが減る。値をゼロ扱いにすると端が落ち込むので、
+    # 実際に重なった重みの合計で割り直す(pandasのmin_periods=1と同じ考え方)。
+    padded = np.pad(vals, half, mode="edge")
+    num = np.convolve(padded, w, mode="same")[half:half + len(vals)]
+    return grid, num / w.sum()
 
 
 def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
