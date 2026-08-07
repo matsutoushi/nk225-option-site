@@ -1,19 +1,64 @@
-JPX data date: 20260717
-PCR: {'put_volume': 33283, 'call_volume': 23733, 'pcr': 1.402}
-OI rows: 732
-weekly participants: 86 (date 20260710)
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/numpy/lib/_stride_tricks_impl.py:649: UserWarning: Warning: converting a masked element to nan.
+  args = [np.array(_m, copy=None, subok=subok) for _m in args]
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/numpy/lib/_stride_tricks_impl.py:649: UserWarning: Warning: converting a masked element to nan.
+  args = [np.array(_m, copy=None, subok=subok) for _m in args]
+JPX data date: 20260807
+data key: 20260807|20260807|20260807 (volume|participant|open-interest)
+PCR: {'put_volume': 30557, 'call_volume': 13200, 'pcr': 2.315}
+OI rows: 836
+weekly participants: 124 (date 20260731)
+PCR(mini): {'put_volume': 13500, 'call_volume': 14007, 'pcr': 0.964}
+mini OI rows: 297
+merged mini into OI: 37,297 contracts (3,730 large-equiv)
 participant history: fetched 0 new weekly files
-nikkei VI: 36.86
-next SQ: 2026-08-14 (26d)
-mini OI rows: 176
-investor flows: fetched 0 new monthly files
+nikkei VI: 29.88
+next SQ: 2026-08-14 (6d)
+N225 volume: 191,500,000 (2026-08-06, -5.3853754940711465%)
+hedge pressure: total -185 oku (expiries ['2608', '2609'])
+futures: 日経225先物 36,682枚(換算36,682) / 日経225mini 567,662枚(換算56,766) / 日経225マイクロ先物 837,008枚(換算8,370)
+investor flows: fetched 0 new weekly files
 Traceback (most recent call last):
-  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1911, in <module>
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pandas/compat/_optional.py", line 158, in import_optional_dependency
+    module = importlib.import_module(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'scipy'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 2774, in <module>
     main()
-  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1769, in main
-    charts["investor"] = chart_investor(flows, lang)
-                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 1164, in chart_investor
-    labels = [f"{m[:2]}/{m[2:]}" for m in flows["month"]]  # YY/MM
-                 ~^^^^
-TypeError: 'int' object is not subscriptable
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 2576, in main
+    hc = chart_hedge(base_extras["hedge"], lang)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 327, in chart_hedge
+    gx, gy = _smooth(by["strike"].tolist(), by["oku"].values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/nk225-option-site/nk225-option-site/pipeline/build.py", line 248, in _smooth
+    sm = pd.Series(vals).rolling(window, win_type="gaussian", center=True,
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pandas/core/generic.py", line 12184, in rolling
+    return Window(
+           ^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pandas/core/window/rolling.py", line 160, in __init__
+    self._validate()
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pandas/core/window/rolling.py", line 1130, in _validate
+    signal = import_optional_dependency(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pandas/compat/_optional.py", line 161, in import_optional_dependency
+    raise ImportError(msg) from err
+ImportError: `Import scipy.signal.windows` failed. Scipy is required to generate window weight. Use pip or conda to install the scipy.signal.windows package.
