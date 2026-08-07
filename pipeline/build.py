@@ -144,6 +144,60 @@ def wall_strikes(oi: pd.DataFrame, expiry: str, spot: float | None,
     return out
 
 
+def hedge_pressure(oi: pd.DataFrame, settle: dict, expiry: str,
+                   band: float = 0.10, max_days: int = 45) -> dict | None:
+    """建玉と清算値段のボラティリティから、ヘッジ売買が値動きに与える向きを推定する。
+
+    オプションを売った側(証券会社)は、リスクを打ち消すため先物を売買してヘッジする。
+    その売買が値動きを「抑える」向きか「増幅する」向きかは、どの行使価格に
+    どれだけ建玉があるかで決まる。ここではその強さを行使価格ごとに集計する。
+
+    前提(業界で広く使われるもの): 証券会社はコールを買い持ち・プットを売り持ち。
+    実際の保有は非公開のため、あくまで推定値。
+
+    Returns: {"spot","by_strike","total","flip"} 計算できなければ None
+    """
+    if not settle or "data" not in settle:
+        return None
+    spot = settle.get("spot")
+    if not spot:
+        return None
+    # 直近の月限(45日以内)をまとめて見る。1限月だけだと満期直前に振れやすいため。
+    iv = settle["data"]
+    iv = iv[(iv["iv"] > 0) & (iv["days"] > 0) & (iv["days"] <= max_days)
+            & (iv["expiry"].str.len() == 4)]
+    if not len(iv):
+        return None
+    df = oi.merge(iv[["type", "expiry", "strike", "iv", "days"]],
+                  on=["type", "expiry", "strike"], how="inner")
+    df = df[(df["strike"] >= spot * (1 - band)) & (df["strike"] <= spot * (1 + band))]
+    if not len(df):
+        return None
+
+    t = df["days"] / 365.0
+    r = settle.get("rate", 0.0)
+    sig = df["iv"]
+    d1 = (np.log(spot / df["strike"]) + (r + sig ** 2 / 2) * t) / (sig * np.sqrt(t))
+    # 標準正規分布の密度関数
+    gamma = np.exp(-d1 ** 2 / 2) / np.sqrt(2 * np.pi) / (spot * sig * np.sqrt(t))
+    # 指数が1%動いたときの円建てインパクト。コールは+、プットは−で合算する。
+    sign = df["type"].map({"C": 1, "P": -1})
+    df = df.assign(force=gamma * df["oi"] * 1000 * spot * spot * 0.01 * sign)
+
+    by = df.groupby("strike", as_index=False)["force"].sum().sort_values("strike")
+    by["cum"] = by["force"].cumsum()
+    flip = None
+    if len(by):
+        pos = by["cum"].iloc[0] >= 0
+        for _, row in by.iterrows():
+            if (row["cum"] >= 0) != pos:
+                flip = float(row["strike"])
+                break
+    return {"spot": spot, "by_strike": by, "total": float(df["force"].sum()),
+            "flip": flip, "days": int(df["days"].max()),
+            "expiries": sorted(df["expiry"].unique().tolist())}
+
+
 def _sq_date(expiry: str) -> pd.Timestamp:
     """限月コード(YYMM)のSQ日=第2金曜を返す。"""
     y, m = 2000 + int(expiry[:2]), int(expiry[2:])
@@ -180,6 +234,22 @@ def merge_mini_into_oi(oi: pd.DataFrame, mini: pd.DataFrame | None,
     return merged, raw_contracts
 
 
+def _smooth(x: list, y, window: int = 31, std: float = 7.0):
+    """行使価格の系列をなめらかな曲線にする。
+
+    行使価格は等間隔ではない(現値付近は125円刻み、遠いと500〜1000円刻み)ため、
+    まず等間隔の格子に載せ替えてからガウス窓で平滑化する。scipy等の追加依存は使わない。
+    窓は「概形が分かる程度」に広めに取り、個々の行使価格の棘を均す。
+    """
+    if len(x) < 3:
+        return np.array(x), np.array(y)
+    grid = np.linspace(min(x), max(x), 240)
+    vals = np.interp(grid, x, np.asarray(y, dtype=float))
+    sm = pd.Series(vals).rolling(window, win_type="gaussian", center=True,
+                                 min_periods=1).mean(std=std)
+    return grid, sm.to_numpy()
+
+
 def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
                           lang: str = "ja") -> str:
     t = L[lang]
@@ -190,20 +260,22 @@ def chart_oi_distribution(oi: pd.DataFrame, expiry: str, spot: float | None,
     puts = df[df["type"] == "P"].set_index("strike")["oi"].reindex(strikes).fillna(0)
     calls = df[df["type"] == "C"].set_index("strike")["oi"].reindex(strikes).fillna(0)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    width = (strikes[1] - strikes[0]) * 0.4 if len(strikes) > 1 else 100
-    ax.barh([s - width / 2 for s in strikes], -puts.values, height=width,
-            color=UP, label=t["put_oi"])
-    ax.barh([s + width / 2 for s in strikes], calls.values, height=width,
-            color=DOWN, label=t["call_oi"])
+    # 縦棒。行使価格を横軸に取り、コールを上・プットを下に振り分ける。
+    # 「壁」の位置を正確に読ませたいので、ここは平滑化しない。
+    fig, ax = plt.subplots(figsize=(11, 6))
+    width = (strikes[1] - strikes[0]) * 0.8 if len(strikes) > 1 else 100
+    ax.bar(strikes, calls.values, width=width, color=DOWN, label=t["call_oi"])
+    ax.bar(strikes, -puts.values, width=width, color=UP, label=t["put_oi"])
+    ax.axhline(0, color=INK2, linewidth=0.8)
     if spot:
-        ax.axhline(spot, color=INK, linestyle="--", linewidth=1,
+        ax.axvline(spot, color=INK, linestyle="--", linewidth=1.2,
                    label=t["spot_line"].format(spot=spot))
     ax.set_title(t["oi_title"].format(exp=_exp_label(expiry, lang)))
-    ax.set_xlabel(t["oi_xlabel"])
-    ax.set_ylabel(t["oi_ylabel"])
-    ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
-    ax.legend(loc="lower right")
+    ax.set_xlabel(t["oi_ylabel"])
+    ax.set_ylabel(t["oi_xlabel"])
+    ax.yaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
+    ax.xaxis.set_major_formatter(lambda x, _: f"{x:,.0f}")
+    ax.legend(loc="upper left")
     ax.grid(alpha=0.3)
     fig.tight_layout()
     os.makedirs(IMG, exist_ok=True)
@@ -235,6 +307,41 @@ def chart_pcr(hist: pd.DataFrame, lang: str = "ja") -> str:
     ax.set_xlim(-0.5, n - 0.5)
     fig.tight_layout()
     name = f"pcr{t['suffix']}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def chart_hedge(h: dict, lang: str = "ja") -> str | None:
+    """ヘッジ売買が値動きに与える向きを行使価格別に描く。
+
+    プラス(緑)= 値動きを抑える向き / マイナス(赤)= 増幅する向き。
+    """
+    if not h or h["by_strike"].empty:
+        return None
+    t = L[lang]
+    by = h["by_strike"].copy()
+    by["oku"] = by["force"] / 1e8          # 億円
+    spot = h["spot"]
+    fig, ax = plt.subplots(figsize=(11, 6))
+    gx, gy = _smooth(by["strike"].tolist(), by["oku"].values)
+    ax.plot(gx, gy, color=INK2, linewidth=1.4)
+    ax.fill_between(gx, gy, 0, where=(gy >= 0), color=ACCENT, alpha=0.55,
+                    interpolate=True)
+    ax.fill_between(gx, gy, 0, where=(gy < 0), color=UP, alpha=0.55,
+                    interpolate=True)
+    ax.axhline(0, color=INK2, linewidth=0.9)
+    ax.axvline(spot, color=INK, linestyle="--", linewidth=1.2)
+    ax.text(spot, ax.get_ylim()[1], t["hedge_spot"].format(spot=spot),
+            color=INK, fontsize=9, va="top", ha="left")
+    ax.set_xlabel(t["strike"])
+    ax.set_ylabel(t["hedge_xlabel"])
+    ax.set_title(t["hedge_title"])
+    ax.xaxis.set_major_formatter(lambda x, _: f"{x:,.0f}")
+    ax.grid(alpha=0.25, axis="y")
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"hedge{t['suffix']}.png"
     fig.savefig(os.path.join(IMG, name), dpi=120)
     plt.close(fig)
     return f"img/{name}"
@@ -427,6 +534,9 @@ L = {
         "max_call": "上の壁(コール建玉)", "max_put": "下の壁(プット建玉)",
         "signal": "シグナル",
         "vol_axis": "出来高(億株)",
+        "hedge_title": "日経225 ガンマエクスポージャー(推定・直近3限月)",
+        "hedge_xlabel": "抑える ↑ ｜ ↓ 増幅する(億円 / 指数1%)",
+        "hedge_spot": "日経平均 {spot:,.0f} ",
         "strike": "行使価格",
         "tbl_note": "前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。JPXが日次公開する直近3限月分。増減は前日比。",
         "tbl_caption": "左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)",
@@ -451,6 +561,9 @@ L = {
         "max_call": "Upper wall (call OI)", "max_put": "Lower wall (put OI)",
         "signal": "Signal",
         "vol_axis": "Volume (100M sh)",
+        "hedge_title": "Nikkei 225 Gamma Exposure (estimate, near expiries)",
+        "hedge_xlabel": "dampens ↑ | ↓ amplifies (100M yen / 1%)",
+        "hedge_spot": "Nikkei 225 {spot:,.0f} ",
         "strike": "Strike",
         "tbl_note": "Strikes within ±3,000 yen of the previous close ({lo:,.0f}–{hi:,.0f}). Nearest 3 expiries published daily by JPX. Change is day-over-day.",
         "tbl_caption": "Left: Open Interest (green = largest per expiry) / Right: DoD Change (increase = green, decrease = red)",
@@ -778,6 +891,11 @@ PAGE = {
         "src_volume": "出来高・価格 {d}",
         "src_pv": "手口 {d}",
         "src_oi": "建玉残高 {d}",
+        "sec_hedge": "ガンマエクスポージャー",
+        "hedge_lead": "オプションを売った側(証券会社)は、リスクを打ち消すために先物を売り買いしてヘッジします。この売買は、相場の位置によって値動きを<b>抑える向き</b>にも<b>増幅する向き</b>にも働きます。下の図は、建玉と清算値段のボラティリティから、その強さを行使価格ごとに推定したものです。<b>証券会社の実際の保有は公表されていないため、あくまで推定値</b>です(コールを買い持ち・プットを売り持ちという一般的な前提を置いています)。",
+        "hedge_sum": "現値より上は{up:+,.0f}億円、現値より下は{dn:+,.0f}億円。合計では<b>{word}</b>({total:+,.0f}億円 / 指数1%あたり)。",
+        "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
+        "hedge_more": '見方の詳しい解説は <a href="guide-gex.html">ガンマエクスポージャーとは</a> をどうぞ。',
         "sec_pv": "手口上位一覧(取引参加者別 取引高)",
         "sec_fut": "先物の出来高(ラージ換算での比較)",
         "fut_lead": "miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。",
@@ -799,7 +917,7 @@ PAGE = {
             ("guide-pcr.html", "Put/Callレシオとは",
              "市場心理の偏りを1つの数字で読む。水準より変化を見る"),
             ("guide-gex.html", "ガンマエクスポージャーとは",
-             "ディーラーのヘッジが値動きを増幅・抑制する仕組み"),
+             "証券会社のヘッジ売買が、なぜ相場を増幅・抑制するのか"),
             ("guide-teguchi.html", "先物の手口の見方",
              "ABNクリアリンやソシエテGは何者か。どこまで読めるか"),
             ("guide-sq.html", "SQとは",
@@ -846,6 +964,11 @@ PAGE = {
         "src_volume": "Volume/price {d}",
         "src_pv": "Participant volume {d}",
         "src_oi": "Open interest {d}",
+        "sec_hedge": "Gamma Exposure",
+        "hedge_lead": "Dealers who sold options hedge by trading futures. Depending on where the index sits, that hedging can either <b>dampen</b> or <b>amplify</b> moves. The chart below estimates that force by strike, using open interest and the implied volatility in JPX settlement prices. <b>Actual dealer positions are not disclosed, so this is an estimate</b> (assuming dealers are long calls and short puts).",
+        "hedge_sum": "Above spot {up:+,.0f}, below spot {dn:+,.0f} (100M yen). Net: <b>{word}</b> ({total:+,.0f} per 1% move).",
+        "hedge_damp": "dampening moves", "hedge_amp": "amplifying moves",
+        "hedge_more": '',
         "sec_pv": "Trading Volume by Participant (daily ranking)",
         "sec_fut": "Futures Volume (large-equivalent comparison)",
         "fut_lead": "Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown.",
@@ -978,6 +1101,23 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         parts.append(P["src_oi"].format(d=_fmt(extras["src_oi"])))
     src_dates = " ／ ".join(parts) if lang == "ja" else " / ".join(parts)
 
+    # オプションのヘッジが値動きに与える向き
+    hedge_section = ""
+    hp = extras.get("hedge")
+    if hp and charts.get("hedge"):
+        by = hp["by_strike"]
+        up = by[by["strike"] > hp["spot"]]["force"].sum() / 1e8
+        dn = by[by["strike"] < hp["spot"]]["force"].sum() / 1e8
+        tot = hp["total"] / 1e8
+        word = P["hedge_damp"] if tot >= 0 else P["hedge_amp"]
+        summary_line = P["hedge_sum"].format(up=up, dn=dn, total=tot, word=word)
+        hedge_section = (
+            f'<h2 id="hedge">{P["sec_hedge"]}</h2>'
+            f'<p>{P["hedge_lead"]}</p>'
+            f'<p><b>{summary_line}</b></p>'
+            f'<img src="{charts["hedge"]}" alt="Option hedging direction by strike">'
+            f'<p>{P["hedge_more"]}</p>')
+
     # 手口上位一覧(日次)。建玉より早く公表されるので独立セクションにする。
     pv_section = ""
     if extras.get("pv"):
@@ -1073,6 +1213,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <img src="{charts['oi']}" alt="Open interest by strike">
 
   {mini_section}
+
+  {hedge_section}
 
   {fut_section}
 
@@ -1407,7 +1549,7 @@ USPAGE = {
         "updated": "COT基準日: {cot_date}(毎週金曜更新) | CBOE基準日: {pcr_date} | 最終更新: {now} JST",
         "kpi": ["CBOE 全体PCR", "株式PCR", "SPX PCR"],
         "sec_cot": "COT 投機筋ネットポジション(週次)",
-        "cot_lead": "CFTC建玉明細報告より。株価指数・通貨はレバレッジファンド、金・原油はマネージドマネーのネットポジション(買い−売り)。毎週火曜時点のデータが金曜に公表されます。",
+        "cot_lead": "CFTC建玉明細報告より。株価指数・通貨はレバレッジファンド、金・原油はマネージドマネーのネットポジション(買い−売り)。毎週火曜時点のデータが金曜に公表されます。<b>灰色の線は各市場の価格(右軸)</b>で、ポジションの偏りと値動きを見比べられます。",
         "cot_cols": ["市場", "ネットポジション", "前週比"],
         "sec_pcr": "CBOE Put/Callレシオ(日次)",
         "pcr_lead": "米国オプション市場全体の弱気/強気の偏り。1.0超はプット優勢です。",
@@ -1415,7 +1557,7 @@ USPAGE = {
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
         "sec_letf": "レバレッジETF 推定リバランス・フロー",
-        "letf_lead": "レバレッジETF(TQQQ・SOXL等)は一定倍率を保つため、引けにかけて原資産を売買します。上昇日は買い・下落日は売りで、値動きを増幅する方向(モメンタム/負のガンマ的)に働きます。下記は主要な株価指数レバレッジETFの純資産と当日リターンから推定した引けのリバランス額です(推定値)。<b>これはオプションのガンマエクスポージャーとは別のメカニズムで、単純に足し合わせられるものではありません。</b>両方を並べて総合的に見る指標としてご利用ください。",
+        "letf_lead": "レバレッジETF(TQQQ・SOXL等)は一定倍率を保つため、引けにかけて原資産を売買します。上昇日は買い・下落日は売りで、値動きを増幅する方向(モメンタム/負のガンマ的)に働きます。下記は主要な株価指数レバレッジETFの純資産と当日リターンから推定した引けのリバランス額です(推定値)。<b>これはオプションのヘッジとは別のメカニズムで、単純に足し合わせられるものではありません。</b>両方を並べて総合的に見る指標としてご利用ください。",
         "letf_kpi": "推定リバランス額 合計($bn)",
         "letf_cols": ["ETF", "原資産", "レバレッジ", "純資産($bn)", "当日%", "推定フロー($bn)"],
         "sec_etf": "SPY・QQQ 建玉の壁",
@@ -1435,7 +1577,7 @@ USPAGE = {
         "updated": "COT as of {cot_date} (updated every Friday) | CBOE as of {pcr_date} | Last updated {now} JST",
         "kpi": ["CBOE Total P/C", "Equity P/C", "SPX P/C"],
         "sec_cot": "COT Speculator Net Positions (Weekly)",
-        "cot_lead": "From the CFTC Commitments of Traders report. Leveraged funds for index/FX futures, managed money for gold/crude. Tuesday data, released Friday.",
+        "cot_lead": "From the CFTC Commitments of Traders report. Leveraged funds for index/FX futures, managed money for gold/crude. Tuesday data, released Friday. <b>The gray line is the price of each market (right axis)</b>, so positioning can be compared against price action.",
         "cot_cols": ["Market", "Net Position", "WoW"],
         "sec_pcr": "CBOE Put/Call Ratios (Daily)",
         "pcr_lead": "Bearish/bullish skew of the US options market. Above 1.0 = puts dominant.",
@@ -1460,8 +1602,31 @@ USPAGE = {
 }
 
 
-def chart_cot(cot: dict, lang: str, usdjpy: pd.Series | None = None) -> str:
-    """全市場のネットポジション推移(スモールマルチプル)。円パネルにはドル円を重ねる。"""
+# COT各市場に重ねる価格のティッカー。投機筋のポジションと値動きを見比べられるようにする。
+COT_PRICE_TICKERS = {
+    "es": "^GSPC", "nq": "^NDX", "nikkei": "^N225", "jpy": "JPY=X",
+    "eur": "EURUSD=X", "gbp": "GBPUSD=X", "gold": "GC=F", "silver": "SI=F",
+    "copper": "HG=F", "wti": "CL=F", "natgas": "NG=F",
+}
+
+
+def fetch_cot_prices() -> dict:
+    """COTパネルに重ねる価格を1年分まとめて取得する。失敗した銘柄は黙って飛ばす。"""
+    out = {}
+    for key, ticker in COT_PRICE_TICKERS.items():
+        try:
+            h = yf.Ticker(ticker).history(period="1y")["Close"].dropna()
+            if len(h):
+                h.index = h.index.tz_localize(None)
+                out[key] = h
+        except Exception as e:
+            print(f"WARN: COT price {key}({ticker}) failed: {e}")
+    return out
+
+
+def chart_cot(cot: dict, lang: str, usdjpy: pd.Series | None = None,
+              prices: dict | None = None) -> str:
+    """全市場のネットポジション推移(スモールマルチプル)。各パネルに価格を重ねる。"""
     import us_data
     suffix = L[lang]["suffix"]
     markets = [m for m in us_data.COT_MARKETS if m["key"] in cot["markets"]]
@@ -1476,16 +1641,22 @@ def chart_cot(cot: dict, lang: str, usdjpy: pd.Series | None = None) -> str:
         ax.plot(x, df["net"], color=color, linewidth=1.3)
         ax.fill_between(x, df["net"], 0, color=color, alpha=0.15)
         ax.axhline(0, color=INK2, linewidth=0.7)
+        # 価格を重ねる。ドル円だけはFRED由来の系列を優先し、無ければ共通取得分を使う。
+        px = None
         if m["key"] == "jpy" and usdjpy is not None and len(usdjpy):
-            u = usdjpy[(usdjpy.index >= x.min()) & (usdjpy.index <= x.max())]
+            px = usdjpy
+        elif prices:
+            px = prices.get(m["key"])
+        drawn = False
+        if px is not None and len(px):
+            u = px[(px.index >= x.min()) & (px.index <= x.max())]
             if len(u):
                 axp = ax.twinx()
                 axp.plot(u.index, u.values, color="#6b7280", alpha=0.8, linewidth=1.2)
                 axp.axis("off")
-        title = m[lang] + (" (灰線: ドル円)" if m["key"] == "jpy" and lang == "ja"
-                           and usdjpy is not None else
-                           (" (gray: USD/JPY)" if m["key"] == "jpy" and lang == "en"
-                            and usdjpy is not None else ""))
+                drawn = True
+        note = (" (灰線: 価格)" if lang == "ja" else " (gray: price)") if drawn else ""
+        title = m[lang] + note
         ax.set_title(title, fontsize=9)
         ax.grid(alpha=0.25)
         ax.tick_params(labelsize=7)
@@ -1558,20 +1729,20 @@ def chart_mini_oi(mini: pd.DataFrame, spot: float | None, lang: str) -> tuple[st
         strikes = [s for s in strikes if 0.92 * spot <= s <= 1.08 * spot]
     puts = df[df["type"] == "P"].set_index("strike")["oi"].reindex(strikes).fillna(0)
     calls = df[df["type"] == "C"].set_index("strike")["oi"].reindex(strikes).fillna(0)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    width = (strikes[1] - strikes[0]) * 0.4 if len(strikes) > 1 else 50
-    ax.barh([s - width / 2 for s in strikes], -puts.values, height=width, color=UP,
-            label=L[lang]["put_oi"])
-    ax.barh([s + width / 2 for s in strikes], calls.values, height=width, color=DOWN,
-            label=L[lang]["call_oi"])
+    fig, ax = plt.subplots(figsize=(11, 5))
+    width = (strikes[1] - strikes[0]) * 0.8 if len(strikes) > 1 else 50
+    ax.bar(strikes, calls.values, width=width, color=DOWN, label=L[lang]["call_oi"])
+    ax.bar(strikes, -puts.values, width=width, color=UP, label=L[lang]["put_oi"])
+    ax.axhline(0, color=INK2, linewidth=0.8)
     if spot:
-        ax.axhline(spot, color=INK, linestyle="--", linewidth=1,
+        ax.axvline(spot, color=INK, linestyle="--", linewidth=1.2,
                    label=L[lang]["spot_line"].format(spot=spot))
     exp_label = f"{exp.month}/{exp.day}"
     ax.set_title((f"日経225ミニオプション 建玉分布({exp_label}限)" if lang == "ja"
                   else f"Nikkei 225 mini Options OI ({exp_label} expiry)"), fontsize=10)
-    ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
-    ax.legend(loc="lower right")
+    ax.yaxis.set_major_formatter(lambda x, _: f"{abs(x):,.0f}")
+    ax.xaxis.set_major_formatter(lambda x, _: f"{x:,.0f}")
+    ax.legend(loc="upper left")
     ax.grid(alpha=0.3)
     fig.tight_layout()
     name = f"mini_oi{suffix}.png"
@@ -2359,6 +2530,17 @@ def main() -> None:
                   f"({vol_info['date'].date()}, {vol_info['pct']}%)")
     except Exception as e:
         warn(f"N225 volume failed: {e}")
+    # 清算値段のボラティリティから、ヘッジ売買が値動きに与える向きを推定する
+    try:
+        settle = jpx.fetch_option_settlement()
+        hp = hedge_pressure(oi, settle, expiry)
+        if hp:
+            base_extras["hedge"] = hp
+            print(f"hedge pressure: total {hp['total']/1e8:+,.0f} oku "
+                  f"(expiries {hp['expiries']})")
+    except Exception as e:
+        warn(f"hedge pressure failed: {e}")
+
     # 先物の出来高・取引代金(ラージ/mini/マイクロをラージ換算で比較)
     try:
         fv = jpx.fetch_futures_volume(files["whole_day"])
@@ -2390,6 +2572,10 @@ def main() -> None:
         }
         if vi_df is not None:
             charts["vi"] = chart_vi(vi_df, lang)
+        if base_extras.get("hedge"):
+            hc = chart_hedge(base_extras["hedge"], lang)
+            if hc:
+                charts["hedge"] = hc
         if mini_df is not None:
             mini_res = chart_mini_oi(mini_df, spot, lang)
             if mini_res:
@@ -2481,12 +2667,20 @@ def main() -> None:
             warn(f"LETF flow failed: {e!r}")
             letf = None
 
+        # COTパネルに重ねる価格。日英で使い回すのでループの外で1回だけ取得する。
+        try:
+            cot_prices = fetch_cot_prices()
+            print(f"COT prices: {len(cot_prices)}/{len(COT_PRICE_TICKERS)} markets")
+        except Exception as e:
+            warn(f"COT prices failed: {e!r}")
+            cot_prices = {}
+
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
             etf_chart = chart_etf_walls(etf_chains, lang) if etf_chains else None
             if letf is not None and letf.get("history") is not None:
                 letf["chart"] = chart_letf(letf["history"], lang)
-            render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy), spx_res, spx_chart,
+            render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy, cot_prices), spx_res, spx_chart,
                       etf_chart, spx_share, letf)
 
         # 米国データ版のX投稿下書き(site/post_us.txt)

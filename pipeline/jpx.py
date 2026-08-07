@@ -98,6 +98,45 @@ FUT_PRODUCTS = {
 }
 
 
+SETTLE_INDEX = BASE + "/markets/derivatives/settlement-price/index.html"
+
+
+def fetch_option_settlement() -> dict:
+    """日経225オプションの清算値段CSVから、行使価格別のボラティリティ等を取得する。
+
+    JPXが日次で公開する清算値段ファイルには、銘柄ごとに
+    権利行使価格・清算値段・ボラティリティ・残存日数・金利・原資産価格が入っている。
+    これを使うと、建玉と組み合わせてヘッジ需要の向きを推定できる。
+
+    Returns: {"date","spot","rate","data": DataFrame[type,expiry,strike,price,iv,days]}
+    """
+    r = requests.get(SETTLE_INDEX, headers=UA, timeout=30)
+    r.raise_for_status()
+    m = re.search(r'href="([^"]*/rb(\d{8})\.csv)"', r.text)
+    if not m:
+        raise RuntimeError("settlement price csv not found")
+    url, date = BASE + m.group(1), m.group(2)
+
+    raw = pd.read_csv(io.BytesIO(_download(url)), encoding="cp932", header=None)
+    n = raw[(raw[11].astype(str) == "日経225")
+            & (raw[1].astype(str).str.match(r"^(CAL|PUT)_2\d"))].copy()
+    if not len(n):
+        raise RuntimeError("no Nikkei option rows in settlement file")
+    for c in (4, 5, 7, 8, 9, 10):
+        n[c] = pd.to_numeric(n[c], errors="coerce")
+    n = n.dropna(subset=[4, 8, 10])
+    out = pd.DataFrame({
+        "type": n[2].map({"CAL": "C", "PUT": "P"}),
+        "expiry": n[3].astype(str).str[2:],   # 202608 → 2608(建玉データと揃える)
+        "strike": n[4].astype(int),
+        "price": n[5],
+        "iv": n[8] / 100.0,                   # %→小数
+        "days": n[10].astype(int),
+    }).dropna(subset=["type"])
+    return {"date": date, "spot": float(n[7].iloc[0]),
+            "rate": float(n[9].iloc[0]) / 100.0, "data": out}
+
+
 def fetch_futures_volume(url: str) -> list[dict]:
     """whole_dayから日経225先物・mini・マイクロの出来高と取引代金を返す。
 
