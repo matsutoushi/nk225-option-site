@@ -316,8 +316,10 @@ def chart_market(oi: pd.DataFrame, expiry: str, data_date: str,
         k = walls[key][0]
         if ymin * 0.9 <= k <= ymax * 1.1:
             ax1.axhline(k, color=color, linestyle=":", linewidth=1.6)
-            ax1.text(n - 1, k, f" {label} {k:,}", color=color, fontsize=9,
-                     va="bottom", ha="right",
+            # ラベルは左寄りに置く。右端は直近のローソク足と重なり、
+            # 完全な左端は価格帯別出来高の棒と重なるため、その右隣に配置する。
+            ax1.text(n * 0.27, k, f"{label} {k:,}", color=color, fontsize=9,
+                     va="bottom", ha="left",
                      bbox=dict(facecolor=PANEL, edgecolor="none", pad=1.5, alpha=0.85))
     ax1.set_ylim(ymin, ymax)
     ax1.set_title(tx["mkt_title"])
