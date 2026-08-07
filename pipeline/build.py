@@ -1565,7 +1565,7 @@ USPAGE = {
         "kpi_0dte": "SPX最短限月の出来高シェア",
         "sec_spx": "SPXオプション: 建玉の壁とガンマエクスポージャー(推定)",
         "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。ガンマエクスポージャーは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
-        "spx_kpi": ["SPX終値", "合計ガンマエクスポージャー($bn/1%)", "ガンマフリップ"],
+        "spx_kpi": ["SPX終値", "合計ガンマエクスポージャー($bn/1%)", "性質が変わる水準"],
         "back": '<a href="./">← 日本市場データへ</a>',
         "lang_switch": '<a href="en/us.html" lang="en">English</a>',
         "footer_src": "データ出典: CFTC(建玉明細報告)、Cboe Global Markets公表データより当サイト作成。",
@@ -1948,7 +1948,7 @@ def chart_spx(res: dict, lang: str) -> str:
                 label=f"SPX {spot:,.0f}")
     if res["flip"]:
         ax2.axhline(res["flip"], color=WARN, linestyle=":", linewidth=1.6,
-                    label=("Gamma flip" if lang == "en" else "ガンマフリップ")
+                    label=("Gamma flip" if lang == "en" else "性質が変わる水準")
                     + f" {res['flip']:,.0f}")
     ax2.axvline(0, color=INK2, linewidth=0.7)
     total = res["total_gex"] / 1e9
