@@ -2150,6 +2150,16 @@ SUB_CSS = """
   p, li { color: var(--ink2); font-size: 0.92em; }
   a { color: #1f6fd0; }
   img { max-width: 100%; height: auto; }
+  /* 解説記事の表。トップの数値表(全て右寄せ・nowrap)と違い1列目に文章が入るので、
+     1列目だけ左寄せ・折り返しあり、数値列は右寄せにする。
+     スマホでは表だけを横スクロールさせ、ページ本体を横に振らせない。 */
+  .tbl-wrap { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88em;
+          font-variant-numeric: tabular-nums; background: var(--panel); }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: right; }
+  th { background: var(--panel2); color: var(--ink2); font-weight: 500; }
+  td { color: var(--ink2); }
+  th:first-child, td:first-child { text-align: left; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
            font-size: 0.78em; color: var(--ink2); }
 """
