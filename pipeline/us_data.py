@@ -7,6 +7,7 @@
 - CBOE 日次Put/Callレシオ: 公式CDNのJSON
 """
 
+import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -186,6 +187,89 @@ _LETF_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
                            "data", "letf_flow.json")
 _LETF_SHARES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "data", "letf_shares.json")
+
+_SIZE_SUFFIX = {"K": 1e3, "M": 1e6, "B": 1e9, "T": 1e12}
+
+
+def _parse_size(s) -> float | None:
+    """"501.60M" や "$37.82B" のような表記を数値にする。"""
+    if isinstance(s, (int, float)):
+        return float(s)
+    if not s:
+        return None
+    m = re.fullmatch(r"\$?([\d,.]+)\s*([KMBT])?", str(s).strip())
+    if not m:
+        return None
+    return float(m.group(1).replace(",", "")) * _SIZE_SUFFIX.get(m.group(2) or "", 1)
+
+
+def refresh_letf_shares() -> dict:
+    """レバレッジETFの口数(発行済口数)を更新して data/letf_shares.json に保存する。
+
+    純資産 = 口数 × 基準価額 で、基準価額は終値とほぼ一致する。口数は設定・解約で
+    動くため、放置すると残高の推定がずれていく。
+
+    取得先はstockanalysis.com。Bloombergの EQY_SH_OUT と全14銘柄で突き合わせた
+    ところ、誤差の中央値は0.97%で、残高の大きいTQQQ・SOXL・QLD・SSO・SPXLは
+    いずれも0.1%以内だった(差が大きいのはSDOW等の小型のみで合計への影響は軽微)。
+
+    取得できなかった銘柄は既存の値を残す。全滅した場合も既存ファイルをそのまま返す。
+    """
+    cur = {}
+    try:
+        with open(_LETF_SHARES, encoding="utf-8") as f:
+            cur = json.load(f)
+    except Exception:
+        pass
+    shares = dict(cur.get("shares", {}))
+
+    got, failed = 0, []
+    for sym, _lev, _und in LETFS:
+        try:
+            url = f"https://stockanalysis.com/etf/{sym.lower()}/__data.json"
+            r = requests.get(url, headers=UA, timeout=25)
+            r.raise_for_status()
+            j = r.json()
+            val = None
+            for node in j.get("nodes", []):
+                arr = node.get("data")
+                if not isinstance(arr, list):
+                    continue
+                for elem in arr:
+                    if isinstance(elem, dict) and "sharesOut" in elem:
+                        i = elem["sharesOut"]
+                        if isinstance(i, int) and 0 <= i < len(arr):
+                            val = _parse_size(arr[i])
+                        break
+                if val:
+                    break
+            # 桁違いの値を拾って残高を壊さないよう、既存値から大きく動いた分は捨てる
+            old = shares.get(sym)
+            if val and old and not (0.5 <= val / old <= 2.0):
+                failed.append(f"{sym}(前回比x{val/old:.1f}のため不採用)")
+                continue
+            if val:
+                shares[sym] = round(val)
+                got += 1
+            else:
+                failed.append(sym)
+        except Exception as e:
+            failed.append(f"{sym}({type(e).__name__})")
+
+    if failed:
+        print(f"WARN: LETF shares not updated: {', '.join(failed)}")
+    if not got:
+        print("INFO: using stored LETF shares")
+        return cur
+    out = {"asof": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+           "source": "stockanalysis.com", "shares": shares}
+    try:
+        with open(_LETF_SHARES, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        print(f"WARN: could not save LETF shares: {e}")
+    print(f"LETF shares: {got}/{len(LETFS)} updated")
+    return out
 
 
 def fetch_letf_rebalance() -> dict:

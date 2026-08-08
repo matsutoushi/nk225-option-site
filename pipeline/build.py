@@ -2664,6 +2664,12 @@ def main() -> None:
             warn(f"SPX section failed: {e}")
 
         try:
+            # 口数は設定・解約で動くので、残高を計算する前に更新しておく。
+            # 失敗しても保存済みのスナップショットで計算は続けられる。
+            try:
+                us_data.refresh_letf_shares()
+            except Exception as e:
+                warn(f"LETF shares refresh failed: {e!r}")
             letf = us_data.fetch_letf_rebalance()
             print(f"LETF flow: {letf['total_bn']:+.2f}bn ({len(letf['items'])} ETFs)")
             # 推定リバランス額の日次履歴(表とCSV配布用)
