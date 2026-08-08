@@ -1,63 +1,118 @@
-# nk225-options-site — 日経225オプション データ可視化サイト(再建版)
+# Nikkei 225 Options & Futures Data
 
-以前運営していた「オプションデータの収集・可視化サイト」の再建プロジェクト。
-毎日自動更新でリピーターを集め、証券口座開設アフィリエイト+AdSenseで収益化する。
+Daily positioning data for Japan's benchmark index, built entirely from free official
+sources and published as a static site. No account, no API key, no paywall.
 
-## 前回からの改善点
+**→ [Live site](https://matsutoushi.github.io/nk225-option-site/)** ·
+[English pages](https://matsutoushi.github.io/nk225-option-site/en/)
 
-| | 前回 | 今回 |
+Updated every business day by GitHub Actions. The charts below are pulled live from the
+site, so they show the current data.
+
+![Open interest by strike](https://matsutoushi.github.io/nk225-option-site/img/oi_dist.png)
+
+## What makes this data unusual
+
+Most global traders know the CFTC's Commitments of Traders report, which groups traders
+into anonymous categories. Japan Exchange Group publishes something different:
+
+- **Weekly open interest by *named* trading participant** — Nomura, Goldman Sachs, HSBC,
+  Morgan Stanley MUFG and others, each with their net Nikkei 225 futures position.
+- **Daily trading volume by participant**, published around 17:45 JST.
+- **Settlement prices including implied volatility for every strike**, which makes it
+  possible to estimate gamma exposure from official data alone — no vendor feed required.
+
+There is no direct US equivalent to the first two, and very little written about them in
+English. See [the explainer](https://matsutoushi.github.io/nk225-option-site/en/guide-participants.html)
+for how to read the data — including why a firm's persistent short is usually structural
+rather than a directional view.
+
+## What the site publishes
+
+| Section | Contents |
+|---|---|
+| Nikkei options | Open interest by strike with day-over-day change, put/call ratio history, estimated gamma exposure |
+| Participants | Weekly net open interest per firm, daily volume rankings for large and mini contracts |
+| US markets | CFTC COT positioning with price overlays, CBOE put/call ratios, SPX open interest and gamma, leveraged-ETF assets |
+| Risk monitor | High-yield spreads, breakeven inflation, Sahm rule and other macro stress indicators |
+| Guides | How to read each dataset, using observed examples rather than textbook definitions |
+
+## Data sources
+
+Everything is public and free.
+
+| Data | Source | Published |
 |---|---|---|
-| 基盤 | WordPress(サーバー代あり) | 静的サイト+GitHub Pages(**無料**) |
-| 更新 | 自前環境で自動更新 | GitHub Actionsで完全自動(PC電源オフでも動く) |
-| 収益 | AdSenseのみ(月500〜2,000円) | 口座開設アフィリエイト(1件約4,000円)を主軸+AdSense |
-| 集客 | Twitter | X 9,000フォロワー+毎日更新のリピーター |
+| Open interest by strike | JPX `open_interest.xlsx` | ~20:00 JST |
+| Put/call volume, turnover | JPX `whole_day.xlsx` | ~16:xx JST |
+| Volume by participant | JPX JSON API | ~17:45 JST |
+| Open interest by participant | JPX (weekly) | Monday |
+| Settlement prices with IV | JPX `rb{YYYYMMDD}.csv` | daily |
+| Index prices, ETF data | Yahoo Finance | — |
+| COT positioning | CFTC | Friday (Tuesday data) |
+| Macro indicators | FRED | varies |
 
-## データ源について(重要な経緯)
+Raw JPX files are not redistributed; only derived charts and aggregates are published.
 
-旧サイトが使っていた**証券会社別の手口データはJPXが公表を廃止**したため復活不可。
-代替として、現在もJPXが毎営業日無料公開しているデータで再設計した(取得確認済み・2026-07-17):
-
-| データ | 取得元 | 使い道 |
-|---|---|---|
-| 行使価格別の建玉残高(日次) | JPX `open_interest.xlsx` | 建玉分布チャート=「壁」の可視化 |
-| プット/コール出来高(日次) | JPX `whole_day.xlsx` | Put/Callレシオと推移 |
-| 日経平均 | Yahoo Finance | マーケット概況・ATM判定 |
-
-日次データを蓄積すると「建玉の前日比増減」「PCR推移」など時系列コンテンツが自動で増えていく。
-将来の拡張候補: J-Quants API(Standard 月3,300円)でIV・清算値の過去データ、日経VI。収益が固定費を超えたら検討。
-
-## アーキテクチャ
+## How it works
 
 ```
-GitHub Actions (平日20:30 JST、JPXデータ公表後)
-  ↓
-pipeline/build.py
-  1. JPX公式サイトから当日ファイルを発見・取得(pipeline/jpx.py)
-  2. PCR算出・建玉パース → data/ に履歴蓄積(Actionsがコミットして永続化)
-  3. チャート生成 → site/index.html 出力
-  ↓
-GitHub Pages へ自動デプロイ(サーバー代0円、PC電源不要、独自ドメイン設定可)
+GitHub Actions (weekday afternoons/evenings JST)
+  │
+  ├─ pipeline/jpx.py       discover and fetch the day's JPX files
+  ├─ pipeline/us_data.py   CFTC, CBOE, ETF and options-chain data
+  ├─ pipeline/fred.py      macro series with local cache fallback
+  │
+  └─ pipeline/build.py     compute, chart, and render static HTML
+        │
+        └─ GitHub Pages
 ```
 
-## ディレクトリ
+JPX publishes its files at different times of day, so the build keys off a composite of
+the volume, participant and open-interest dates. If any one of them advances, the site
+rebuilds — otherwise the run exits without redeploying.
 
-- `pipeline/jpx.py` — JPXデータの発見・取得・パース
-- `pipeline/build.py` — チャート生成とHTML出力(ローカル実行で動作確認済み)
-- `data/` — 日次履歴の蓄積(PCR履歴、建玉スナップショット)
-- `site/` — 生成された公開ファイル(自動生成物。手編集しない)
-- `.github/workflows/daily-update.yml` — 毎日の自動更新ジョブ
-- `docs/monetization.md` — アフィリエイト・AdSenseの配置設計
+Daily values are appended to `data/` and committed back by the workflow, so time series
+accumulate without any external database.
 
-## セットアップ(ユーザー作業)
+## Running it locally
 
-1. GitHubリポジトリ作成(Publicを推奨。Pages無料枠のため)
-2. このフォルダをプッシュ
-3. Settings → Pages → Source: GitHub Actions
-4. Actionsタブから daily-update を手動実行(workflow_dispatch)して初回デプロイ
-5. 独自ドメインを充てる場合はPages設定でCNAME追加(AdSense申請に必要)
+```bash
+pip install -r pipeline/requirements.txt
+python pipeline/build.py          # writes to site/
+FORCE_BUILD=1 python pipeline/build.py   # rebuild even if no new data
+```
 
-## 収益導線(docs/monetization.md に詳細)
+Optional environment variables: `FRED_API_KEY` (falls back to a local cache if absent),
+`ADSENSE_CLIENT` / `ADSENSE_SLOT` (ads are only emitted when both are set).
 
-- ヘッダー/サイドに「オプション取引に対応した証券口座」導線(→ 解説ページ → ASPリンク)
-- 記事系コンテンツ(finance-blog/articles の口座開設ガイド等)もこのサイト内 `/guide/` に統合
-- データページはAdSense、ガイドページはアフィリエイト優先(自動広告除外)
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `pipeline/jpx.py` | JPX file discovery, download and parsing |
+| `pipeline/us_data.py` | CFTC, CBOE, SPX chain, leveraged ETFs |
+| `pipeline/fred.py` | FRED series with cache fallback |
+| `pipeline/build.py` | Calculations, charts, HTML rendering |
+| `pipeline/pages.py` | Guide article content (JA/EN) |
+| `pipeline/tools_page.py` | Interactive Plotly page |
+| `data/` | Accumulated daily history, committed by CI |
+| `site/` | Generated output (not tracked) |
+| `docs/` | Internal planning notes |
+
+## 日本語
+
+日経225オプション・先物の建玉や手口を、JPXなどの公表データから毎営業日自動で集計し、
+チャートにして公開しています。行使価格別の建玉分布、Put/Callレシオ、取引参加者別の
+ポジション、清算値のボラティリティから推定したガンマエクスポージャーなどを扱います。
+
+サイトは[こちら](https://matsutoushi.github.io/nk225-option-site/)。
+データの読み方は[解説記事](https://matsutoushi.github.io/nk225-option-site/guide-oi.html)にまとめています。
+
+## Disclaimer
+
+This project is for informational purposes only. It is not investment advice or a
+solicitation to trade. Figures labelled as estimates depend on stated assumptions that
+cannot be verified from public data — the gamma exposure calculation in particular
+assumes a dealer positioning convention that may not hold. Verify anything you rely on
+against the original sources.
