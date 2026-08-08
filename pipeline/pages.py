@@ -7,33 +7,96 @@
 - 広告を含む予定のページには冒頭にPR表記
 """
 
+# 英語ページの meta description。
+# 検索結果のスニペットになるほか、AIアシスタントがページの主題を判断する材料にもなる。
+# 「JPXは証券会社名まで公表する」「日経の建玉・ガンマは公式データだけで組める」という、
+# 英語圏でほとんど書かれていない事実を先頭に置いている。
+EN_GUIDE_DESC = {
+    "guide-participants.html":
+        "JPX publishes weekly Nikkei 225 futures open interest by named trading participant — "
+        "Nomura, Goldman Sachs, HSBC and others — unlike the CFTC's anonymous COT categories. "
+        "How to read it, and why a firm's short is usually structural, not bearish.",
+    "guide-nikkei-options.html":
+        "Nikkei 225 options explained for global traders: contract specs, SQ settlement, "
+        "open interest walls, put/call ratio and gamma exposure, all built from free official "
+        "JPX data and updated every business day.",
+}
+
 # 英語ページ {ファイル名: (タイトル, 本文HTML)} — en/ 配下に出力される
 EN_GUIDE_PAGES = {
     "guide-participants.html": ("Japan's Hidden COT: JPX Participant Positioning", """
 <h1>Japan's Hidden COT — Reading JPX Trading-Participant Positioning</h1>
-<p>Most global traders know the CFTC's COT report. Far fewer know that Japan Exchange Group (JPX)
-publishes something arguably richer for Nikkei futures: <b>weekly open interest by named trading
-participant</b> — Nomura, Goldman Sachs, HSBC, Morgan (MUFG), UBS and others, each with their
-net long/short position in Nikkei 225 futures.</p>
+<p>Most global traders know the CFTC's Commitments of Traders report. Far fewer know that
+Japan Exchange Group (JPX) publishes something arguably richer for Nikkei 225 futures:
+<b>weekly open interest by named trading participant</b> — Nomura, Goldman Sachs, HSBC,
+Morgan Stanley MUFG, SMBC Nikko and others, each with their net long/short position.</p>
+<p>The CFTC aggregates traders into anonymous categories. JPX names the firms.
+This page explains what the data is, how to read it correctly, and — importantly —
+the mistake that makes it useless if you get it wrong.</p>
 
-<h2>What the data shows</h2>
-<p>Every week (first business day), JPX publishes each participant's net open interest in
-index futures. Unlike the CFTC report, which aggregates anonymous categories,
-this data names the firms. Positions reflect a mix of house books and customer flows cleared
-through each firm, so treat them as flow fingerprints rather than pure proprietary bets.</p>
+<h2>What JPX publishes</h2>
+<ul>
+<li><b>Weekly open interest by participant</b> (released the first business day of each week):
+net position held through each clearing firm in Nikkei 225 futures and mini futures.</li>
+<li><b>Daily trading volume by participant</b> (released around 17:45 JST): how much was
+traded through each firm that day. Volume only — <b>no direction</b>.</li>
+</ul>
+<p>Both are free and official. Neither has a direct equivalent in US markets.</p>
+
+<h2>The mistake that ruins this data</h2>
+<p>The obvious reading — "Firm X is net short, so foreign institutions are bearish" —
+<b>does not work</b>. Here is what our own dataset shows.</p>
+<p>We aggregated 52 weeks of participant open interest in Nikkei 225 futures
+(August 2025 to July 2026) and measured how often each firm's net position kept the same sign:</p>
+<table>
+<thead><tr><th>Participant</th><th>Average net</th><th>Same sign</th></tr></thead>
+<tbody>
+<tr><td>HSBC</td><td>−31,604 contracts</td><td><b>52 of 52 weeks short</b></td></tr>
+<tr><td>SMBC Nikko</td><td>+4,927</td><td><b>52 of 52 weeks long</b></td></tr>
+<tr><td>Morgan Stanley MUFG</td><td>−14,029</td><td>98% short</td></tr>
+<tr><td>Nomura</td><td>+18,065</td><td>92% long</td></tr>
+<tr><td>Société Générale</td><td>+19,106</td><td>90% long</td></tr>
+</tbody>
+</table>
+<p>The Nikkei moved substantially in both directions over this period.
+<b>These firms did not change sides.</b> If you had read HSBC's short as a bearish signal,
+you would have been bearish every single week for a year.</p>
+<p>The reason is structural, not directional. A clearing firm's position reflects
+hedges against structured products it has issued, the other side of client flow,
+index arbitrage against cash equities, and market-making inventory.
+<b>These generate persistent one-way positions regardless of any house view.</b></p>
+
+<h2>How to read it correctly</h2>
+<p>Compare each firm against <b>its own normal</b>, not against zero.</p>
+<ul>
+<li><b>Wrong:</b> "HSBC is short, so they are bearish."</li>
+<li><b>Right:</b> "HSBC's short is 20,000 contracts smaller than usual — that is buying pressure."</li>
+</ul>
+<p>If HSBC's baseline is −31,604 and this week reads −5,000, the firm has effectively
+covered a large short even though the sign is still negative.
+The same logic applies to daily volume: 50,000 contracts means nothing for a firm that
+always trades 50,000, but means a great deal for one that usually trades 10,000.</p>
+
+<h2>Large vs mini: two different crowds</h2>
+<p>Nikkei 225 futures come in large (¥1,000 multiplier) and mini (¥100).
+The participant mix differs: large contracts are dominated by foreign institutions,
+while mini rankings include Japanese online brokers (SBI, Rakuten, Matsui) — that is,
+domestic retail. When the two disagree, professionals and retail are positioned differently.</p>
 
 <h2>How this site presents it</h2>
-<p>On our <a href="./">main page</a> we chart each major participant's weekly net position
-over the past year, with the Nikkei 225 overlaid. Patterns emerge quickly: some firms trend-follow,
-some fade rallies, some hold persistent structural shorts (often hedges against structured products).</p>
+<p>On our <a href="./">main dashboard</a> we chart each major participant's weekly net position
+over the past year with the Nikkei 225 overlaid, and publish the daily volume rankings for
+both large and mini contracts every business day, sourced entirely from JPX.</p>
 
 <h2>Why it matters</h2>
-<p>Japan's cash-equity flows are dominated by foreign investors, but Nikkei futures positioning
-gives a faster weekly read on how large players lean. Combined with options open interest
-("walls") and the CME's Nikkei COT data, it forms a reasonably complete positioning picture
-that is hard to find in English anywhere else.</p>
+<p>Japanese equity flows are dominated by foreign investors, and futures positioning gives a
+faster read than cash-market statistics. Combined with options open interest ("walls"),
+estimated gamma exposure, and the CME's Nikkei COT data, it forms a positioning picture
+that is difficult to assemble in English anywhere else.</p>
+<p>Just remember what the data is not: it contains no direction for volume, no separation of
+house and client, and no proprietary view. <b>It is a flow fingerprint, not a forecast.</b></p>
 
-<p><a href="./">→ See the live data (updated weekly)</a></p>
+<p><a href="./">→ See the live data (updated every business day)</a></p>
 """),
 
     "guide-nikkei-options.html": ("Nikkei 225 Options: A Field Guide", """
@@ -56,6 +119,8 @@ to US moves in real time.</li>
 <li>Open interest by strike for the nearest three expiries — the "walls" we chart daily</li>
 <li>Put/call volume — the basis of our Nikkei put/call ratio series</li>
 <li>Weekly: open interest by named trading participant (<a href="guide-participants.html">explainer</a>)</li>
+<li>Daily settlement prices including <b>implied volatility for every strike</b> — this is what
+lets us estimate gamma exposure from official data alone</li>
 </ul>
 
 <h2>Reading the walls</h2>
@@ -64,7 +129,40 @@ marks where hedging demand concentrated; SQ week tends to gravitate toward high-
 Combined with the Nikkei VI (Japan's volatility index) you get a quick regime read:
 walls close + VI low = pinned market; walls broken + VI spiking = trend risk.</p>
 
-<p><a href="./">→ Live Nikkei dashboard</a> ・ <a href="us.html">→ US markets (COT & SPX gamma)</a></p>
+<h2>Do not use the largest open interest as the wall</h2>
+<p>This is the most common error, and Nikkei options make it easy to commit.</p>
+<p>In early August 2026, the single largest open interest in the entire Nikkei options chain
+was the <b>30,000 put, at roughly 5,600 contracts</b>. The Nikkei was trading near 65,600 —
+so that strike sat <b>53% below spot</b>. Over eight sessions the position moved from
+5,592 to 5,623 contracts: essentially dead. It is legacy or deep tail protection,
+and it has nothing to do with current price action.</p>
+<p>Meanwhile the 70,000 call, about 6% above spot, moved from 4,490 to 4,910 contracts
+in the same window. Smaller, but alive and reachable. That is the strike that matters.</p>
+<p>For this reason we restrict "walls" to strikes <b>within ±10% of spot</b>: the highest
+call open interest above spot, and the highest put open interest below it.</p>
+
+<h2>Two Nikkei-specific quirks worth knowing</h2>
+<p><b>1. The back month can be larger than the front month.</b>
+On 7 August 2026, one week before the August expiry, August open interest stood at
+169,955 contracts while <b>September held 189,160</b>. September is a Major SQ
+(futures expire alongside options), so quarterly hedges concentrate there.
+Looking only at the front month will misread where the market's attention is.</p>
+<p><b>2. Open interest rises into expiry rather than winding down.</b>
+The same August series went from 137,311 contracts on 17 July to 169,955 on 7 August —
+<b>up 24% in three weeks</b>. Short-dated options are cheap and responsive, so short-term
+flow concentrates into them. The position does not decay away; it accumulates and then
+vanishes at SQ, which is why the supply-demand picture changes abruptly around expiry.</p>
+
+<h2>Put/call ratio: read the numerator and denominator</h2>
+<p>The Nikkei put/call ratio normally sits <b>above 1.0</b> — our measured average is 1.57
+for large contracts — because institutional put hedging is structural. Judge it against
+its own range, not against 1.0.</p>
+<p>Mini contracts behave differently: the same period averaged <b>0.91</b>, consistently
+below the large-contract ratio. Large is institutional hedging; mini carries more retail
+upside-seeking flow. The gap between them is itself informative.</p>
+
+<p><a href="./">→ Live Nikkei dashboard</a> ・ <a href="us.html">→ US markets (COT & SPX gamma)</a>
+・ <a href="guide-participants.html">→ Participant positioning explained</a></p>
 """),
 }
 

@@ -1011,7 +1011,7 @@ PAGE = {
 def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "ja",
                  extras: dict | None = None) -> None:
     P = PAGE[lang]
-    og = og_meta(P["title"], P["desc"])
+    og = og_meta(P["title"], P["desc"], ("", "en/"))
     extras = extras or {}
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     d = f"{date[:4]}-{date[4:6]}-{date[6:]}"
@@ -1398,7 +1398,7 @@ def chart_rates(series: dict, lang: str) -> str | None:
 def render_risk(risk: dict, lang: str, chart_rel: str | None,
                 rates_rel: str | None = None) -> None:
     P = RISKPAGE[lang]
-    og = og_meta(P["title"])
+    og = og_meta(P["title"], pair=("risk.html", "en/risk.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     counts = {"green": 0, "yellow": 0, "red": 0}
@@ -1500,7 +1500,7 @@ FEDPAGE = {
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
-    og = og_meta(P["title"])
+    og = og_meta(P["title"], pair=("fedwatch.html", "en/fedwatch.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     sections = []
     head = "".join(f"<th>{c}</th>" for c in P["cols"])
@@ -1990,7 +1990,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
               letf: dict | None = None) -> None:
     import us_data
     P = USPAGE[lang]
-    og = og_meta(P["title"])
+    og = og_meta(P["title"], pair=("us.html", "en/us.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     chart_src = f"{P['prefix']}{chart_rel}?v={ver}"
@@ -2172,15 +2172,26 @@ GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymC
             'gtag("js",new Date());gtag("config","G-B0F8KB2KW7");</script>')
 
 
-def og_meta(title: str, desc: str = "") -> str:
-    """OGP/Twitterカード用メタタグ(X告知でリンクカードを出すため)。"""
+def og_meta(title: str, desc: str = "", pair: tuple[str, str] | None = None) -> str:
+    """OGP/Twitterカード用メタタグ(X告知でリンクカードを出すため)。
+
+    pairに(日本語版のパス, 英語版のパス)を渡すとhreflangも出力する。
+    これが無いと検索エンジンが日英を「言語違いの同じページ」と認識できず、
+    英語圏の検索で英語版が拾われにくい。
+    """
     img = SITE_URL + "img/market.png"
-    return (f'<meta property="og:title" content="{title}">\n'
+    tags = (f'<meta property="og:title" content="{title}">\n'
             f'<meta property="og:description" content="{desc}">\n'
             f'<meta property="og:image" content="{img}">\n'
             f'<meta property="og:type" content="website">\n'
             f'<meta name="twitter:card" content="summary_large_image">\n'
             f'<link rel="icon" type="image/png" href="{SITE_URL}favicon.png">')
+    if pair:
+        ja, en = pair
+        tags += (f'\n<link rel="alternate" hreflang="ja" href="{SITE_URL}{ja}">\n'
+                 f'<link rel="alternate" hreflang="en" href="{SITE_URL}{en}">\n'
+                 f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}{ja}">')
+    return tags
 
 
 # 全ページ共通のナビゲーションリンク(各言語のページからの相対パス)
@@ -2385,15 +2396,16 @@ def render_static_pages() -> None:
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
             f.write(shell(title, body))
 
-    def shell_en(title, body):
-        og = og_meta(f"{title} | Nikkei 225 Options Data")
+    def shell_en(title, body, desc=""):
+        og = og_meta(f"{title} | Nikkei 225 Options Data", desc)
+        meta_desc = f'\n<meta name="description" content="{desc}">' if desc else ""
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
-{og}
+{og}{meta_desc}
 <title>{title} | Nikkei 225 Options Data</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{SUB_CSS}</style>
@@ -2412,7 +2424,7 @@ def render_static_pages() -> None:
     os.makedirs(os.path.join(SITE, "en"), exist_ok=True)
     for fname, (title, body) in pages.EN_GUIDE_PAGES.items():
         with open(os.path.join(SITE, "en", fname), "w", encoding="utf-8") as f:
-            f.write(shell_en(title, body))
+            f.write(shell_en(title, body, pages.EN_GUIDE_DESC.get(fname, "")))
 
 
 WARNINGS: list[str] = []
