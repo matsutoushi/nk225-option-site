@@ -2364,7 +2364,9 @@ def render_seo_files() -> None:
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
     def shell(title, body, ad=""):
-        ad_head = adsense_head() if ad else ""
+        # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
+        # ADSENSE_CLIENT さえ入っていれば出す。
+        ad_head = adsense_head()
         og = og_meta(f"{title} | 日経225オプション データ分析")
         return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -2439,7 +2441,9 @@ Googleが広告Cookieを使用することにより、ユーザーは
             f.write(shell(title, body, ad))
 
     def shell_en(title, body, desc="", ad=""):
-        ad_head = adsense_head() if ad else ""
+        # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
+        # ADSENSE_CLIENT さえ入っていれば出す。
+        ad_head = adsense_head()
         og = og_meta(f"{title} | Nikkei 225 Options Data", desc)
         meta_desc = f'\n<meta name="description" content="{desc}">' if desc else ""
         return f"""<!DOCTYPE html>
