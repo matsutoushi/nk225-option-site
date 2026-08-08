@@ -184,6 +184,8 @@ LETFS = [
 ]
 _LETF_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                            "data", "letf_flow.json")
+_LETF_SHARES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "data", "letf_shares.json")
 
 
 def fetch_letf_rebalance() -> dict:
@@ -198,13 +200,29 @@ def fetch_letf_rebalance() -> dict:
     """
     import json
     import yfinance as yf
+
+    # yfinanceのtotalAssetsは更新が遅く、実勢より1割ほど低く出ることがある
+    # (2026-08-07時点でTQQQ -13.9%、SOXL -23.2%の乖離を確認)。
+    # ETFの純資産は口数×基準価額で、基準価額は終値とほぼ一致するため、
+    # 口数のスナップショット(letf_shares.json)があればそちらから算出する。
+    # 口数は設定・解約で動くので、スナップショットは時々更新すること。
+    shares = {}
+    try:
+        with open(_LETF_SHARES, encoding="utf-8") as f:
+            shares = json.load(f).get("shares", {})
+    except Exception:
+        pass
+
     items, total = [], 0.0
     for sym, lev, und in LETFS:
         try:
             t = yf.Ticker(sym)
-            aum = t.info.get("totalAssets")
             hist = t.history(period="5d")
-            if not aum or len(hist) < 2:
+            if len(hist) < 2:
+                continue
+            px = float(hist["Close"].iloc[-1])
+            aum = shares[sym] * px if sym in shares else t.info.get("totalAssets")
+            if not aum:
                 continue
             etf_ret = float(hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1)
             flow = aum * (lev - 1) * etf_ret  # = AUM×L(L-1)×原資産リターン

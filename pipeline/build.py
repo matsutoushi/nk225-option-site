@@ -1861,28 +1861,32 @@ def chart_letf(history: pd.DataFrame, letf: dict, lang: str) -> str | None:
     相場次第で反転するだけで、系列として意味を読み取りにくかった。
     残高の方が「この仕組みがどれだけの規模で効いているか」を素直に表す。
 
-    残高の履歴は取得できないため(yfinanceは過去の口数を返さない)、
-    合計残高は本日以降に蓄積していく。点が足りないうちはETF別の内訳を出す。
+    残高が積み上がっているほどリバランスの力も大きくなるので、
+    規模の増減は残高の推移で見るのが素直。
     """
     suffix = L[lang]["suffix"]
     ja = lang == "ja"
-    df = history.copy()
-    df = df[df["date"].astype(str).str.fullmatch(r"20\d{6}")]
-    if "total_aum_bn" in df.columns:
+    df = history.copy() if history is not None else pd.DataFrame()
+    if len(df) and "total_aum_bn" in df.columns:
+        df = df[df["date"].astype(str).str.fullmatch(r"20\d{6}")]
         df = df[df["total_aum_bn"].notna()]
     else:
-        df = df.iloc[0:0]
+        df = pd.DataFrame()
 
     if len(df) >= 3:
         x = pd.to_datetime(df["date"], format="%Y%m%d")
         vals = df["total_aum_bn"].astype(float)
-        fig, ax = plt.subplots(figsize=(10, 3.6))
+        fig, ax = plt.subplots(figsize=(10, 3.8))
         ax.plot(x, vals, color=ACCENT, linewidth=1.8)
         ax.fill_between(x, vals, 0, color=ACCENT, alpha=0.18)
         ax.set_ylim(bottom=0)
+        cur, lo, hi = vals.iloc[-1], vals.min(), vals.max()
+        ax.annotate(f"{cur:,.0f}", (x.iloc[-1], cur), textcoords="offset points",
+                    xytext=(4, 5), fontsize=9, color=ACCENT, fontweight="bold")
         ax.set_ylabel("純資産($bn)" if ja else "AUM ($bn)", fontsize=9)
-        ax.set_title(("主要レバレッジETFの純資産合計の推移" if ja
-                      else "Total AUM of Major Leveraged ETFs"), fontsize=10)
+        ax.set_title((f"主要レバレッジETFの純資産合計の推移(レンジ {lo:,.0f}〜{hi:,.0f} $bn)" if ja
+                      else f"Total AUM of Major Leveraged ETFs (range {lo:,.0f}-{hi:,.0f} $bn)"),
+                     fontsize=10)
         ax.grid(alpha=0.25)
         fig.autofmt_xdate()
     else:
@@ -2662,20 +2666,28 @@ def main() -> None:
         try:
             letf = us_data.fetch_letf_rebalance()
             print(f"LETF flow: {letf['total_bn']:+.2f}bn ({len(letf['items'])} ETFs)")
-            # 日次履歴に蓄積(データ基準日=JPXの前営業日に合わせる)。
-            # 残高(total_aum_bn)は過去分を取得する手段がないので、ここから積み上げる。
-            letf["total_aum_bn"] = round(sum(it["aum_bn"] for it in letf["items"]), 2)
+            # 推定リバランス額の日次履歴(表とCSV配布用)
             lh_path = os.path.join(DATA, "letf_history.csv")
             lh = pd.read_csv(lh_path, dtype={"date": str}) if os.path.exists(lh_path) else \
-                pd.DataFrame(columns=["date", "total_bn", "total_aum_bn"])
-            if "total_aum_bn" not in lh.columns:
-                lh["total_aum_bn"] = pd.NA
+                pd.DataFrame(columns=["date", "total_bn"])
             lh = lh[lh["date"].astype(str) != date]
-            lh = pd.concat([lh, pd.DataFrame([{"date": date, "total_bn": letf["total_bn"],
-                                               "total_aum_bn": letf["total_aum_bn"]}])],
+            lh = pd.concat([lh, pd.DataFrame([{"date": date, "total_bn": letf["total_bn"]}])],
                            ignore_index=True).sort_values("date")
             lh.to_csv(lh_path, index=False)
             letf["history"] = lh
+
+            # 純資産の日次履歴(グラフ用)。過去分はBloombergから一度だけ入れてあり、
+            # 以降は口数スナップショット×終値で算出した値を継ぎ足していく。
+            letf["total_aum_bn"] = round(sum(it["aum_bn"] for it in letf["items"]), 2)
+            ah_path = os.path.join(DATA, "letf_aum_history.csv")
+            ah = pd.read_csv(ah_path, dtype={"date": str}) if os.path.exists(ah_path) else \
+                pd.DataFrame(columns=["date", "total_aum_bn"])
+            ah = ah[ah["date"].astype(str) != date]
+            ah = pd.concat([ah, pd.DataFrame([{"date": date,
+                                               "total_aum_bn": letf["total_aum_bn"]}])],
+                           ignore_index=True).sort_values("date")
+            ah.to_csv(ah_path, index=False)
+            letf["aum_history"] = ah
         except Exception as e:
             warn(f"LETF flow failed: {e!r}")
             letf = None
@@ -2690,8 +2702,8 @@ def main() -> None:
 
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
-            if letf is not None and letf.get("history") is not None:
-                letf["chart"] = chart_letf(letf["history"], letf, lang)
+            if letf is not None:
+                letf["chart"] = chart_letf(letf.get("aum_history"), letf, lang)
             render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy, cot_prices), spx_res, spx_chart,
                       spx_share, letf)
 
