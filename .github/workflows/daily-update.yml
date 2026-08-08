@@ -38,6 +38,10 @@ jobs:
       FORCE_BUILD: ${{ github.event_name != 'schedule' && '1' || '' }}
       # FRED公式APIキー(未設定でもキャッシュフォールバックで動作)
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      # AdSense。両方をSecretsに登録したときだけ、解説記事の末尾に広告が出る。
+      # 未登録なら広告タグは一切出力されない。
+      ADSENSE_CLIENT: ${{ secrets.ADSENSE_CLIENT }}
+      ADSENSE_SLOT: ${{ secrets.ADSENSE_SLOT }}
     steps:
       - uses: actions/checkout@v4
 

@@ -2162,6 +2162,9 @@ SUB_CSS = """
   th:first-child, td:first-child { text-align: left; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
            font-size: 0.78em; color: var(--ink2); }
+  /* 広告枠。本文と地続きに見えると誤解を招くので、区切り線と「広告」表記を必ず出す。 */
+  .ad-slot { margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .ad-label { display: block; font-size: 0.72em; color: var(--ink2); margin-bottom: 6px; }
 """
 
 
@@ -2170,6 +2173,35 @@ GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymC
             '<script async src="https://www.googletagmanager.com/gtag/js?id=G-B0F8KB2KW7"></script>\n'
             '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
             'gtag("js",new Date());gtag("config","G-B0F8KB2KW7");</script>')
+
+
+# AdSense。パブリッシャーIDとスロットIDを環境変数で渡したときだけ出力する。
+# 未設定なら空文字を返すので、IDが無い状態でビルドしても広告タグは一切入らない。
+#
+# 自動広告(Auto ads)はAdSense管理画面側でオフにしておくこと。オンにすると
+# ページ上部にも勝手に挿入され、数秒で要点を届けるという設計が崩れる。
+ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "").strip()
+ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "").strip()
+
+
+def adsense_head() -> str:
+    """<head>に入れる読み込みタグ。IDが無ければ何も返さない。"""
+    if not ADSENSE_CLIENT:
+        return ""
+    return ('\n<script async src="https://pagead2.googlesyndication.com/pagead/js/'
+            f'adsbygoogle.js?client={ADSENSE_CLIENT}" crossorigin="anonymous"></script>')
+
+
+def adsense_unit(lang: str = "ja") -> str:
+    """記事末尾に置く広告枠。IDが無ければ何も返さない。"""
+    if not (ADSENSE_CLIENT and ADSENSE_SLOT):
+        return ""
+    label = "広告" if lang == "ja" else "Advertisement"
+    return (f'\n<div class="ad-slot"><span class="ad-label">{label}</span>\n'
+            f'<ins class="adsbygoogle" style="display:block" '
+            f'data-ad-client="{ADSENSE_CLIENT}" data-ad-slot="{ADSENSE_SLOT}" '
+            f'data-ad-format="auto" data-full-width-responsive="true"></ins>\n'
+            f'<script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script></div>')
 
 
 def og_meta(title: str, desc: str = "", pair: tuple[str, str] | None = None) -> str:
@@ -2331,7 +2363,8 @@ def render_seo_files() -> None:
 
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
-    def shell(title, body):
+    def shell(title, body, ad=""):
+        ad_head = adsense_head() if ad else ""
         og = og_meta(f"{title} | 日経225オプション データ分析")
         return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -2342,11 +2375,11 @@ def render_static_pages() -> None:
 {og}
 <title>{title} | 日経225オプション データ分析</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{SUB_CSS}</style>
+<style>{SUB_CSS}</style>{ad_head}
 </head>
 <body>
 <header class="site-header">{site_nav("ja")}</header>
-{body}
+{body}{ad}
 <footer>
   {footer_sitemap("ja")}
   <p>本サイトは情報提供を目的としたものであり、投資勧誘や投資助言ではありません。投資判断はご自身の責任でお願いします。</p>
@@ -2375,8 +2408,14 @@ def render_static_pages() -> None:
 <p>当サイトは、閲覧にあたって個人情報の入力を求めることはありません。</p>
 <h2>広告について</h2>
 <p>当サイトは、第三者配信の広告サービスおよびアフィリエイトプログラム
-(A8.net、アクセストレード、TGアフィリエイト等)を利用する場合があります。
+(Google AdSense、A8.net、アクセストレード、TGアフィリエイト等)を利用する場合があります。
 広告配信事業者は、ユーザーの興味に応じた広告を表示するためにCookieを使用することがあります。</p>
+<p>Googleを含む第三者配信事業者は、Cookieを使用して、ユーザーが当サイトや他のサイトに
+過去にアクセスした際の情報に基づいて広告を配信します。
+Googleが広告Cookieを使用することにより、ユーザーは
+<a href="https://adssettings.google.com/">広告設定</a>でパーソナライズ広告を無効にできます。
+また <a href="https://www.aboutads.info/choices/">aboutads.info</a> で
+第三者配信事業者のCookieを無効にできます。</p>
 <h2>アクセス解析について</h2>
 <p>当サイトは、アクセス解析ツールを利用する場合があります。
 これらのツールはトラフィックデータの収集のためにCookieを使用することがありますが、
@@ -2392,11 +2431,15 @@ def render_static_pages() -> None:
         f.write(shell("運営者情報", about))
     with open(os.path.join(SITE, "privacy.html"), "w", encoding="utf-8") as f:
         f.write(shell("プライバシーポリシー", privacy))
+    # guide-start はアフィリエイトが4枠あるので広告を入れない(宣伝ページ感が強まるため)
+    NO_AD = {"guide-start.html"}
     for fname, (title, body) in pages.GUIDE_PAGES.items():
+        ad = "" if fname in NO_AD else adsense_unit("ja")
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
-            f.write(shell(title, body))
+            f.write(shell(title, body, ad))
 
-    def shell_en(title, body, desc=""):
+    def shell_en(title, body, desc="", ad=""):
+        ad_head = adsense_head() if ad else ""
         og = og_meta(f"{title} | Nikkei 225 Options Data", desc)
         meta_desc = f'\n<meta name="description" content="{desc}">' if desc else ""
         return f"""<!DOCTYPE html>
@@ -2408,11 +2451,11 @@ def render_static_pages() -> None:
 {og}{meta_desc}
 <title>{title} | Nikkei 225 Options Data</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{SUB_CSS}</style>
+<style>{SUB_CSS}</style>{ad_head}
 </head>
 <body>
 <header class="site-header">{site_nav("en")}</header>
-{body}
+{body}{ad}
 <footer>
   {footer_sitemap("en")}
   <p>This site is for informational purposes only and does not constitute investment advice or solicitation. Trade at your own risk.</p>
@@ -2424,7 +2467,8 @@ def render_static_pages() -> None:
     os.makedirs(os.path.join(SITE, "en"), exist_ok=True)
     for fname, (title, body) in pages.EN_GUIDE_PAGES.items():
         with open(os.path.join(SITE, "en", fname), "w", encoding="utf-8") as f:
-            f.write(shell_en(title, body, pages.EN_GUIDE_DESC.get(fname, "")))
+            f.write(shell_en(title, body, pages.EN_GUIDE_DESC.get(fname, ""),
+                             adsense_unit("en")))
 
 
 WARNINGS: list[str] = []
