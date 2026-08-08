@@ -1566,12 +1566,10 @@ USPAGE = {
         "pcr_rows": {"total": "全体(Total)", "index": "指数(Index)", "equity": "株式(Equity)",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["区分", "Put/Callレシオ"],
-        "sec_letf": "レバレッジETF 推定リバランス・フロー",
-        "letf_lead": "レバレッジETF(TQQQ・SOXL等)は一定倍率を保つため、引けにかけて原資産を売買します。上昇日は買い・下落日は売りで、値動きを増幅する方向(モメンタム/負のガンマ的)に働きます。下記は主要な株価指数レバレッジETFの純資産と当日リターンから推定した引けのリバランス額です(推定値)。<b>これはオプションのヘッジとは別のメカニズムで、単純に足し合わせられるものではありません。</b>両方を並べて総合的に見る指標としてご利用ください。",
+        "sec_letf": "レバレッジETFの規模と推定リバランス",
+        "letf_lead": "レバレッジETF(TQQQ・SOXL等)は一定倍率を保つため、引けにかけて原資産を売買します。上昇日は買い・下落日は売りで、値動きを増幅する方向に働きます。<b>この力の大きさは各ETFの純資産に比例する</b>ため、まず残高の規模を掲載しています。表には純資産と当日リターンから推定した引けのリバランス額も併記します(推定値)。<b>オプションのヘッジとは別のメカニズムなので、単純に足し合わせることはできません。</b>",
         "letf_kpi": "推定リバランス額 合計($bn)",
         "letf_cols": ["ETF", "原資産", "レバレッジ", "純資産($bn)", "当日%", "推定フロー($bn)"],
-        "sec_etf": "SPY・QQQ 建玉の壁",
-        "etf_lead": "米国の代表的ETFオプションの行使価格別建玉(45日以内の限月・現値±10%)。SPXと同様、建玉の集中する水準は意識されやすい価格帯の目安です。",
         "kpi_0dte": "SPX最短限月の出来高シェア",
         "sec_spx": "SPXオプション: 建玉の壁とガンマエクスポージャー(推定)",
         "spx_lead": "CBOE遅延データ(前営業日終値時点)より、45日以内の限月・現値±10%を集計。ガンマエクスポージャーは「ディーラーはコール買い・プット売り」という一般的な仮定に基づく推定値で、実際のディーラーポジションを示すものではありません。プラス圏=相場の変動を抑える力、マイナス圏=変動を増幅する力が働きやすいと解釈されます。",
@@ -1594,12 +1592,10 @@ USPAGE = {
         "pcr_rows": {"total": "Total", "index": "Index", "equity": "Equity",
                      "spx": "SPX+SPXW", "vix": "VIX"},
         "pcr_cols": ["Category", "Put/Call Ratio"],
-        "sec_letf": "Leveraged ETF Estimated Rebalancing Flow",
-        "letf_lead": "Leveraged ETFs (TQQQ, SOXL, etc.) rebalance into the close to maintain constant leverage: buying on up days, selling on down days — a momentum (negative-gamma-like) force. Below is the estimated end-of-day rebalancing flow from major equity-index leveraged ETFs, based on their AUM and daily return (an estimate). <b>This is a different mechanism from options gamma exposure and cannot simply be added to it.</b> Use both side by side for a fuller picture.",
+        "sec_letf": "Leveraged ETF Size & Estimated Rebalancing",
+        "letf_lead": "Leveraged ETFs (TQQQ, SOXL, etc.) rebalance into the close to maintain constant leverage: buying on up days, selling on down days — a momentum force. <b>Its size scales with each fund's AUM</b>, so the chart shows assets under management. The table also lists the estimated end-of-day rebalancing flow derived from AUM and the daily return (an estimate). <b>This is a different mechanism from options gamma exposure and cannot simply be added to it.</b>",
         "letf_kpi": "Estimated total rebalancing flow ($bn)",
         "letf_cols": ["ETF", "Underlying", "Leverage", "AUM($bn)", "Day%", "Est. flow($bn)"],
-        "sec_etf": "SPY & QQQ OI Walls",
-        "etf_lead": "Open interest by strike for the major US ETF options (expiries within 45 days, strikes within ±10% of spot).",
         "kpi_0dte": "SPX Nearest-Expiry Volume Share",
         "sec_spx": "SPX Options: OI Walls & Gamma Exposure (Estimate)",
         "spx_lead": "From Cboe delayed data (as of last US close), expiries within 45 days, strikes within ±10% of spot. GEX uses the standard naive assumption (dealers long calls, short puts) and is an estimate, not actual dealer positioning. Positive GEX tends to dampen volatility; negative GEX tends to amplify it.",
@@ -1858,24 +1854,53 @@ def chart_participants(hist: pd.DataFrame, n225: pd.DataFrame | None, lang: str)
     return f"img/{name_f}"
 
 
-def chart_letf(history: pd.DataFrame, lang: str) -> str | None:
-    """レバレッジETF推定リバランス額の日次推移(棒)。"""
+def chart_letf(history: pd.DataFrame, letf: dict, lang: str) -> str | None:
+    """レバレッジETFの純資産(残高)を描く。
+
+    以前は推定リバランス額の日次推移を棒で出していたが、日々の符号が
+    相場次第で反転するだけで、系列として意味を読み取りにくかった。
+    残高の方が「この仕組みがどれだけの規模で効いているか」を素直に表す。
+
+    残高の履歴は取得できないため(yfinanceは過去の口数を返さない)、
+    合計残高は本日以降に蓄積していく。点が足りないうちはETF別の内訳を出す。
+    """
     suffix = L[lang]["suffix"]
+    ja = lang == "ja"
     df = history.copy()
     df = df[df["date"].astype(str).str.fullmatch(r"20\d{6}")]
-    if len(df) < 2:
-        return None
-    x = pd.to_datetime(df["date"], format="%Y%m%d")
-    vals = df["total_bn"].astype(float)
-    fig, ax = plt.subplots(figsize=(10, 3.6))
-    colors = [ACCENT if v >= 0 else UP for v in vals]
-    ax.bar(x, vals, width=0.8, color=colors)
-    ax.axhline(0, color=INK2, linewidth=0.8)
-    ax.set_ylabel("推定フロー($bn)" if lang == "ja" else "Est. flow ($bn)", fontsize=9)
-    ax.set_title(("レバレッジETF 推定リバランス額の推移(+買い/−売り)" if lang == "ja"
-                  else "Leveraged ETF Estimated Rebalancing Flow (+buy / -sell)"), fontsize=10)
-    ax.grid(alpha=0.25)
-    fig.autofmt_xdate()
+    if "total_aum_bn" in df.columns:
+        df = df[df["total_aum_bn"].notna()]
+    else:
+        df = df.iloc[0:0]
+
+    if len(df) >= 3:
+        x = pd.to_datetime(df["date"], format="%Y%m%d")
+        vals = df["total_aum_bn"].astype(float)
+        fig, ax = plt.subplots(figsize=(10, 3.6))
+        ax.plot(x, vals, color=ACCENT, linewidth=1.8)
+        ax.fill_between(x, vals, 0, color=ACCENT, alpha=0.18)
+        ax.set_ylim(bottom=0)
+        ax.set_ylabel("純資産($bn)" if ja else "AUM ($bn)", fontsize=9)
+        ax.set_title(("主要レバレッジETFの純資産合計の推移" if ja
+                      else "Total AUM of Major Leveraged ETFs"), fontsize=10)
+        ax.grid(alpha=0.25)
+        fig.autofmt_xdate()
+    else:
+        items = (letf or {}).get("items") or []
+        if not items:
+            return None
+        items = sorted(items, key=lambda r: r["aum_bn"])
+        fig, ax = plt.subplots(figsize=(10, max(3.0, 0.42 * len(items) + 1.2)))
+        ax.barh([r["sym"] for r in items], [r["aum_bn"] for r in items],
+                color=ACCENT, alpha=0.85)
+        for i, r in enumerate(items):
+            ax.text(r["aum_bn"], i, f" {r['aum_bn']:,.1f}", va="center",
+                    fontsize=8, color=INK2)
+        ax.set_xlabel("純資産($bn)" if ja else "AUM ($bn)", fontsize=9)
+        ax.set_title(("主要レバレッジETFの純資産(銘柄別)" if ja
+                      else "AUM of Major Leveraged ETFs"), fontsize=10)
+        ax.grid(alpha=0.25, axis="x")
+
     fig.tight_layout()
     os.makedirs(IMG, exist_ok=True)
     name = f"letf{suffix}.png"
@@ -1884,90 +1909,67 @@ def chart_letf(history: pd.DataFrame, lang: str) -> str | None:
     return f"img/{name}"
 
 
-def chart_etf_walls(chains: dict, lang: str) -> str | None:
-    """SPY・QQQの建玉の壁(2パネル)。chains: {"SPY": chain_dict, "QQQ": chain_dict}"""
-    suffix = L[lang]["suffix"]
-    fig, axes = plt.subplots(1, 2, figsize=(11, 6))
-    drawn = 0
-    for ax, sym in zip(axes, ("SPY", "QQQ")):
-        c = chains.get(sym)
-        if not c:
-            ax.axis("off")
-            continue
-        spot = c["spot"]
-        df = c["chain"]
-        cutoff = datetime.now(timezone.utc).date() + timedelta(days=45)
-        df = df[(df["expiry"] <= cutoff) & (df["oi"] > 0)
-                & (df["strike"] >= spot * 0.9) & (df["strike"] <= spot * 1.1)].copy()
-        df["bin"] = (df["strike"] // 5) * 5
-        puts = df[df["type"] == "P"].groupby("bin")["oi"].sum()
-        calls = df[df["type"] == "C"].groupby("bin")["oi"].sum()
-        bins = sorted(set(puts.index) | set(calls.index))
-        ax.barh(bins, -puts.reindex(bins).fillna(0), height=4,
-                color=UP, label="Put OI" if lang == "en" else "プット建玉")
-        ax.barh(bins, calls.reindex(bins).fillna(0), height=4,
-                color=DOWN, label="Call OI" if lang == "en" else "コール建玉")
-        ax.axhline(spot, color=INK, linestyle="--", linewidth=1)
-        ax.set_title(f"{sym}  (spot {spot:,.0f})", fontsize=10)
-        ax.xaxis.set_major_formatter(lambda x, _: f"{abs(x)/1000:,.0f}k")
-        ax.legend(loc="lower left", fontsize=8)
-        ax.grid(alpha=0.25)
-        drawn += 1
-    if drawn == 0:
-        plt.close(fig)
-        return None
-    sup = ("SPY・QQQ 行使価格別建玉(45日以内・±10%)" if lang == "ja"
-           else "SPY & QQQ Open Interest by Strike (45d expiries, ±10%)")
-    fig.suptitle(sup, fontsize=11)
-    fig.tight_layout()
-    name = f"etf_walls{suffix}.png"
-    fig.savefig(os.path.join(IMG, name), dpi=120)
-    plt.close(fig)
-    return f"img/{name}"
 
 
 def chart_spx(res: dict, lang: str) -> str:
-    """SPXの建玉の壁とネットGEXを25pt刻みで並べた2パネル図。"""
+    """SPXの建玉分布とガンマエクスポージャーを縦2段で描く。
+
+    日経(chart_oi_distribution / chart_hedge)と同じ流儀に揃えている:
+    - 建玉は「壁」の位置を正確に読ませたいので縦棒のまま平滑化しない
+    - ガンマは連続的な量なので、なめらかな曲線にして符号で塗り分ける
+    どちらも横軸を行使価格に取り、現値を縦の破線で示す。
+    """
     suffix = L[lang]["suffix"]
     spot = res["spot"]
     walls = res["walls"].copy()
     walls["bin"] = (walls["strike"] // 25) * 25
     gex = res["gex"].copy()
     gex["bin"] = (gex["strike"] // 25) * 25
-    gex_b = gex.groupby("bin")["gex"].sum() / 1e9
+    gex_b = (gex.groupby("bin")["gex"].sum() / 1e9).sort_index()
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 6.5), sharey=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 9), sharex=True)
 
     puts = walls[walls["type"] == "P"].groupby("bin")["oi"].sum()
     calls = walls[walls["type"] == "C"].groupby("bin")["oi"].sum()
     bins = sorted(set(puts.index) | set(calls.index))
-    ax1.barh(bins, -puts.reindex(bins).fillna(0), height=20, color=UP,
-             label="Put OI" if lang == "en" else "プット建玉")
-    ax1.barh(bins, calls.reindex(bins).fillna(0), height=20, color=DOWN,
-             label="Call OI" if lang == "en" else "コール建玉")
-    ax1.axhline(spot, color=INK, linestyle="--", linewidth=1)
+    width = (bins[1] - bins[0]) * 0.8 if len(bins) > 1 else 20
+    ax1.bar(bins, calls.reindex(bins).fillna(0), width=width, color=DOWN,
+            label="Call OI" if lang == "en" else "コール建玉")
+    ax1.bar(bins, -puts.reindex(bins).fillna(0), width=width, color=UP,
+            label="Put OI" if lang == "en" else "プット建玉")
+    ax1.axhline(0, color=INK2, linewidth=0.8)
+    ax1.axvline(spot, color=INK, linestyle="--", linewidth=1.2,
+                label=f"SPX {spot:,.0f}")
     ax1.set_title("SPX Open Interest by Strike" if lang == "en"
                   else "SPX 行使価格別建玉(壁)", fontsize=10)
-    ax1.xaxis.set_major_formatter(lambda x, _: f"{abs(x)/1000:,.0f}k")
-    ax1.legend(loc="lower left", fontsize=8)
+    ax1.set_ylabel("Open interest" if lang == "en" else "建玉", fontsize=9)
+    ax1.yaxis.set_major_formatter(lambda x, _: f"{abs(x)/1000:,.0f}k")
+    ax1.legend(loc="upper left", fontsize=8)
     ax1.grid(alpha=0.25)
 
-    colors = [ACCENT if v >= 0 else UP for v in gex_b.values]
-    ax2.barh(gex_b.index, gex_b.values, height=20, color=colors)
-    ax2.axhline(spot, color=INK, linestyle="--", linewidth=1,
-                label=f"SPX {spot:,.0f}")
+    gx, gy = _smooth(gex_b.index.tolist(), gex_b.values)
+    ax2.plot(gx, gy, color=INK2, linewidth=1.4)
+    ax2.fill_between(gx, gy, 0, where=(gy >= 0), color=ACCENT, alpha=0.55,
+                     interpolate=True)
+    ax2.fill_between(gx, gy, 0, where=(gy < 0), color=UP, alpha=0.55,
+                     interpolate=True)
+    ax2.axhline(0, color=INK2, linewidth=0.9)
+    ax2.axvline(spot, color=INK, linestyle="--", linewidth=1.2)
     if res["flip"]:
-        ax2.axhline(res["flip"], color=WARN, linestyle=":", linewidth=1.6,
+        ax2.axvline(res["flip"], color=WARN, linestyle=":", linewidth=1.6,
                     label=("Gamma flip" if lang == "en" else "性質が変わる水準")
                     + f" {res['flip']:,.0f}")
-    ax2.axvline(0, color=INK2, linewidth=0.7)
+        ax2.legend(loc="upper left", fontsize=8)
     total = res["total_gex"] / 1e9
-    ax2.set_title((f"Net GEX by Strike (Total {total:+,.1f} $bn/1%)" if lang == "en"
-                   else f"ネット・ガンマエクスポージャー(合計 {total:+,.1f} $bn/1%)"), fontsize=10)
-    ax2.legend(loc="lower right", fontsize=8)
-    ax2.grid(alpha=0.25)
+    ax2.set_title((f"Net Gamma Exposure (Total {total:+,.1f} $bn/1%)" if lang == "en"
+                   else f"ガンマエクスポージャー(合計 {total:+,.1f} $bn/1%)"), fontsize=10)
+    ax2.set_xlabel("Strike" if lang == "en" else "行使価格", fontsize=9)
+    ax2.set_ylabel(("Dampen ↑ | ↓ Amplify" if lang == "en"
+                    else "抑える ↑ | ↓ 増幅する"), fontsize=9)
+    ax2.xaxis.set_major_formatter(lambda x, _: f"{x:,.0f}")
+    ax2.grid(alpha=0.25, axis="y")
 
-    sup = ("SPX Options: OI Walls & Naive Gamma Exposure (45d expiries, ±10%)"
+    sup = ("SPX Options: OI Walls & Estimated Gamma Exposure (45d expiries, ±10%)"
            if lang == "en" else
            "SPXオプション: 建玉の壁とガンマエクスポージャー推定(45日以内の限月・現値±10%)")
     fig.suptitle(sup, fontsize=11)
@@ -1980,7 +1982,7 @@ def chart_spx(res: dict, lang: str) -> str:
 
 def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
               spx_res: dict | None = None, spx_chart: str | None = None,
-              etf_chart: str | None = None, share: dict | None = None,
+              share: dict | None = None,
               letf: dict | None = None) -> None:
     import us_data
     P = USPAGE[lang]
@@ -2024,11 +2026,6 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   </div>
   <p>{P['spx_lead']}</p>
   <img src="{spx_src}" alt="SPX OI walls and gamma exposure">"""
-
-    etf_section = ""
-    if etf_chart:
-        etf_section = (f"\n  <h2>{P['sec_etf']}</h2>\n  <p>{P['etf_lead']}</p>\n"
-                       f'  <img src="{P["prefix"]}{etf_chart}?v={ver}" alt="SPY QQQ OI walls">')
 
     letf_section = ""
     if letf and letf.get("items"):
@@ -2100,7 +2097,6 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 
   {letf_section}
 
-  {etf_section}
 </main>
 <footer>
   {footer_sitemap(lang)}
@@ -2634,20 +2630,12 @@ def main() -> None:
         # SPX建玉の壁+GEX(失敗してもCOT/PCRセクションは出す)
         spx_res = None
         spx_share = None
-        etf_chains = {}
         usdjpy = None
         try:
             import fred
             usdjpy = fred.fetch_series("DEXJPUS")
         except Exception as e:
             print(f"WARN: USDJPY fetch failed: {e}")
-        for sym in ("SPY", "QQQ"):
-            try:
-                etf_chains[sym] = us_data.fetch_chain(sym)
-                print(f"{sym}: spot {etf_chains[sym]['spot']:,.0f}, "
-                      f"rows {len(etf_chains[sym]['chain'])}")
-            except Exception as e:
-                warn(f"{sym} chain failed: {e}")
         try:
             spx_chain = us_data.fetch_spx_chain()
             try:
@@ -2674,12 +2662,17 @@ def main() -> None:
         try:
             letf = us_data.fetch_letf_rebalance()
             print(f"LETF flow: {letf['total_bn']:+.2f}bn ({len(letf['items'])} ETFs)")
-            # 日次履歴に蓄積(データ基準日=JPXの前営業日に合わせる)
+            # 日次履歴に蓄積(データ基準日=JPXの前営業日に合わせる)。
+            # 残高(total_aum_bn)は過去分を取得する手段がないので、ここから積み上げる。
+            letf["total_aum_bn"] = round(sum(it["aum_bn"] for it in letf["items"]), 2)
             lh_path = os.path.join(DATA, "letf_history.csv")
             lh = pd.read_csv(lh_path, dtype={"date": str}) if os.path.exists(lh_path) else \
-                pd.DataFrame(columns=["date", "total_bn"])
+                pd.DataFrame(columns=["date", "total_bn", "total_aum_bn"])
+            if "total_aum_bn" not in lh.columns:
+                lh["total_aum_bn"] = pd.NA
             lh = lh[lh["date"].astype(str) != date]
-            lh = pd.concat([lh, pd.DataFrame([{"date": date, "total_bn": letf["total_bn"]}])],
+            lh = pd.concat([lh, pd.DataFrame([{"date": date, "total_bn": letf["total_bn"],
+                                               "total_aum_bn": letf["total_aum_bn"]}])],
                            ignore_index=True).sort_values("date")
             lh.to_csv(lh_path, index=False)
             letf["history"] = lh
@@ -2697,11 +2690,10 @@ def main() -> None:
 
         for lang in ("ja", "en"):
             spx_chart = chart_spx(spx_res, lang) if spx_res else None
-            etf_chart = chart_etf_walls(etf_chains, lang) if etf_chains else None
             if letf is not None and letf.get("history") is not None:
-                letf["chart"] = chart_letf(letf["history"], lang)
+                letf["chart"] = chart_letf(letf["history"], letf, lang)
             render_us(cot, pcr_us, lang, chart_cot(cot, lang, usdjpy, cot_prices), spx_res, spx_chart,
-                      etf_chart, spx_share, letf)
+                      spx_share, letf)
 
         # 米国データ版のX投稿下書き(site/post_us.txt)
         lines = [f"【米国市場データ {int(pcr_us['date'][5:7])}/{int(pcr_us['date'][8:])}】", ""]
