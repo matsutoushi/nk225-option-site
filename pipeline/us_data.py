@@ -151,8 +151,14 @@ def spx_walls_and_gex(spx: dict, days: int = 45, band: float = 0.10) -> dict:
     """
     spot = spx["spot"]
     df = spx["chain"].copy()
-    cutoff = datetime.now(timezone.utc).date() + timedelta(days=days)
-    df = df[(df["expiry"] <= cutoff)
+    # 日次満期(0DTE)まで含める。SPXは残存1日以内が全体の6割を占めるため、
+    # 短い限月を落とすと形そのものを取り違える。
+    # ただし満期を過ぎた銘柄は除く。CBOEのチェーンには前営業日に満期を迎えた
+    # 銘柄が建玉付きで残っており、下限を切らないとGEXが大きく水増しされる
+    # (2026-08-14時点で、期限切れ分だけで合計の51%を占めていた)。
+    today = datetime.now(timezone.utc).date()
+    cutoff = today + timedelta(days=days)
+    df = df[(df["expiry"] >= today) & (df["expiry"] <= cutoff)
             & (df["strike"] >= spot * (1 - band)) & (df["strike"] <= spot * (1 + band))]
 
     walls = df.groupby(["type", "strike"], as_index=False)["oi"].sum()

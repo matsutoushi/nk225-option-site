@@ -144,7 +144,31 @@ def wall_strikes(oi: pd.DataFrame, expiry: str, spot: float | None,
     return out
 
 
+def _weekly_oi_as_large(mini: pd.DataFrame | None, expiry: str) -> pd.DataFrame | None:
+    """ウィークリー(ミニ)オプションの建玉を、清算値段の限月コードに揃えて返す。
+
+    建玉ファイルの限月は「最終売買日」、清算値段の限月コードは「SQ日」で、
+    両者は1日ずれる(例: 最終売買日2026-08-13 ↔ コード260814)。
+    月限のSQ回号は merge_mini_into_oi が既にラージへ合算しているので、
+    ここでは二重計上を避けるために除外する。
+
+    ミニは想定元本がラージの1/10なので、枚数を1/10してラージ換算で返す。
+    """
+    if mini is None or not len(mini):
+        return None
+    sq = _sq_date(expiry)
+    merged_already = {sq.date(), (sq - pd.Timedelta(days=1)).date()}
+    m = mini[~mini["expiry"].isin(merged_already)].copy()
+    if not len(m):
+        return None
+    code = pd.to_datetime(m["expiry"]) + pd.Timedelta(days=1)
+    m["expiry"] = code.dt.strftime("%y%m%d")
+    m["oi"] = m["oi"] / 10.0
+    return m.groupby(["type", "expiry", "strike"], as_index=False)["oi"].sum()
+
+
 def hedge_pressure(oi: pd.DataFrame, settle: dict, expiry: str,
+                   mini: pd.DataFrame | None = None,
                    band: float = 0.10, max_days: int = 45) -> dict | None:
     """建玉と清算値段のボラティリティから、ヘッジ売買が値動きに与える向きを推定する。
 
@@ -152,24 +176,31 @@ def hedge_pressure(oi: pd.DataFrame, settle: dict, expiry: str,
     その売買が値動きを「抑える」向きか「増幅する」向きかは、どの行使価格に
     どれだけ建玉があるかで決まる。ここではその強さを行使価格ごとに集計する。
 
-    前提(業界で広く使われるもの): 証券会社はコールを買い持ち・プットを売り持ち。
-    実際の保有は非公開のため、あくまで推定値。
+    月限だけでなくウィークリー(ミニ)も含める。満期が近いほどガンマは大きく、
+    SQ週は週次限月が支配的になるため、月限だけでは形そのものを取り違える。
 
-    Returns: {"spot","by_strike","total","flip"} 計算できなければ None
+    前提(業界で広く使われるもの): 証券会社はコールを買い持ち・プットを売り持ち。
+    実際の保有は非公開のため、あくまで推定値。この前提の当否は公開データからは
+    検証できず、計算を精緻にしても解消しない。
+
+    Returns: {"spot","by_strike","total","flip","expiries"} 計算できなければ None
     """
     if not settle or "data" not in settle:
         return None
     spot = settle.get("spot")
     if not spot:
         return None
-    # 直近の月限(45日以内)をまとめて見る。1限月だけだと満期直前に振れやすいため。
+    # 残存45日以内の全限月(月限+ウィークリー)。1限月だけだと満期直前に振れやすい。
     iv = settle["data"]
-    iv = iv[(iv["iv"] > 0) & (iv["days"] > 0) & (iv["days"] <= max_days)
-            & (iv["expiry"].str.len() == 4)]
+    iv = iv[(iv["iv"] > 0) & (iv["days"] > 0) & (iv["days"] <= max_days)]
     if not len(iv):
         return None
-    df = oi.merge(iv[["type", "expiry", "strike", "iv", "days"]],
-                  on=["type", "expiry", "strike"], how="inner")
+    src = oi[["type", "expiry", "strike", "oi"]]
+    wk = _weekly_oi_as_large(mini, expiry)
+    if wk is not None and len(wk):
+        src = pd.concat([src, wk], ignore_index=True)
+    df = src.merge(iv[["type", "expiry", "strike", "iv", "days"]],
+                   on=["type", "expiry", "strike"], how="inner")
     df = df[(df["strike"] >= spot * (1 - band)) & (df["strike"] <= spot * (1 + band))]
     if not len(df):
         return None
@@ -2613,7 +2644,7 @@ def main() -> None:
     # 清算値段のボラティリティから、ヘッジ売買が値動きに与える向きを推定する
     try:
         settle = jpx.fetch_option_settlement()
-        hp = hedge_pressure(oi, settle, expiry)
+        hp = hedge_pressure(oi, settle, expiry, mini_df)
         if hp:
             base_extras["hedge"] = hp
             print(f"hedge pressure: total {hp['total']/1e8:+,.0f} oku "
