@@ -858,9 +858,14 @@ CSS_MAIN = """
   .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
   .tbl-box { flex: 1 1 420px; min-width: 320px; }
   .tbl-scroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
-  .tbl-duo { display: flex; gap: 20px; max-height: 560px; overflow: auto;
+  /* 建玉一覧は全限月を一覧したい表なので縦は切らない。
+     狭い画面でははみ出すため、横方向だけスクロールさせる。 */
+  .tbl-duo { display: flex; gap: 20px; overflow-x: auto; overflow-y: visible;
               border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }
   .tbl-duo table { width: auto; }
+  /* 縦スクロール枠を外したので、見出しの固定も解除する。
+     固定したままだとページ上部のヘッダー(sticky)と重なって読めなくなる。 */
+  .tbl-duo thead th { position: static; }
   table { border-collapse: collapse; font-size: 14px; white-space: nowrap; width: 100%;
            font-variant-numeric: tabular-nums; background: var(--panel); }
   th, td { border: 1px solid var(--line); padding: 5px 10px; text-align: right; }
