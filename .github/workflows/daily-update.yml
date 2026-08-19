@@ -33,6 +33,10 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # ランナー側でコマンドがハングすると concurrency group を握ったままになり、
+    # 後続のスケジュール実行が全部キャンセルされる(2026-08-19に6時間半詰まった)。
+    # GitHubの上限6時間ではなく、この処理の実測(3〜5分)に見合う上限を置く。
+    timeout-minutes: 25
     env:
       # 手動実行・コード変更時は未更新でも必ずビルドする
       FORCE_BUILD: ${{ github.event_name != 'schedule' && '1' || '' }}
@@ -51,7 +55,16 @@ jobs:
           cache: pip
 
       - name: Install Japanese fonts
-        run: sudo apt-get update && sudo apt-get install -y fonts-ipaexfont
+        # apt-get update はミラー不調で無応答になることがある。
+        # 取得のタイムアウトを効かせたうえで、ステップ単位でも打ち切る。
+        timeout-minutes: 6
+        run: |
+          for i in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update && break
+            echo "apt-get update failed (attempt $i)"
+            sleep 5
+          done
+          sudo apt-get install -y --no-install-recommends fonts-ipaexfont
 
       - name: Install dependencies
         run: pip install -r pipeline/requirements.txt
