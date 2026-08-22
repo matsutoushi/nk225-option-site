@@ -130,6 +130,35 @@ def slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60]
 
 
+def presser_text(date: str) -> tuple:
+    """FOMC記者会見の逐語録(PDF)を取ってテキストにする。
+
+    URLは会合最終日で決まる: FOMCpresconf{YYYYMMDD}.pdf
+    見つからなければ (None, None) を返す。会見が無い会合もあるため。
+    """
+    url = f"{BASE}/mediacenter/files/FOMCpresconf{date.replace('-', '')}.pdf"
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            blob = r.read()
+    except Exception:
+        return None, None
+    try:
+        import pypdf
+    except ImportError:
+        print("  pypdf が無いため会見PDFを飛ばします (pip install pypdf)")
+        return None, None
+    try:
+        reader = pypdf.PdfReader(io.BytesIO(blob))
+        text = "\n".join(p.extract_text() or "" for p in reader.pages)
+    except Exception as e:
+        print(f"  会見PDFの解析に失敗 {date}: {e}")
+        return None, None
+    text = re.sub(r"[ \t\xa0]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text).strip()
+    return url, text
+
+
 def resolve_minutes(url: str, raw: str) -> tuple:
     """議事要旨のプレスリリースは告知だけなので、本文ページへ辿る。
 
@@ -194,12 +223,6 @@ def main() -> None:
         if save(OUT_WARSH, date, title, url, role, args.force):
             new_warsh += 1
 
-    index = [{"date": d, "title": t, "role": r, "source": u,
-              "file": f"{d}_{slug(t)}.txt"}
-             for u, (d, t, r) in sorted(docs.items(), key=lambda kv: kv[1][0])]
-    io.open(os.path.join(OUT_WARSH, "index.json"), "w", encoding="utf-8",
-            newline="\n").write(json.dumps(index, ensure_ascii=False, indent=2) + "\n")
-
     # ---- 2. 就任後のFOMC文書 -----------------------------------------------
     print("RSS(金融政策リリース)を確認しています...")
     fomc = []
@@ -215,17 +238,55 @@ def main() -> None:
         if save(OUT_FOMC, date, title, url, "fomc", args.force):
             new_fomc += 1
 
+    # ---- 3. 記者会見の逐語録 ------------------------------------------------
+    # 議長本人の言葉としては、量でも中身でもこれが一番厚い。声明の日=会合最終日に開かれる。
+    # 記者の質問も含む逐語録なので、引用するときは発言者を確かめること。
+    print("記者会見の逐語録を確認しています...")
+    new_pc = 0
+    pressers = []
+    for date, title, _ in sorted(fomc):
+        if "issues FOMC statement" not in title:
+            continue
+        pc_title = f"FOMC Press Conference (transcript), {date}"
+        fname = f"{date}_{slug(pc_title)}.txt"
+        dest = os.path.join(OUT_WARSH, fname)
+        pc_url = f"{BASE}/mediacenter/files/FOMCpresconf{date.replace('-', '')}.pdf"
+        entry = {"date": date, "title": pc_title, "role": "chair",
+                 "source": pc_url, "file": fname}
+        if os.path.exists(dest) and not args.force:
+            pressers.append(entry)
+            continue
+        url, text = presser_text(date)
+        if not text:
+            continue
+        pressers.append(entry)
+        header = (f"# {pc_title}\ndate: {date}\nrole: chair\nsource: {url}\n"
+                  f"note: 記者の質問を含む逐語録。引用時は発言者を確認すること。\n\n")
+        io.open(dest, "w", encoding="utf-8", newline="\n").write(header + text)
+        print(f"  saved {date} [chair] 記者会見 逐語録 ({len(text):,}字)")
+        new_pc += 1
+        time.sleep(0.4)
+
     io.open(os.path.join(OUT_FOMC, "index.json"), "w", encoding="utf-8",
             newline="\n").write(json.dumps(
                 [{"date": d, "title": t, "role": "fomc", "source": u,
                   "file": f"{d}_{slug(t)}.txt"} for d, t, u in sorted(fomc)],
                 ensure_ascii=False, indent=2) + "\n")
 
+    # 会見の逐語録も warsh/ に入るので、索引は全部揃ってから書く
+    index = [{"date": d, "title": t, "role": r, "source": u,
+              "file": f"{d}_{slug(t)}.txt"}
+             for u, (d, t, r) in docs.items()] + pressers
+    index.sort(key=lambda i: (i["date"], i["title"]))
+    io.open(os.path.join(OUT_WARSH, "index.json"), "w", encoding="utf-8",
+            newline="\n").write(json.dumps(index, ensure_ascii=False, indent=2) + "\n")
+
     gov = sum(1 for i in index if i["role"] == "governor")
     chair = sum(1 for i in index if i["role"] == "chair")
     print(f"\n本人の文書: 理事時代 {gov}本 / 議長就任後 {chair}本 (新規 {new_warsh})")
+    print(f"  うち記者会見の逐語録: {len(pressers)}本 (新規 {new_pc})")
     print(f"FOMC文書(就任後): {len(fomc)}本 (新規 {new_fomc})")
-    if new_warsh or new_fomc:
+    if new_warsh or new_fomc or new_pc:
         print("新しい資料が入りました。")
 
 

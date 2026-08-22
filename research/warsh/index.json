@@ -126,10 +126,24 @@
     "file": "2010-11-08_rejecting-the-requiem.txt"
   },
   {
+    "date": "2026-06-17",
+    "title": "FOMC Press Conference (transcript), 2026-06-17",
+    "role": "chair",
+    "source": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20260617.pdf",
+    "file": "2026-06-17_fomc-press-conference-transcript-2026-06-17.txt"
+  },
+  {
     "date": "2026-07-14",
     "title": "Warsh, Semiannual Monetary Policy Report to the Congress",
     "role": "chair",
     "source": "https://www.federalreserve.gov/newsevents/testimony/warsh20260714a.htm",
     "file": "2026-07-14_warsh-semiannual-monetary-policy-report-to-the-congress.txt"
+  },
+  {
+    "date": "2026-07-29",
+    "title": "FOMC Press Conference (transcript), 2026-07-29",
+    "role": "chair",
+    "source": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20260729.pdf",
+    "file": "2026-07-29_fomc-press-conference-transcript-2026-07-29.txt"
   }
 ]

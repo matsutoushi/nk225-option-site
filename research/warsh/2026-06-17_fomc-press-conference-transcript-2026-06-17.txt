@@ -1,0 +1,560 @@
+# FOMC Press Conference (transcript), 2026-06-17
+date: 2026-06-17
+role: chair
+source: https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20260617.pdf
+note: 記者の質問を含む逐語録。引用時は発言者を確認すること。
+
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 1 of 21 
+
+Transcript of Chairman Warsh’s Press Conference 
+June 17, 2026 
+
+CHAIRMAN WARSH. Good day. It’s an honor, a true honor, to be back at the Federal 
+Reserve and to take up this duty at a time of such consequence. I’ve been especially heartened 
+by the warm welcome of old friends and new colleagues, both, and I’ve listened closely to my 
+fellow FOMC members. I’ve heard a lot of new ideas, new thinking, and genuine interest in 
+moving the Fed forward. 
+This week’s FOMC meeting exemplified the very best of the Fed’s traditions: rigorous 
+debate, open-mindedness, commitment to mission, responsibility, and accountability for 
+performance. In this business, they all add up to one thing: getting monetary policy right—or as 
+near to it as we can do. That is our North Star. 
+My colleagues and I are here to serve our legislative remit, which you’ve heard us say 
+before—price stability and maximum employment—and these objectives guided our business in 
+the meeting just concluded. As you saw a few moments ago, the Committee decided to maintain 
+the target range for the fed funds rate at 3½ to 3¾ percent, in support of the Fed’s dual mandate. 
+The Committee also reaffirmed its policy of maintaining ample reserves in the banking system. 
+Economic activity is expanding at a solid pace despite elevated uncertainty that owes, in 
+part, to the conflict in the Middle East. Productivity growth and capital investment—both 
+strong. Job gains have kept pace with the workforce, and the unemployment rate has changed 
+little. 
+We recognize that inflation has been running well ahead of the Fed’s long-stated inflation 
+goal of 2 percent that’s been going on for more than five years. Persistently high prices are a 
+burden for the American people. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 2 of 21 
+
+But the recent past need not be prologue. I am pleased to report that members of the 
+FOMC are unambiguous and unanimous: This Committee will deliver price stability. 
+At any institution, a change in leadership is a natural and timely opportunity to reaffirm 
+its mission, to review current practices, and to consider whether those practices best meet our 
+objectives. My Fed colleagues and I will be working in close collaboration to ask what changes 
+might improve the conduct of monetary policy. 
+On that score, you might have already noticed something: a difference in today’s policy 
+statement. It’s a bit shorter, a bit simpler—and it dispenses with some older language. That 
+statement just gives you the facts, as best we can judge it. Absent, also, is so-called forward 
+guidance—which we agreed was not well suited to the current policy conjuncture. 
+This afternoon, you also received the usual Summary of Economic Projections. It’s been 
+the practice of this Committee for participants to submit these projections, and I have encouraged 
+my colleagues to continue to do so. I, however, have refrained from offering any projections of 
+my own, consistent with my long-held views on the SEP, at least as currently structured. 
+In the median projections, real GDP rises at 2.2 percent this year, 2.3 percent next year, 
+and total PCE inflation runs at 3.6 percent this year, 2.3 percent next year. The unemployment 
+rate stands at about 4.3 percent. The median participant judges that the appropriate federal funds 
+rate to be at 3.8 percent at the end of this year and 3.6 at the end of next. 
+Let me turn now to a few words on a key initiative that we’re announcing today. I’m 
+appointing a task force in each of five areas that are central to the broad conduct of monetary 
+policy: First, Fed communications; second, the Fed’s balance sheet; third, our use and reliance 
+on existing data sources; fourth, productivity and jobs in an era of transformation; and last, the 
+Fed’s inflation frameworks. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 3 of 21 
+
+These subjects are timely, consequential, and, in my view, worthy of a fresh look. My 
+colleagues and I discussed them with energy and purpose over the last couple of days. For each 
+of these independent task forces, I’m enlisting some of the very best minds—both inside and 
+outside the economics profession. 
+They will be supported by subject matter specialists from our superb Fed staff. And they 
+will have a straightforward charge: Start with first principles; ask hard questions; examine 
+current practice; consider alternatives; and, ultimately, propose next steps for policymaker 
+consideration. 
+Since last summer, my colleagues discussed possible improvements in the form and 
+function of Fed communications. This new task force will build on that effort and, I expect, 
+propose some well-considered changes, including to the SEP I mentioned a few moments ago. 
+The second task force, the one on balance sheet policy, will review the benefits and risks 
+of the current ample-reserves regime and the composition of the Fed’s balance sheet. They will 
+assess alternative frameworks for the conduct and operation of monetary policy. 
+The third task force, the one on data, will evaluate new information sources and consider 
+methodological changes to improve data gathering, with the aim of giving policymakers more 
+accurate, relevant, contemporaneous, and, perhaps most important, actionable information on the 
+state of our economy. 
+Fourth, the task force on productivity and jobs. It’ll survey the pace, the reach, the 
+economic impact of new general-purpose technologies, including AI, and explore the 
+implications for the Fed in pursuit of our employment and inflation mandates. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 4 of 21 
+
+The last task force, the one on inflation frameworks, that’ll examine the drivers of 
+inflation, first principles, and weigh the full range of ideas for delivering price stability in a 
+changing economy. 
+You’ll hear quite a bit more about these task forces and this overall initiative in the 
+coming weeks. Enough for now to make a simple statement—each task force will serve an 
+objective shared by everyone in the System, shared by everyone around that table that I sat with 
+over the last couple of days: a Federal Reserve that is clear eyed about its mission, fit for 
+purpose, and focused on the future. 
+And with that, I appreciate your attention. I’m happy to take your questions. 
+MICHELLE SMITH. Howard Schneider. 
+HOWARD SCHNEIDER. Hi, Chairman. Howard Schneider, with Reuters. Good to see 
+you again, and, and, and welcome back. This is a lot to be putting in motion so fast. What is the 
+timeline you have in mind for, for each of these? 
+CHAIRMAN WARSH. So I think it’ll depend on the task force and also depends on the 
+urgency in which we need clear answers. My expectation—I’m still in the business of recruiting 
+and finalizing them—my expectation is the task forces will begin work in the next couple of 
+weeks, and we’ll start to get some more information from them, some more framing of how they 
+see things starting in the fall, and hopefully most, if not all of them, concluding by year-end. 
+HOWARD SCHNEIDER. And just specifically on the inflation framework, you talk 
+about first principles, does this include a review of the 2 percent target itself? You’ve mentioned 
+that things to the right of the decimal point don’t matter. Should this be starting from a premise 
+that 2 percent as a point estimate is, is too strict? 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 5 of 21 
+
+CHAIRMAN WARSH. Let me break that into two pieces. First on the inflation 
+framework review, their remit is, what are the drivers of inflation? What’s the Fed’s 
+responsibility for inflation? In part, how do we measure inflation? But that’ll overlap with my 
+data group. On the 2 percent inflation objective, that is the Federal Reserve’s long-held 
+objective of 2 percent. You’ve heard me say before, I tend to focus on the left of the decimal 
+point. Well, the two is the left of the decimal point. For now, zero is to the right. I see no 
+reason until we have reestablished our commitment and ability to deliver on the 2 percent 
+inflation objective to revisit that. So that’ll be outside the scope of what we’re taking on. 
+MICHELLE SMITH. Colby. 
+COLBY SMITH. Thank you so much. Colby Smith with the New York Times. You’ve, 
+in the past, said that inflation is a choice, and in the policy statement, it includes this pledge to 
+deliver price stability, as you’ve reiterated today. But looking at the SEP, the bulk of your 
+colleagues expect core PCE to run around 3.3 percent by year-end and for the 2 percent inflation 
+target not to be reached until 2028. So I’m curious how patient you think the Fed can afford to 
+be at this juncture in terms of waiting for one-time inflation waves to wash through and for 
+underlying inflation to step down after so many years of inflation running above target? And 
+under what circumstances you would support the Fed taking some action and raising rates? 
+CHAIRMAN WARSH. Sure. So quite a bit there. Let me—let me try to break that into 
+pieces. First, we have the capability and commitment to deliver on our price-stability objective 
+of 2 percent. That’s exactly what we’re going to do. In the Fed’s review of its strategy over the 
+last any number of years—in January, the Fed—including the strategy that we’re still bound 
+by—the Fed statement says that inflation is primarily determined by monetary policy. You bet it 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 6 of 21 
+
+is. I’ve said for years inflation is a choice. You bet it is. And today I’m announcing that this 
+Committee, unambiguously and unanimously, have decided we are going to deliver on that. 
+Rest of your question sounded like an encouragement for me to give forward guidance. 
+We’ve dropped forward guidance. Some along the Committee I think dropped it, I suspect from 
+our discussion the last couple of days, because they said, at this moment in time, it doesn’t feel 
+as though providing forward guidance is right. Others have, I’d say, different views and think as 
+a general proposition forward guidance isn’t the business we should be in. But that’ll be taken 
+up by the task force on communications, and my policymaker colleagues, we’re going to listen 
+hard to what the experts say and make our own decision. But I can’t give any forward guidance 
+about what we’re going to do next. The good news is, we’ll be meeting in six weeks. 
+COLBY SMITH. So just following up, I guess on the current policy settings then, I am 
+curious how restrictive you think things are at the current moment, given the flow of data that 
+we’ve seen and, you know, forecasts that are coming down the pipeline. 
+CHAIRMAN WARSH. Yeah. I—I’ve heard characterizations, both inside in the Fed 
+about that. I’ll give you my own. It’s uneven. And, if I look at the housing markets as one 
+example, Fed policy isn’t the, the single determinant of the state of the housing market, but 
+broadly I would say, there, Fed policy appears to be somewhat restrictive. I would have a hard 
+time managing to say those words if I were to see what’s happening in financial markets, so I’d 
+say it’s uneven. That’s perhaps a function of different transmission mechanisms of monetary 
+policy, whether monetary policy is coming from our interest rate tool or our balance sheet tool. 
+But the good news, we have a task force on that, too, and the balance sheet task force will be 
+looking more at that subject. 
+MICHELLE SMITH. Mike McKee. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 7 of 21 
+
+MICHAEL MCKEE. You’ve said you, you don’t like forward guidance. You dropped it 
+from the statement this time. But with the dot plot, nine members suggested that they want a rate 
+increase by the end of the year, and the markets have taken that as forward guidance. So what 
+does this mean in terms of how you guide the markets and in terms of what the dot plot’s future 
+is? 
+CHARIMAN WARSH. I’m going to have to give you the same answer I gave to, to 
+Ms. Smith; we’ve got a task force for that. I’ll give you a little bit more. I reviewed the dot 
+plots, and when I saw the submissions, I noted that all the submissions were coming in with 
+pencils, you know those kinds with the big erasers. That’s to say that I think my colleagues 
+around the table, when they submitted their dots, understand the world is changing quite quickly. 
+And they didn’t feel bound by them six weeks from now or six days from now and if—in the 
+event that their circumstances change. 
+I’ll note a couple other things. What I heard around the table was, as they submitted their 
+modal forecasts, their modal forecasts—to be clear—weren’t, this was more likely than not. 
+This was—this was more likely than their other scenarios. So I didn’t hear tons of conviction. 
+What I heard was the kind of humility that I think we should have. I did not submit a, a dot. For 
+me, it’s not helpful in the conduct of policy. I suspect, by year-end, as I mentioned in my 
+opening statements, there’ll be a review about communications broadly, press conferences, dots, 
+meetings, and the like, transcripts, minutes. This will be part of that. I don’t want to prejudge 
+the outcomes there, but I’m pretty open minded about what they could be. And I was just 
+incredibly impressed over the last couple of days. My colleagues over the last two days, and 
+frankly, over the first three weeks I’ve been here, they’ve been very open about changes. 
+Change isn’t easy. Change is filled with risk. But our number one goal is to get monetary policy 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 8 of 21 
+
+right. The way to get monetary policy right is to deliver on the remit that Congress gave us to 
+deliver on price stability. And there was no disagreement on any of those points. 
+MICHAEL MCKEE. At the risk of possibly getting the same answer about task forces, 
+communications, what is your feeling about these news conferences? Are you going to continue 
+one after every meeting? Do you think—find them useful? What is the future for the way Kevin 
+Warsh will communicate? 
+CHARIMAN WARSH. Well, this one’s probably got another 15 or 20 minutes in it, so I 
+don’t want to prejudge the outcome. Press conferences can be a very useful way to communicate 
+with households, businesses, and more broadly, through using the likes of you. I had a great old 
+mentor named George Shultz, and his mantra was, “Press conferences are useful. But when you 
+have one, you want to make sure you have something important to say.” Today I think we had 
+something important to say about our commitment to deliver on price stability, our commitment 
+to rethink practices with an eye of moving the Fed forward, and to give you and the American 
+people a sense that these aren’t idle thoughts. These are concrete thoughts that we’re going to 
+seek out the best minds, both the best thinking inside of the Federal Reserve and the best people I 
+know in business, and economics, and the academy, and technology, and the rest, to share their 
+views. That’s what we’re going to be doing here, the pursuit of truth. I think we’re going to 
+come up with some new and interesting things. We made some changes today. I expect more 
+changes to come, and, and some of those might well be worthy of a press conference. 
+MICHELLE SMITH. Chris Rugaber. 
+CHRIS RUGABER. Hi. Chris Rugaber at Associated Press. Thanks for taking our 
+questions. Could you give us a sense of how you see inflation more in the long term? I know 
+you may not want to comment on the ups and downs. But is this mainly driven by energy prices 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 9 of 21 
+
+and the Iran war at this point, or do you have any concerns about underlying inflation pressures 
+in the economy? Thank you. 
+CHAIRMAN WARSH. So I can’t do much better than, than the Committee just did, so 
+let me—let me restate it. Inflation remains elevated relative to the Committee’s 2 percent goal, 
+in part reflecting supply shocks that have driven price increases in certain sectors, including 
+energy. That paragraph goes on to say, but to be clear, the Fed’ll deliver price stability. My own 
+judgment is the Committee spent quite a bit of time, not just in two days but over iterations of a 
+couple weeks. That’s what we’re prepared to say about inflation, but the commitment to deliver 
+is strong, unanimous, and unambiguous. And that’s, I think, an important message we’ve missed 
+for five years, and, and we’re going to fix that. 
+CHRIS RUGABER. Well, great. And then just on your—the, the data task force and 
+everything else, I mean, generally speaking, I think people feel the—feel the Fed looks at 
+everything already, certainly that was the sense from before. What’s—is there data that you feel 
+is not given enough weight? I mean, you mentioned the trimmed mean in the past, but again, 
+that’s well known to certainly most Fed members. So what is that task force looking at and, and 
+what, what might be the—I mean, I know you don’t want to prejudge the outcome, but are there 
+examples of data that you expect might be given more weight? Thank you. 
+CHAIRMAN WARSH. So you’re answering my question. So let me say, I don’t want 
+to prejudge the outcome. I also don’t want to say too much about what they’re going to do 
+because I still have a phone call or two to make before I’ve nailed down the people that are doing 
+that. I’m interested [in] what the outside experts’ view is on the subject. 
+I’ll say this generally: Most of the data that central bankers and other government 
+officials in the United States consume come with old-fashioned survey methods, national 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 10 of 21 
+
+accounts of what the U.S. economy looks like that looks very little like the U.S. economy in 
+2026, survey methods that don’t have response rates that we need, asking questions that might’ve 
+been quite applicable a generation ago that are less applicable now. So even inside of official 
+statistics, I would be open minded if the task force and our own best thinking had 
+recommendations how those official statistics can be brought up to a standard of, of our time 
+using new analytic methods. 
+I’d also say this: Almost every private company CEO that’s running his or her business 
+are doing so with real-time information that isn’t subject to much revision, that is telling them 
+what just happened at that very moment. As you know, there are normal long and variable lags 
+in the conduct of monetary policy. What we’re really interested in is what’s happening right 
+now. What we’re less interested in is echoes of history. And you’re hearing from my answer 
+that some of the data that we receive, that we’re waiting on, the first Friday after the month, the 
+payroll index, or something else, that might be an echo of history that’s quite useful on its third 
+revision. We need to take those error bounds down because we have to make hard decisions in 
+real time. I’m really open minded that there is a lot of new data sources that we can learn from 
+the private sector, from reforms in the official sector, and new analytic techniques that are far 
+more refined than asking a simple question about whether something was core or noncore. 
+MICHELLE SMITH. Edward. 
+EDWARD LAWRENCE. Thanks. Welcome, Mr. Chairman. Edward Lawrence with 
+Fox Business. So, if you don’t give a lot of ongoing forward guidance, won’t the markets have 
+more volatility? And shouldn’t Americans have more access into what you’re thinking going 
+forward? 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 11 of 21 
+
+CHAIRMAN WARSH. So I think financial markets perform best when they react to 
+incoming data. I think they—the financial markets work less efficiently when they ask a 
+question: How will the Federal Reserve react to that incoming information? The more that 
+markets are paying attention to what’s happening in the real economy, deciding what’s good data 
+and what’s less good data, the more financial markets can price what they believe is the most 
+likely and what are the tail risks. Financial market prices are probably the most important source 
+of information to guide central bankers. But when all the financial markets are doing is 
+reflecting back what we’ve said, then we’re taking the most important source of information and 
+we’re being blind to it. I’d like us to create a system where those blinders come off, where 
+markets are following data that they efficiently think is reliable. And they’ll be watching data. 
+We’ll be watching data. They’ll come with better information through market prices to us. We 
+can make more informed decisions. But ultimately, the goal that I said at the outset, deliver on 
+the price-stability objective that Congress told us to do and that we’ve got to get in the business 
+of doing. 
+EDWARD LAWRENCE. If I could take you in the meeting a little bit. So your first 
+meeting, the, the Board members seemed fairly hawkish when you listen to—in general, when 
+you listen to what they’re saying. Was there any discussion of a rate cut going forward today? 
+CHAIRMAN WARSH. There was one proposal on the table. There was no discussion 
+of any other proposals. The discussion on that proposal, I would say, was quite limited. The 
+group was unanimous and unambiguous on it. It has been the practice of this central bank and 
+others to have a range of alternatives. Today we had one. I thought it furthered discussion, 
+deepened it and made it clear what we needed to do and how we need to deliver. I wouldn’t 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 12 of 21 
+
+prejudge what happens in the future, but there was only one big subject for us. We took it on. 
+We had a good family fight on it for a couple of days, and we ended up, I think, in a better place. 
+MICHELLE SMITH. Claire. 
+CLAIRE JONES. Thanks a lot. Claire Jones, Financial Times. You know, coming to 
+this “blind,” reading this very nice, short statement that I think we’ve all appreciated in the room, 
+one might wonder why you didn’t raise rates today considering what you’re saying here about 
+the, the risks to U.S. inflation and your mandate. I guess why not and what would you need to 
+see in order to get to that place? And secondly, on your task forces, are there any best practices 
+of the central banks that you’d consider looking at? Thank you. 
+CHAIRMAN WARSH. Yeah. I’m glad they’re in the practice of giving you two 
+questions, because my answer to your first question was to be very curt. I’ve got nothing more 
+to say than the statement itself. And to the point of the question I got before: Market reactions 
+to what we say, unfiltered, I think is more helpful than, having delivered a statement, me then 
+improvising further upon it. Best practices of task forces, this is a subject I’ve thought some 
+about. I’ve been on a task force or two in my life. Best practice, find the best minds. Ensure 
+that the task forces have a range of people, both by backgrounds and predispositions, so they, 
+too, can have a bit of a family fight. Make sure when you establish a task force that the group 
+that’s going to be the recipient of the information feels as if they’ve got some equities in it, too. 
+That’s why we’re looking for—haven’t done the final roll call—some of the most significant 
+talent we have in the building and across the Reserve Banks on each of these and, in some sense, 
+seconding them to this group for a period of some number of months so that the leaders of the 
+task force know what the most analytical central bank in the world thinks about that. They can 
+reflect on it. And a final best practice, we’re not outsourcing decisions to anybody. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 13 of 21 
+
+Administrations past and present, Reserve Banks have chosen a group of 19 people around the 
+table. These will be our decisions. We can agree to some of the recommendations, disagree with 
+others, have a good family fight about it. But what comes from them will, I hope and believe, 
+make the discussion we have internally better, stronger, more of a dialectic, so that we can 
+finally deliver on that price-stability objective. 
+CLAIRE JONES. Just a quick follow-up on your, your markets’ point, if you look at 
+two-year yields, they’re really suggesting that markets think more tightening is needed. Would 
+that be your read on what the two-year yield is saying as well? 
+CHAIRMAN WARSH. We were in such a good place. This is why we don’t do third 
+questions, I presume. I’m not going to offer any commentary on market reaction over the last 30 
+or 60 minutes. What we’ve given markets is a new chapter for the central bank, some fresh 
+thinking. What we’ve given markets, and households, and businesses, I think, is a commitment 
+to ask ourselves hard questions, such that we can deliver on the promises that we’ve made 
+before. This is a lot of change for financial markets to digest. I wouldn’t be particularly 
+intrigued by how they react in the first several minutes or even first several days. What I think is 
+most important is that financial markets, and at least as important, households and businesses, 
+know that the central bank will deliver on price stability. 
+MICHELLE SMITH. Brian. 
+BRIAN CHEUNG. Hi, Chairman Warsh. Brian Cheung with NBC News. Thank you 
+for taking our questions. So, when you say that we’ve dropped forward guidance, for the 
+layperson, that might sound like the Fed’s going to say less or offer less insight into where their 
+borrowing costs might go. So, for the person that maybe you might run into at the grocery store, 
+where the price tags are rising at a faster pace than their wages at the moment, how would you 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 14 of 21 
+
+explain it to them? I don’t know if “task force” might be the answer there, but how would you 
+kind of communicate this era, this chapter of the Fed? 
+CHAIRMAN WARSH. If I told somebody in the milk aisle that I had a task force for 
+that, I think that would be doing a very poor job, so I appreciate it. If I saw somebody in the 
+grocery store, what I would say to them is that we cannot have a very significant effect on 
+particular prices. The price of oil in the markets today or even the price of a dozen eggs, that 
+does not have first-order consequences to what we’re doing. But we do have a really important 
+job there, and it’s to make sure that those changes in oil, or beef, or eggs, or milk don’t broaden 
+in the economy, don’t have second- and third-order effects. That’s our job. That’s our 
+commitment. That’s our capability, and we’re going to deliver on it. 
+BRIAN CHEUNG. And then is the Fed’s relationship with the Treasury also under 
+review? There was the normal breakfast meetings with the Treasury Secretary. Is that 
+something you intend to continue doing, and have you had conversations with the President since 
+your swearing in? 
+CHAIRMAN WARSH. So, on the President, I, I don’t have anything for you. With 
+respect to the Treasury Secretary, he has been posting pictures of our breakfasts, so I don’t think 
+I can—I don’t think I can deny that. The long tradition at the central bank is that the Fed 
+Chairman and the Treasury Secretary meet weekly. I think we’ve pulled off three of those so far. 
+I believe he’s overseas this week, so this’ll be the exception to the rule. I think they’re very 
+useful discussions. The central bank’s objectives and our roles and responsibilities are quite 
+delineated from the fiscal authorities. And, in my view, monetary policy is independent in the 
+conduct of what we do, but that doesn’t mean we’re not interested in what’s happening with the 
+fiscal authorities. The way I think about it is this central bank needs to have a wide lens but a 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 15 of 21 
+
+narrower remit. We need to be quite interested in what’s happening in the world. I won’t be 
+breaking any news here to suggest that I’m quite interested what’s happening in the Middle East. 
+That does have some effect on our day job. It doesn’t mean it’s our responsibility, but I think 
+we’re going to keep a wide lens. And my meetings with Secretary Bessent to this point have 
+helped widen that aperture. So we’re aware of things that could affect our day job, even if it 
+isn’t. 
+MICHELLE SMITH. Steve. 
+STEVE LIESMAN. Steve Liesman, CNBC. Mr. Chair—Mr. Chairman, thank you for 
+taking my question. You had said in the—before you became Chairman that you thought 
+productivity was a reason why the Federal Reserve could lower interest rates. Do you still 
+believe that to be the case? 
+CHAIRMAN WARSH. So the Committee had a discussion of productivity today. AI 
+came up. The way I thought about it before and socialized with the group is that artificial 
+intelligence, the latest generation of general purpose technology, is perhaps as important a 
+change in the economy and business and households that we’ve had in my adult lifetime. It is 
+filled with both a huge opportunity and with risks. I take both of those very seriously. You may 
+have heard me say before that AI is shorthand perhaps for American ingenuity. That doesn’t 
+mean that it’s going to be easy. That certainly doesn’t mean it’s not going to be disruptive. But 
+over the long term, my conviction—and I heard quite a bit of support for this around the 
+Committee today—is the United States is a winner as we go down this. The United States is 
+ultimately going to be better off in that. Now, to bring that back to the conduct of policy, timing, 
+scale, speed, implications for output and employment, it’s one of the things we have a task force 
+to do. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 16 of 21 
+
+STEVE LIESMAN. [Laughter] If you don’t mind a follow-up from the other side, 
+which is that, when you look at the strong job growth that’s out there, the elevated inflation, 
+GDP seems to be going pretty good and the stock market seems to be soaring, do you look 
+around this economy and see the funds rate being restrictive? 
+CHAIRMAN WARSH. So that’s your second question. I’m going to give the same 
+answer that I gave before. I’d say, as I think about the conduct of policy, what matters is what’s 
+the effect of policy, not what do we say, but what happens. And the best way I can describe is, 
+it’s uneven. I do see some restrictiveness on things like housing. It’s hard to use those same 
+words anywhere else. I’ll just make one other point. You talked about one of our dual mandates 
+and the employment side. I don’t believe that we have a cruel choice. I don’t share the view that 
+was expressed a few generations ago that Federal Reserve chairmen show up a podium like this 
+and say, “You’ve got to choose. And you’re going to have to decide whether you’re willing to 
+tolerate higher inflation to put more people at work.” I don’t believe in that. What I believe is, if 
+we do our job, we can make strong growth, low prices, and strong employment mutually 
+compatible. And so what you heard from the Committee today is, we’ve got some work to do on 
+this price-stability front. 
+MICHELLE SMITH. Nick. 
+NICK TIMIRAOS. Thank you. Nick Timiraos with Wall Street Journal. Chairman 
+Warsh, you’ve said repeatedly credibility is earned by delivering. If credibility requires 
+delivering, the move would be to tighten or at least to threaten to. Now, you didn’t do that today. 
+Why not? 
+CHAIRMAN WARSH. That judgment you expressed was not expressed by any of the 
+19 people around the table. We’ll be meeting in six weeks, and we’ll take up the issue again. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 17 of 21 
+
+NICK TIMIRAOS. And, and, if I could ask about AI, the buildout is generating 
+enormous demand right now, cap-ex, data centers, power. The productivity payoff may be 
+further out. So, in your judgment today, is AI adding more to demand or to supply? 
+CHAIRMAN WARSH. It’s a good question. At the central bank and in the economics 
+profession, what we spend most of our time doing is counting demand. It’s easier. We can see 
+it. We can count it. We can check it. We can revise it. What we do, though, is we infer supply. 
+You’ll notice in the second paragraph of what one of your colleagues described as “a very short 
+statement,” we have a sentence on the demand side and a sentence about the same length on the 
+supply side. They’re both important. Just because we can count one better than the other 
+doesn’t mean we’re going to favor one more than the other. With respect to AI and the growth 
+of data centers and infrastructure around it, we’re counting the demand side, and it is no doubt 
+showing up in GDP figures. We can be less certain when we infer the timing and extent of the 
+growth on the supply side. It may well be an intuition the supply side is going to expand, but it’ll 
+take longer. But just describe it this way: There’s a race between supply and demand. Milton 
+Friedman says that the only thing we know about economics is that there’s a supply line and a 
+demand line and they ultimately cross. When they cross, what are the implications for policy? 
+The good news for you is, we have a task force for that. 
+MICHELLE SMITH. Andrew. 
+ANDREW ACKERMAN. Thanks, Mr. Chairman. It sounded like on the task force on 
+data that, that you were looking at overhauling or completely overhauling the system of national 
+accounts, the way that government monitors the economy. Is that your ambition? 
+CHAIRMAN WARSH. In a word, no. In a few words, much of this data gathering 
+happens in other government agencies to which we owe a tremendous amount of respect, a 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 18 of 21 
+
+tremendous amount of deference. But, if in the course of this, we come up with 
+recommendations, which Fed staff have already begun to develop, about things that they could 
+be doing to help inform us as policymakers, we’re not going to hesitate. Again, I don’t want to 
+try to delineate the four corners of the research of the task force on data, but I do think there will 
+be a review of official statistics, and at least as important, a view of bringing the best practices 
+from the private sector and new analytical tools made possible by AI, so we can forge these into 
+a fabric that gives us better real-time information. So, as I mentioned before, when we’re 
+making decisions, we’re making decisions that we’d say are real contemporaneous data, not data 
+that we call “contemporaneous.” It’s really an echo of history. 
+ANDREW ACKERMAN. Okay. Thanks. The other question I wanted to ask is related 
+to the building renovations. Are you considering any changes to the renovations, the projects, 
+just in light of the fact that they became kind of a political football in the last year? 
+CHAIRMAN WARSH. I heard something about that. I don’t think I’m breaking any 
+news, but my view is, when you show up at a new institution, you should go meet with the 
+Inspector General, just as a matter of good practice. It’s a practice that I hope to continue. I’ve 
+had one meeting with the Inspector General, and he told me what I believe the world knows, 
+which he’ll be coming out with a report on the building and the building projects at some point 
+later this summer. And I’ll be interested in reading the report. From my perspective, with a 
+forward-looking glance, is there anything that we can be doing or should be doing from this 
+moment until the completion of the project to do what we can to be good stewards of taxpayer 
+money and make sure that we’re delivering on the promises that we made? So more work to do. 
+You might not be surprised, in the first few weeks, I’ve been somewhat preoccupied on other 
+matters, but I promise to, to get to the full breadth of the Fed’s tasks in the weeks ahead. 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 19 of 21 
+
+MICHELLE SMITH. Victoria. 
+VICTORIA GUIDA. Hi, Victoria Guida with Politico. So I know that you did not 
+submit a forecast, but you are the person who is authorized to speak on behalf of the FOMC. So 
+I’m wondering if you could tell us, in the SEP, the increase in the expectations for inflation, is 
+that all because of the Iran war? What was the discussion around what—the expectations for 
+inflation being higher and also potentially growth being slower? 
+CHAIRMAN WARSH. So my read of what I heard in the room reflected, I must admit, 
+in the SEPs, is half of my colleagues thought the policy rate, given all those developments, 
+should be at this level or lower between now and year-end and the other half thought higher. 
+That 19th voter was me, and I didn’t submit one. There’s a range of views on the questions of 
+first- and second-round effects, no resolution or conviction. But we’ll be meeting again in six 
+weeks. I think we’re going to know more then. And I think that my colleagues are very 
+attentive to incoming developments between now and then. 
+VICTORIA GUIDA. And can I just—quick follow-up on the SEP? 
+CHAIRMAN WARSH. Sure. 
+VICTORIA GUIDA. You said that you’re still encouraging your, your fellow 
+Committee members to submit forecasts, even if you’re not doing it. So what do you think is the 
+benefit of them doing it even if you don’t? 
+CHAIRMAN WARSH. That’s the commitment that the FOMC made, and it’s a 
+commitment that I hope we live up to. Commitment we made was to deliver price stability. I 
+expect us to live up to it. By the time we get to the end of this year, as I mentioned, I wouldn’t 
+be surprised if there was a new communications framework, there were some changes to the 
+SEP. That’s a Committee discussion, a robust discussion, and I think we’ll have it. I believe 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 20 of 21 
+
+we’re going to come to a better mix of communications to deliver on what we promised, but I 
+wouldn’t want to prejudge what those are. But between now and then, I would continue to 
+expect colleagues to submit their SEPs. Some of them I think believe that the practice as 
+currently structured is okay. But I heard a lot of interest in real reform, generally about all of 
+these topics. You didn’t ask it, but I’ll answer. It was a pretty gracious couple of days, and it’s 
+been a pretty warm few weeks. The institution wants to figure out how we can do better. The 
+institution’s going back to first principles. And I’m encouraged that what we’ve done in the 
+statement, what we’re thinking about doing with respect to the SEP, that instinct towards a new 
+chapter is a real one. And by the end of the year, I hope we can put some points on the board 
+both in form and in substance of delivering. 
+MICHELLE SMITH. Go to Enda for the last question. 
+ENDA CURRAN. Thank you, Mr. Chairman. Enda Curran, Bloomberg News. Could 
+you guide us through, please, some of the principles that guide your own reaction function, and 
+tell us a little bit about kind of conditions that you think when the Fed should respond. 
+CHAIRMAN WARSH. It’s going to be a very unsatisfactory answer to the final 
+question. The Federal Reserve has a lot of responsibilities, not just in monetary policy, but in 
+supervision and regulation, consumer affairs, and payments. My own view is our credibility 
+comes from delivering on what we’re saying we’re going to do across everything we do. I’ve 
+devoted more time in my first three weeks to monetary policy than all those things. But the more 
+we deliver on our promises as good supervisors and good regulators, the more benefit we get, the 
+more credibility enhancement we have in monetary policy. When we deliver on our price-
+stability objectives, which we will, the American people will feel as though the hardships that 
+they’ve been living through, in part because of inflation in the last five years, are in the rearview 
+June 17, 2026 Chairman Warsh’s Press Conference FINAL 
+
+Page 21 of 21 
+
+mirror, and that credibility will have dividends, dividends across what we do. And the institution 
+will come to press conferences like this always with an impetus to reform, always with an 
+impetus to, to do better. But we’re going to put some points on the board. 
+ENDA CURRAN. Can I ask you about the labor data in recent months? How would you 
+sum up labor data—labor market right now, do you see it as stable, or as potentially a source of 
+inflation? Thank you. 
+CHAIRMAN WARSH. Yeah. So, so the Committee—if I were to try to capture how the 
+Committee thought about it, the Committee thought that the labor markets were stable. There 
+were some people around the Committee who thought that it was trending better than that. 
+Trends matter more than data points. What’s happening over three or six months matters more 
+than any one data point—any one data release. And I’d say the jobs data’s been moving in a 
+good direction. If I heard one other thing around that subject over the course of the last couple of 
+days, what I heard was that strong productivity-led growth is not something that we fear, but 
+something we embrace. 
+Thank you all very much.
