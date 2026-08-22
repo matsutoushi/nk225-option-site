@@ -1,0 +1,30 @@
+[
+  {
+    "date": "2026-06-17",
+    "title": "Federal Reserve issues FOMC statement",
+    "role": "fomc",
+    "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260617a.htm",
+    "file": "2026-06-17_federal-reserve-issues-fomc-statement.txt"
+  },
+  {
+    "date": "2026-07-08",
+    "title": "Minutes of the Federal Open Market Committee, June 16-17, 2026",
+    "role": "fomc",
+    "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260708a.htm",
+    "file": "2026-07-08_minutes-of-the-federal-open-market-committee-june-16-17-2026.txt"
+  },
+  {
+    "date": "2026-07-29",
+    "title": "Federal Reserve issues FOMC statement",
+    "role": "fomc",
+    "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260729a.htm",
+    "file": "2026-07-29_federal-reserve-issues-fomc-statement.txt"
+  },
+  {
+    "date": "2026-08-19",
+    "title": "Minutes of the Federal Open Market Committee, July 28–29, 2026",
+    "role": "fomc",
+    "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260819a.htm",
+    "file": "2026-08-19_minutes-of-the-federal-open-market-committee-july-28-29-2026.txt"
+  }
+]

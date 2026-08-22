@@ -1,4 +1,4 @@
-# Semiannual Monetary Policy Report to the Congress
+# Warsh, Semiannual Monetary Policy Report to the Congress
 date: 2026-07-14
 role: chair
 source: https://www.federalreserve.gov/newsevents/testimony/warsh20260714a.htm

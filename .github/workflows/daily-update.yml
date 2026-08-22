@@ -91,12 +91,20 @@ jobs:
           git commit -m "ci: build error log"
           git push
 
+      - name: Update Fed research corpus
+        # ウォーシュ議長の講演・議会証言とFOMC文書を集める(research/)。
+        # FRBのRSSは直近十数件しか載らないので、毎日回して取りこぼしを防ぐ。
+        # サイトの生成には使わない資料なので、失敗してもビルドは止めない。
+        continue-on-error: true
+        timeout-minutes: 8
+        run: python research/fetch_warsh.py
+
       - name: Commit data history
         if: steps.build.outputs.updated == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data
+          git add data research
           git diff --cached --quiet || git commit -m "data: daily update"
           git push
 
