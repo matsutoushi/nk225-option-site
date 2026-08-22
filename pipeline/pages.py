@@ -20,6 +20,22 @@ EN_GUIDE_DESC = {
         "Nikkei 225 options explained for global traders: contract specs, SQ settlement, "
         "open interest walls, put/call ratio and gamma exposure, all built from free official "
         "JPX data and updated every business day.",
+    "guide-gamma-exposure.html":
+        "Gamma exposure for the Nikkei 225, estimated from JPX settlement files that publish "
+        "implied volatility for every strike — plus SPX GEX from CBOE chains. What the number "
+        "can and cannot tell you, and the two errors that inflate almost every published estimate.",
+    "guide-sq.html":
+        "Nikkei 225 SQ explained: how the settlement price is calculated, why it differs from "
+        "the index open, and the counterintuitive fact that open interest climbs into expiry "
+        "and then vanishes in a single session — 156,105 contracts on 14 August 2026.",
+    "guide-put-call-ratio.html":
+        "The Nikkei 225 put/call ratio falls on some of the worst down days. Why the denominator "
+        "matters as much as the numerator, why the large-contract ratio averages 1.57 while mini "
+        "averages 0.91, and how to read the two together.",
+    "glossary.html":
+        "Glossary of Japanese index-derivatives terms for global traders: SQ, genkyoku, "
+        "tategyoku, teguchi, large vs mini vs micro contracts, Nikkei VI, and the JPX data "
+        "files each one comes from.",
 }
 
 # 英語ページ {ファイル名: (タイトル, 本文HTML)} — en/ 配下に出力される
@@ -163,6 +179,296 @@ upside-seeking flow. The gap between them is itself informative.</p>
 
 <p><a href="./">→ Live Nikkei dashboard</a> ・ <a href="us.html">→ US markets (COT & SPX gamma)</a>
 ・ <a href="guide-participants.html">→ Participant positioning explained</a></p>
+"""),
+
+    "guide-gamma-exposure.html": ("Gamma Exposure, Honestly", """
+<h1>Gamma Exposure — What It Measures, and Where Published Numbers Go Wrong</h1>
+<p>Gamma exposure ("GEX") tries to answer one question: <b>when the index moves, does dealer
+hedging push it further, or pull it back?</b> The idea is sound. Most published numbers are
+built on assumptions that are rarely stated, and on at least one arithmetic error that is easy
+to make and hard to notice.</p>
+<p>This page explains how we compute it for the Nikkei 225 and the S&amp;P 500, what the number
+is worth, and the two mistakes we found in our own implementation.</p>
+
+<h2>The mechanism</h2>
+<p>A dealer who is short options must hedge. If they are short gamma, hedging means
+<b>selling into declines and buying into rallies</b> — the hedge amplifies the move.
+If they are long gamma, they do the opposite and dampen it.</p>
+<p>Gamma is largest near the strike and near expiry, so the effect concentrates around
+heavily traded strikes in the front month. Aggregate gamma across every strike, sign it by
+assumed dealer positioning, and you get a single number: yen (or dollars) of hedging flow
+per 1% move in the index.</p>
+
+<h2>Why the Nikkei is unusually well suited to this</h2>
+<p>Most gamma estimates need an options pricing model, which needs implied volatility, which
+usually means paying for data. JPX removes that step: its <b>daily settlement price file
+publishes an implied volatility for every single strike</b>, along with days to expiry and
+the reference index level. Black-Scholes gamma follows directly from official data.</p>
+<p>We compute gamma per strike, weight it by open interest and the contract multiplier
+(¥1,000 for large, ¥100 for mini), and sum across the nearest expiries within ±10% of spot.</p>
+
+<h2>The number is directional, not absolute</h2>
+<p>Here is the honest limitation, stated plainly: <b>dealer positioning is not public.</b>
+Every GEX calculation, ours included, substitutes a convention — dealers are assumed long
+calls and short puts. Nobody publishes whether that is true on any given day.</p>
+<p>It is also incomplete by construction. Structured products hedged over the counter never
+appear in listed open interest. In the US, covered-call funds illustrate the scale of the gap:
+JEPI runs roughly $45bn largely through OTC equity-linked notes, invisible to any
+exchange-data calculation, while listed-option funds like QYLD (~$8.4bn) are visible.
+The same asymmetry exists in Japan through structured notes.</p>
+<p>So treat the output as a <b>sign and a shape</b>, not a quantity. Is hedging flow
+amplifying or dampening? Where does it flip relative to spot? Those survive the assumptions.
+The absolute yen figure does not.</p>
+
+<h2>The shape matters more than the total</h2>
+<p>The aggregate hides the useful part. Our Nikkei readings for 21 August 2026:</p>
+<table>
+<thead><tr><th>Region</th><th>Gamma per 1% move</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>Above spot</td><td>+¥39.5bn</td><td>dampening</td></tr>
+<tr><td>Below spot</td><td>−¥58.4bn</td><td>amplifying</td></tr>
+<tr><td><b>Net</b></td><td><b>−¥18.8bn</b></td><td>amplifying</td></tr>
+</tbody>
+</table>
+<p>The signs are opposite. Hedging flow would cushion a rally and accelerate a decline —
+a market that grinds up and drops fast. A single net figure of −¥18.8bn tells you none of that,
+which is why we chart the profile across strikes rather than publishing one number.</p>
+<p>The shape is also more stable than the level. On 20 August the same readings were
++¥42.5bn above and −¥57.9bn below. The Nikkei moved +890 yen that day and −200 the next,
+yet the downside figure changed by less than ¥1bn. Net gamma has been on the amplifying
+side since 19 August (−¥44.0bn, then −¥15.4bn, then −¥18.8bn) even as the Nikkei
+Volatility Index drifted down from 29.7 to 28.4.</p>
+
+<h2>Mistake 1: expired contracts</h2>
+<p>Options chains from most sources include contracts that have already expired. If you filter
+only by "days to expiry ≤ N" without also requiring expiry ≥ today, negative day counts pass
+through and contribute gamma that no longer exists.</p>
+<p>We had this bug in our SPX calculation. Adding a single condition — expiry must be today or
+later — moved published SPX gamma exposure from <b>$178.1bn to $87.1bn</b>.
+The original figure was overstated by 51%. If a published GEX number looks large,
+this is the first thing to check.</p>
+
+<h2>Mistake 2: assuming weeklies are the missing piece</h2>
+<p>Nikkei mini options expire weekly, and it is natural to assume that omitting them
+understates gamma badly. We assumed exactly that, then measured it.</p>
+<p>About 85% of mini open interest already sits on the monthly SQ expiry and was
+being captured. Adding every weekly expiry contributed <b>571 large-equivalent contracts —
+roughly 0.3% of the total</b>. The intuition was wrong, and we would not have known
+without checking.</p>
+<p>One detail worth recording if you build this yourself: JPX labels mini open interest by
+<b>last trading day</b>, while the settlement file labels the same series by <b>SQ day</b>.
+They differ by exactly one calendar day. Join on the raw code and the weekly series
+silently disappears.</p>
+
+<h2>What we publish</h2>
+<p>Every business day, for both markets:</p>
+<ul>
+<li><b>Nikkei 225:</b> gamma profile by strike, split above and below spot, from JPX
+settlement and open interest files</li>
+<li><b>S&amp;P 500:</b> SPX gamma from CBOE chains including daily and weekly expiries,
+with the flip level where the sign changes</li>
+</ul>
+<p>Both are labelled as estimates, with the dealer-positioning assumption stated on the page.</p>
+
+<p><a href="./">→ Live Nikkei gamma profile</a> ・ <a href="us.html">→ SPX gamma and COT</a>
+・ <a href="guide-nikkei-options.html">→ Nikkei options field guide</a></p>
+"""),
+
+    "guide-sq.html": ("Nikkei SQ Explained", """
+<h1>SQ — How Nikkei 225 Options Actually Expire</h1>
+<p>SQ ("Special Quotation") is the settlement price for expiring Nikkei 225 options and futures.
+It is simple to define and easy to misunderstand, and the open interest behaviour around it
+runs opposite to most people's intuition.</p>
+
+<h2>The mechanics</h2>
+<ul>
+<li><b>When:</b> the second Friday of each month. March, June, September and December are
+"Major SQ", when futures expire alongside options and volume concentrates.</li>
+<li><b>How:</b> the SQ value is computed from the <b>opening prices of all 225 constituents</b>
+on that morning, each stock taken at its own opening auction.</li>
+<li><b>Mini options</b> expire weekly, so most Fridays carry an expiry of some size.</li>
+</ul>
+
+<h2>SQ is not the Nikkei's opening price</h2>
+<p>This trips people up constantly. The Nikkei 225 index opens using whatever prices exist at
+09:00, including the previous close for any constituent that has not yet opened. The SQ value
+instead waits for each stock's actual opening auction.</p>
+<p>On a volatile morning, slow-opening large caps can push the two apart by several hundred yen.
+Contracts settle at the SQ value — not at the index print you saw on screen.</p>
+
+<h2>Open interest rises into expiry, then vanishes</h2>
+<p>The intuition is that positions get unwound as expiry approaches and open interest drains
+away. The data says otherwise.</p>
+<p>The August 2026 series went from <b>137,311 contracts on 17 July to 169,955 on 7 August</b>
+— up 24% in three weeks, one week before expiry. Short-dated options are cheap and responsive,
+so short-term flow concentrates into them rather than leaving.</p>
+<p>Then it disappears at once. On <b>14 August 2026, SQ day, total open interest fell by
+156,105 contracts in a single session</b> (calls −53,942, puts −102,163). Nothing decayed;
+it accumulated and was extinguished.</p>
+<p>This is why the supply-demand picture changes abruptly around expiry rather than gradually.
+Gamma concentrated at nearby strikes is there one day and gone the next, and hedging flows
+that were pinning the index simply stop.</p>
+
+<h2>The rebuild starts immediately</h2>
+<p>The week after the August expiry, total Nikkei options open interest went from
+<b>272,499 contracts on 17 August to 291,911 on 21 August</b> — up 7.1% in five sessions,
+with puts adding 13,222 and calls 6,190. Three weeks before the September SQ, the position
+was already being rebuilt.</p>
+<p>A practical consequence: the front month is not always the biggest. On 7 August 2026,
+one week before the August expiry, August held 169,955 contracts while <b>September held
+189,160</b>. September is a Major SQ, so quarterly hedges concentrate there. Looking only at
+the nearest expiry will point you at the wrong strikes.</p>
+
+<h2>What to watch around SQ</h2>
+<ul>
+<li><b>Where open interest sits</b> in the expiring series — heavy strikes tend to attract
+the index during expiry week</li>
+<li><b>Whether the next month is already larger</b>, which tells you where hedging has moved</li>
+<li><b>The gamma profile</b> before and after: the amplifying or dampening effect of dealer
+hedging can invert overnight when a large series settles
+(<a href="guide-gamma-exposure.html">explainer</a>)</li>
+<li><b>Major SQ months</b> (Mar/Jun/Sep/Dec), where futures expire too and the effect is larger</li>
+</ul>
+
+<h2>Where the data comes from</h2>
+<p>JPX publishes open interest by strike for the nearest three expiries every business day,
+free. We chart the distribution, the daily change, and the totals by expiry, so the
+accumulate-then-vanish cycle is visible without assembling the files yourself.</p>
+
+<p><a href="./">→ Live open interest by expiry</a> ・
+<a href="guide-gamma-exposure.html">→ Gamma exposure explained</a> ・
+<a href="guide-nikkei-options.html">→ Nikkei options field guide</a></p>
+"""),
+
+    "guide-put-call-ratio.html": ("The Put/Call Ratio Trap", """
+<h1>The Put/Call Ratio — Why It Falls on Bad Days</h1>
+<p>The put/call ratio divides put volume by call volume. Higher is supposed to mean more fear.
+It is one of the most widely quoted sentiment gauges, and one of the easiest to read backwards.</p>
+
+<h2>A worked example that inverts the signal</h2>
+<p>On 28 July 2026 the Nikkei 225 fell <b>3.95%</b>. The put/call ratio fell too —
+from 1.995 to <b>1.387</b>. Read naively, the market became less fearful during a sharp
+sell-off.</p>
+<p>The components explain it:</p>
+<table>
+<thead><tr><th></th><th>Prior day</th><th>28 July</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>Put volume</td><td>21,148</td><td>35,728</td><td>×1.69</td></tr>
+<tr><td>Call volume</td><td>10,603</td><td>25,764</td><td><b>×2.43</b></td></tr>
+<tr><td>Ratio</td><td>1.995</td><td>1.387</td><td>−0.61</td></tr>
+</tbody>
+</table>
+<p>Put activity rose sharply. Call activity rose <b>more</b>. In a fast decline, traders take
+profit on puts they already own, buy cheap calls for a bounce, and close calls that are now
+far out of the money — all of which lift call volume. The ratio fell while hedging demand
+was rising.</p>
+<p><b>A ratio moves on its denominator as readily as its numerator.</b> Without both raw
+volumes you can read the day exactly backwards, which is why we publish put and call volume
+next to the ratio rather than the ratio alone.</p>
+
+<h2>1.0 is not the neutral line for the Nikkei</h2>
+<p>Textbooks treat 1.0 as balance. For Nikkei 225 large-contract options, our measured
+average is <b>1.57</b>. Institutional downside hedging is structural and permanent, so the
+ratio lives above 1.0 in calm markets and tells you nothing by being there.</p>
+<p>Judge it against its own recent range instead. Readings from the week of 17 August 2026
+show how wide that range is: 1.956, 1.818, 2.279, 1.017, 1.384. A single print carries
+very little information.</p>
+
+<h2>Large and mini are two different crowds</h2>
+<p>Nikkei options trade in large (×1,000 yen) and mini (×100 yen) sizes. Over the same
+sample, large averaged <b>1.57</b> and mini averaged <b>0.91</b> — mini frequently sits
+below 1.0.</p>
+<p>Large contracts are dominated by institutions buying downside protection. Mini carries a
+much higher share of retail flow, which leans toward upside. The two ratios measure different
+populations, and the <b>gap between them</b> is more informative than either alone.
+When mini rises toward large, retail is hedging too.</p>
+
+<h2>Open interest sometimes says it more cleanly</h2>
+<p>Volume counts activity; open interest counts commitment. Occasionally the second is
+much clearer.</p>
+<p>On 20 August 2026, Nikkei call open interest went from 101,116 to 101,103 contracts —
+a net change of <b>13 contracts</b>. Puts added 1,721 the same day. Across the previous month
+call open interest had risen by 1,000 to 6,000 contracts on a typical day, so this was not a
+quiet session in general; it was a session where <b>only the upside stopped being built</b>.
+The put/call volume ratio that day was 1.017, which looks perfectly balanced and says
+nothing about it.</p>
+
+<h2>Practical reading</h2>
+<ul>
+<li>Always look at put and call volume separately before reading the ratio</li>
+<li>Compare against the recent range, not against 1.0</li>
+<li>Check large against mini — divergence is the signal</li>
+<li>Cross-check against open interest changes, which are harder to distort</li>
+<li>On big down days, expect the ratio to behave strangely; that is normal, not a signal</li>
+</ul>
+
+<p><a href="./">→ Live put/call ratio and volumes</a> ・
+<a href="guide-nikkei-options.html">→ Nikkei options field guide</a> ・
+<a href="guide-gamma-exposure.html">→ Gamma exposure explained</a></p>
+"""),
+
+    "glossary.html": ("Glossary", """
+<h1>Glossary — Japanese Index Derivatives for Global Traders</h1>
+<p>Terms that appear on this site, and the official file each one comes from.
+Japanese readings are given where you are likely to meet them in JPX documents.</p>
+
+<h2>Contracts and expiry</h2>
+<ul>
+<li><b>SQ (Special Quotation)</b> — the settlement price for expiring options and futures,
+calculated from the opening prices of all 225 constituents on the second Friday of the month.
+Not the same as the index open.
+<a href="guide-sq.html">Full explanation</a></li>
+<li><b>Major SQ</b> — March, June, September and December, when futures expire alongside
+options.</li>
+<li><b>Genkyoku (限月)</b> — contract month. JPX codes these as YYMM, for example 2609
+for September 2026.</li>
+<li><b>Large / mini / micro</b> — Nikkei futures and options in three sizes. Multipliers are
+¥1,000, ¥100 and ¥10 respectively. To compare volume across them, convert to
+large-equivalents by dividing mini by 10 and micro by 100.</li>
+<li><b>Night session</b> — an evening trading session overlapping US hours, so Japanese
+index derivatives react to US moves before the Tokyo cash market reopens.</li>
+</ul>
+
+<h2>Positioning</h2>
+<ul>
+<li><b>Tategyoku (建玉)</b> — open interest. Contracts still outstanding, as opposed to
+volume, which counts activity.</li>
+<li><b>Wall</b> — a strike carrying unusually heavy open interest, often treated as a
+reference level. Restrict candidates to strikes near spot: the largest open interest in the
+chain is frequently a deep out-of-the-money legacy position.
+<a href="guide-nikkei-options.html">Why</a></li>
+<li><b>Teguchi (手口)</b> — trading-participant data. JPX publishes daily volume and weekly
+open interest <b>by named firm</b>, with no US equivalent.
+<a href="guide-participants.html">How to read it</a></li>
+<li><b>COT</b> — the CFTC's Commitments of Traders report, covering CME-listed Nikkei futures.
+Anonymous categories, weekly, useful alongside the JPX participant data.</li>
+</ul>
+
+<h2>Volatility and flow</h2>
+<ul>
+<li><b>Nikkei VI</b> — Japan's implied volatility index, the local equivalent of the VIX.</li>
+<li><b>Put/call ratio</b> — put volume divided by call volume. For Nikkei large contracts the
+measured average is 1.57, so 1.0 is not neutral.
+<a href="guide-put-call-ratio.html">Full explanation</a></li>
+<li><b>Gamma exposure (GEX)</b> — an estimate of how much dealer hedging amplifies or dampens
+index moves, expressed per 1% move. Depends on an unpublished assumption about dealer
+positioning. <a href="guide-gamma-exposure.html">Full explanation</a></li>
+<li><b>Implied volatility by strike</b> — published by JPX in the daily settlement file,
+which is what makes gamma estimation possible from free data alone.</li>
+</ul>
+
+<h2>Data sources used on this site</h2>
+<ul>
+<li><b>JPX</b> — open interest by strike, put and call volume, participant volume and
+positions, daily settlement prices including per-strike implied volatility</li>
+<li><b>CFTC</b> — Commitments of Traders, weekly</li>
+<li><b>CBOE</b> — put/call ratios and SPX option chains</li>
+<li><b>FRED</b> — rates, credit spreads and inflation expectations</li>
+</ul>
+<p>All are public. We publish aggregates and estimates rather than redistributing raw
+exchange data.</p>
+
+<p><a href="./">→ Live Nikkei dashboard</a> ・ <a href="us.html">→ US markets</a></p>
 """),
 }
 

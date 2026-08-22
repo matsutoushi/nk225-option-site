@@ -1026,15 +1026,24 @@ PAGE = {
         "sec_pcr": "Put/Call Ratio Trend",
         "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
         "kpi_guide": 'What do these numbers mean? → '
-                     '<a href="guide-participants.html">JPX participant positioning</a>'
+                     '<a href="guide-put-call-ratio.html">Put/call ratio</a>'
+                     ' ・ <a href="guide-gamma-exposure.html">Gamma exposure</a>'
                      ' ・ <a href="guide-nikkei-options.html">Nikkei options field guide</a>',
         "sec_guides": "Guides — How to Read This Data",
         "guides_lead": "Background on each indicator and how traders actually use it.",
         "guides": [
-            ("guide-participants.html", "JPX Participant Positioning",
-             "Japan's hidden COT — weekly futures positions by named firm"),
             ("guide-nikkei-options.html", "Nikkei 225 Options: Field Guide",
              "Contract basics, SQ, and what the official data covers"),
+            ("guide-gamma-exposure.html", "Gamma Exposure, Honestly",
+             "What it measures, and the two errors that inflate most published estimates"),
+            ("guide-put-call-ratio.html", "The Put/Call Ratio Trap",
+             "Why it falls on some of the worst down days, and how to read it instead"),
+            ("guide-sq.html", "Nikkei SQ Explained",
+             "Open interest climbs into expiry, then vanishes in one session"),
+            ("guide-participants.html", "JPX Participant Positioning",
+             "Japan's hidden COT — weekly futures positions by named firm"),
+            ("glossary.html", "Glossary",
+             "SQ, genkyoku, tategyoku, teguchi — and the JPX file each comes from"),
         ],
         "footer_links": '<a href="../about.html" style="color:#1f6fd0">About</a> | <a href="../privacy.html" style="color:#1f6fd0">Privacy Policy</a> | <a href="guide-participants.html" style="color:#1f6fd0">Guide: Participant Positioning</a> | <a href="guide-nikkei-options.html" style="color:#1f6fd0">Guide: Nikkei Options</a>',
         "footer_src": "Data source: compiled from official Japan Exchange Group (JPX) publications. Nikkei 225 price data by Nikkei Inc. (copyright belongs to Nikkei Inc.).",
@@ -2272,7 +2281,7 @@ NAV_LINKS = {
            ("risk.html", "Risk Monitor"), ("fedwatch.html", "Fed Watch"),
            ("tools.html", "Data Explorer"),
            ("guide-nikkei-options.html", "Nikkei Guide"),
-           ("guide-participants.html", "Positioning Guide")],
+           ("glossary.html", "Glossary")],
 }
 
 
@@ -2303,6 +2312,10 @@ def footer_sitemap(lang: str) -> str:
             ("en/", "English")]
     else:
         items = NAV_LINKS["en"] + [
+            ("guide-participants.html", "Participant Positioning"),
+            ("guide-gamma-exposure.html", "Gamma Exposure"),
+            ("guide-put-call-ratio.html", "Put/Call Ratio"),
+            ("guide-sq.html", "SQ Explained"),
             ("../about.html", "About"), ("../privacy.html", "Privacy"),
             ("../", "日本語")]
     links = " ｜ ".join(f'<a href="{h}" style="color:#1f6fd0">{t}</a>' for h, t in items)
@@ -2385,6 +2398,8 @@ def render_seo_files() -> None:
              "guide-sq.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
+             "en/guide-gamma-exposure.html", "en/guide-sq.html",
+             "en/guide-put-call-ratio.html", "en/glossary.html",
              "about.html", "privacy.html"]
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
@@ -2397,13 +2412,26 @@ def render_seo_files() -> None:
         f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
 
 
+# 同じ主題の日本語版と英語版の対応。ファイル名が揃っていないので明示する。
+# hreflangを出す材料で、これが無いと検索エンジンが日英を別々のページと見なし、
+# 英語圏の検索で英語版が拾われにくくなる。
+GUIDE_PAIRS = {
+    "guide-gex.html": "en/guide-gamma-exposure.html",
+    "guide-pcr.html": "en/guide-put-call-ratio.html",
+    "guide-sq.html": "en/guide-sq.html",
+    "guide-teguchi.html": "en/guide-participants.html",
+    "glossary.html": "en/glossary.html",
+}
+EN_GUIDE_PAIRS = {en.split("/", 1)[1]: ja for ja, en in GUIDE_PAIRS.items()}
+
+
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
-    def shell(title, body, ad=""):
+    def shell(title, body, ad="", pair=None):
         # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
         # ADSENSE_CLIENT さえ入っていれば出す。
         ad_head = adsense_head()
-        og = og_meta(f"{title} | 日経225オプション データ分析")
+        og = og_meta(f"{title} | 日経225オプション データ分析", pair=pair)
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -2473,14 +2501,15 @@ Googleが広告Cookieを使用することにより、ユーザーは
     NO_AD = {"guide-start.html"}
     for fname, (title, body) in pages.GUIDE_PAGES.items():
         ad = "" if fname in NO_AD else adsense_unit("ja")
+        en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
-            f.write(shell(title, body, ad))
+            f.write(shell(title, body, ad, (fname, en) if en else None))
 
-    def shell_en(title, body, desc="", ad=""):
+    def shell_en(title, body, desc="", ad="", pair=None):
         # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
         # ADSENSE_CLIENT さえ入っていれば出す。
         ad_head = adsense_head()
-        og = og_meta(f"{title} | Nikkei 225 Options Data", desc)
+        og = og_meta(f"{title} | Nikkei 225 Options Data", desc, pair)
         meta_desc = f'\n<meta name="description" content="{desc}">' if desc else ""
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2506,9 +2535,11 @@ Googleが広告Cookieを使用することにより、ユーザーは
 
     os.makedirs(os.path.join(SITE, "en"), exist_ok=True)
     for fname, (title, body) in pages.EN_GUIDE_PAGES.items():
+        ja = EN_GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, "en", fname), "w", encoding="utf-8") as f:
             f.write(shell_en(title, body, pages.EN_GUIDE_DESC.get(fname, ""),
-                             adsense_unit("en")))
+                             adsense_unit("en"),
+                             (ja, f"en/{fname}") if ja else None))
 
 
 WARNINGS: list[str] = []
