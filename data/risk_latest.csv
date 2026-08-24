@@ -13,5 +13,5 @@ inflation,jpcpi,日本CPI(前年比),-0.4%,2021-06,green
 inflation,wti,WTI原油(前年比),$86 (+34%),2026-08-18,yellow
 stress,nfci,シカゴ連銀 金融環境指数,-0.56,2026-08-14,green
 stress,stlfsi,セントルイス連銀 金融ストレス指数,-0.83,2026-08-14,green
-stress,hy,ハイイールド債スプレッド,2.75%,2026-08-20,green
-stress,vix,VIX指数,16.0,2026-08-20,green
+stress,hy,ハイイールド債スプレッド,2.70%,2026-08-21,green
+stress,vix,VIX指数,15.1,2026-08-21,green
