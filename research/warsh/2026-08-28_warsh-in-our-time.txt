@@ -1,0 +1,232 @@
+# Warsh, In Our Time
+date: 2026-08-28
+role: chair
+source: https://www.federalreserve.gov/newsevents/speech/warsh20260828a.htm
+
+August 28, 2026
+
+ In Our Time 
+
+ Chairman Kevin Warsh 
+
+ At “Financial Innovation: Implications for Payments and Policy,” an economic policy symposium sponsored by the Federal Reserve Bank of Kansas City, Jackson Hole, Wyoming
+
+ Share 
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ Watch Live 
+
+ Thank you. It's great to be here again and to see so many familiar faces. I've been looking forward to this weekend—what better place to mark my 100th day as Chairman?
+
+ For the fine hospitality, everyone here is in debt to President Jeff Schmid and his colleagues at the Federal Reserve Bank of Kansas City. Jeff, our thanks to you all.
+
+ Jeff and the other planners have some recreation options lined up for later today. And I'd advise you to be very careful with your choices.
+
+ As I learned years ago, you can take two different kinds of hikes on the trails around Jackson Hole. I can sum up my hikes with former Vice Chairman Don Kohn in two words: I survived. These steely marathon death marches revealed a side of Don I wasn't ready for.
+
+ There's another kind of hike—one I associate with Chairman Ben Bernanke, my old colleague. With Ben, it's a much more leisurely pace, an easy stroll along the wandering trails at the Rockefeller Preserve.
+
+ So before setting out, do a wellness check and ask yourself: "Is this a Kohn day or a Bernanke day?"
+
+ The best thing about this gathering is that it helps us all clear our minds and think straight about our world and our time. For me, it feels like the right place, and the right audience, for a real engagement with the ideas that matter most.
+
+ Innovation is the conference theme, and I believe that the public and the markets—in their collective wisdom—understand that innovations in the conduct of policy at the Fed will help deliver price stability alongside full employment.
+
+ Here is a quick overview of what I'll cover in my remarks this morning. You can call it an outline . . . you can call it a trail map . . . just don't call it forward guidance.
+
+ First, I'll touch on a few of the longer-term questions we're asking at the Fed about the latest general-purpose technology, artificial intelligence (AI), and where it might take the economy.
+
+ Then I'll reflect a bit on the practice of forward guidance and the interaction between the central bank and financial markets.
+
+ Next, I'll present some of the key principles that I believe should guide the conduct of monetary policy.
+
+ And, finally, I'll give you my assessment of the economy.
+
+ Preparing for Future Policy Conjunctures 
+
+With the unchanging picture of the Tetons as our backdrop, we are here to survey an economic landscape that is anything but static.
+
+ It wasn't so long ago—in the run-up to the crisis of 2008 and over the decade that followed—when economists and policymakers were speaking of secular stagnation and a global saving glut. 1 It was a widely held view that an excess of capital would sit on the sidelines for a long, long time, because there just wouldn't be enough compelling investment opportunities. All the good stuff had been invented. So growth would be low and slow. 2 
+
+ Well, times sure have changed. We've come to a hinge point in history. 3 
+
+ To cite the clearest example, progress in artificial intelligence—the 80-year-old name for the newest technology—has been faster even than its evangelists predicted a couple of years ago.
+
+ The potential for substantially higher growth is on the rise. Ever-expanding pools of capital are pouring into AI-related infrastructure of all sorts. A kind of hyper–Moore's law seems to be playing out. Scaling laws, too, are changing both the method and speed of innovation. 4 
+
+ Capital and labor have combined to create the large language models at the heart of AI. Users buy tokens to gain access to the models. Reports put annualized token sales for the two leading labs alone at more than $100 billion—an increase of 500-plus percent from a year ago.
+
+ The Fed watches all of this attentively. We recognize that AI is a new variable—potentially a new factor of production—that will have consequences for both the economy and the conduct of monetary policy. It opens some major lines of inquiry:
+
+ Will the application of AI cause a significant, sustained rise in productivity across the economy? And if so, when?
+
+ Will token usage be complementary or competitive to labor? Will the next generation of AI models demand even greater capital intensity, or will the models themselves help devise a capital-light solution?
+
+ Among the other yet unknowns is the resulting market structure. It's not obvious where the returns on capital will land or on what timescale. Early on, how much of the surplus goes to owners of scarce assets—AI labs, chipmakers, energy producers, and cloud providers? Over time, how much of that value accrues to businesses and consumers? What are the broad implications for workers and for the employment side of the Fed's mandate?
+
+ Likewise, we don't yet know the equilibrium price of the tokens. Might there be a heterogeneity of tokens, such that growing sums will be paid for access to the best models at the frontier? Will token prices for older models fall to the level of their marginal cost?
+
+ We will be thinking through these matters with the help of a task force on productivity and jobs. My early check-ins with the leaders of that task force, and the four others, have been encouraging.
+
+ To be clear, though, their recommendations will come later and have no bearing on decisions we make in the current policy conjuncture. But I believe that for future policy challenges, this intellectual investment today will leave us far better prepared.
+
+ Forward Guidance and Its Stand-ins 
+
+As our task forces go about their work, I am not waiting to introduce innovations at the Fed to make us fit for purpose. To highlight one example, I have set out to change the form and function of the Fed Chairman's so-called forward guidance. You might know about my long-time discomfort with early pronouncements of future policy decisions. I much prefer another path . . . and will make the case for it.
+
+ Transparency in communications about future policy decisions is not a virtue unto itself. Communications must be in service to the Fed's paramount responsibility: getting monetary policy right. 5 
+
+ Forward guidance as a regular practice was adopted by my colleagues and me during the Global Financial Crisis. 6 It was essential at the time, and we introduced it with much fanfare. But, as with other legacies of crises past, I believe that the practice has overstayed its welcome.
+
+ In normal times, the role of forward guidance should be limited and circumscribed. Otherwise it risks creating ambiguity in the name of clarity. Oversharing policy deliberations and overcommitting to future decisions can lead markets, businesses, and households astray. 7 And I believe when policymakers make quasi-commitments on interest rates through the cycle, we inhibit our own freedom to make the right calls when it's time to decide.
+
+ To get policy right, we also need to get the relationship right between financial markets and the central bank. The Fed needs clear market signals, as unfiltered as possible . . . from market internals . . . the level and change in asset prices across sectors . . . the prices and trading volumes of Treasury securities. . . the foreign exchange value of the dollar . . . the cost and availability of credit . . . and the price of a broad set of commodities.
+
+ These and other indicators should inform the Fed's near-term outlook on economic activity and inflation throughout the business cycle. They should also reveal the state of broader financial conditions . . . and the risks and uncertainties in the financial cycle.
+
+ At the same time, market participants themselves should be tracking real information across the economy. They should draw their own conclusions; form their own expectations of output, employment, and inflation; and stay sharply attuned to risks.
+
+ The Fed should be humble and never naïve. The Fed plays an essential role in the economy and the markets. And our tools are powerful. We determine the path of short-term interest rates. And market participants will always try to anticipate what we will do next. But we should not indulge a regime in which market participants are looking primarily to the Fed for their next trade.
+
+ The economic literature has long described the distorting effects: a hall-of-mirrors problem. 8 If markets rely materially on the Fed's guidance and the Fed relies on market prices, we are all more likely to be blinded to new developments . . . more likely to be caught unprepared for a turn of events . . . and more likely to commit errors in policymaking. 9 
+
+ Perversely, market participants are unlikely to bear the biggest costs of the hall-of-mirrors problem. The most serious harm is likely to befall those without financial assets. If the Fed gets inflation wrong and judges the economy wrong, who gets the worst of it? Not the financial high-fliers. Hard-working Americans are the ones left to deal with inflation that is too high or jobs that suddenly appear less secure.
+
+ So, if forward guidance is ill-suited to normal times, then how about the new Fed chief commits—at the very least—to an explicit reaction function? Surely, he should tell us his interest rate path—if, say, the data were to come in hot or cold.
+
+ I wish our understanding of the economy were so precise as to provide a mechanical, tried-and-true answer—that some simple function like a Taylor rule could be rigorously relied upon. But our knowledge just doesn't extend that far—at least not yet—and the factors most relevant to the proper conduct of monetary policy change over time.
+
+ Providing forecasts to illustrate the Fed's reaction function works better in theory than in practice, better in the lab than in the field. I'm not alone in noticing that forward guidance in 2021, to cite one example, might well have slowed the policy response to high inflation. 10 
+
+ In my term as Chairman, my colleagues and I will endeavor to construct more reliable models and more robust rules to guide policy decisions. We'll do this knowing that accuracy in economic forecasting is still just an aspiration. With so much changing so fast in geopolitics, global supply chains, and technology, it's wise to be modest about what we can and cannot know.
+
+ In the same spirit, we should receive the full range of ideas on matters that may inform the Fed's monetary policy decisions. If the aim is optimal decisionmaking, we should not crowd out views on the economy.
+
+ How, then, to chart a better path to policy? In the balance of my remarks, I will share some key principles that guide my thinking on the appropriate conduct of monetary policy . . . then offer my promised assessment of the economy.
+
+ Key Principles 
+
+Turning to principles . . .
+
+ First, I've noticed that, in this line of work, yesterday's news has a way of getting mistaken for what is happening right now. The challenge is to know the difference. In other words, we must interrogate reality to make sure we are not setting forward-looking policy based on stale or inaccurate data. Nor should we rely on isolated data points. Trends matter most. The Fed is a decisionmaking agency. We make choices amid uncertainty, and the data upon which we draw must be as relevant, contemporaneous, accurate, and actionable as possible. 11 
+
+ Second, the Federal Reserve's actions are intended to ensure that the aggregate demand side of the economy is broadly consistent with aggregate supply. However, all we observe directly is activity. We never see, and can only infer, what's really happening on the supply side. Hence, evaluating the current and expected balance between aggregate supply and demand is imprecise. 12 
+
+ Third, there should be no misunderstanding: The Fed's price-stability objective of 2 percent, as measured by the personal consumption expenditures (PCE) price index, is a firm, fixed target. Let's be equally clear about another aspect of the objective: Price stability is not self-executing, nor is inflation necessarily mean-reverting. It is the Fed's job to deliver stable prices.
+
+ Fourth, the Fed also bears responsibility for maximum employment. Achieving both sides of our mandate over the medium term is not an either/or proposition. I do not believe that the Fed's dual mandate works at cross-purposes. After all, high inflation itself is very harmful to economic prosperity.
+
+ Fifth, short-term interest rates are the predominant tool to achieve the dual mandate. Unconventional policies to spur economic activity may suit genuine crises but should otherwise be used sparingly, if at all.
+
+ Sixth, money matters. It's not fashionable these days, but my view is that money has something important to do with monetary policy. 13 We should pay attention to money created by the central bank and money that comes from the banking and financial systems. 14 It's true that financial innovations and other factors alter the mechanics that link the monetary base, the velocity of money, and the broader economy. But that is scarcely a reason to ignore the ultimate effects of money on financial conditions and prices.
+
+ Finally, a quieter Fed, more purposeful in its communications, is better able to meet its objectives. And we can be held accountable for delivering on our remit—the only true test of our credibility. To borrow a line from General Chuck Yeager, "At the moment of truth, there are either reasons or results." 15 
+
+ The Economy Today 
+
+Now, given these principles, how do I read the economy today? What's really going on outside the window? 16 
+
+ You may have read in the July minutes the unanimous view of the FOMC: 17 Labor markets were stable, and output was solid. But inflation remained too high. A good majority of my colleagues and I thought the wiser course was to await new information in the intermeeting period—especially given possible developments in supply chains, investment flows, and geopolitics—before deciding whether a change in interest rate policy was advisable. And we expressed our joint readiness to act as circumstances might require.
+
+ For my part, today I am impressed by the overall performance of the economy, which appears to have strengthened. One indicator of strength is how well an economy holds up to shocks. On that score, both Main Street and Wall Street have been remarkably resilient.
+
+ Several observations:
+
+ Business capital expenditures—the seed corn of future economic growth—are rising rapidly. The four-quarter change in investment in equipment and intangibles has been around 9 percent, its highest growth rate since 2021. More than half of the cap-ex growth this year can likely be ascribed to the buildout related to AI.
+
+ For firms in the S&P 500, profits have grown by more than 20 percent over the past year. Profit margins are quite elevated, relative to history. Overall equity market volatility is low. We're staying keenly focused on market internals, watching performance across sectors.
+
+ Expectations for growth in both cap-ex and corporate earnings are running quite high. I will continue to watch the change in their growth rates, the second derivative. The follow-on effects on asset prices, business confidence, consumer income, and spending are equally important to gauge.
+
+ Credit spreads on corporate bonds and leveraged loans are near the low ends of their historical ranges, and issuance volumes in these markets have been quite strong this year. Looking beyond fixed-income markets to the banking business, in the July Senior Loan Officer Opinion Survey on Bank Lending Practices, banks tell us that standards for commercial and industrial loans are on the easier end of their historical range. That helps explain the growth we've seen this year in those loans. Credit and loan markets are showing few signs of policy restraint.
+
+ Certain sectors—like housing and agriculture—are showing strains. But, on balance, I would be hard pressed to describe broad financial conditions as restrictive.
+
+ Real consumer spending has been healthy despite the shocks, increasing more than 2 percent over the past four quarters. Combining consumption with the brisk investment we've observed, private domestic final purchases (PDFP) has also risen. PDFP has increased at a pace of nearly 3 percent so far this calendar year. That's a measure that typically carries more signal than gross domestic product, and the trend here too is positive.
+
+ On the employment side of the Fed's dual mandate, our country is doing well. Labor markets are quite stable. The jobless rate, at 4.1 percent, remains low by historical standards and has not changed much for a couple of years. Unemployment claims, on a four-week average—an empirically robust real-time indicator—are near their lowest level in decades.
+
+ In my view, the relatively low turnover in today's labor market is partly a result of the significant rematching between employers and employees that happened at scale in the post-pandemic environment.
+
+ When labor supply is barely growing, monthly job gains are naturally going to run low. There are always areas of concern in the labor market—for example, among recent graduates. In general, though, people who want to work, by and large, are holding or finding jobs. They may well be concerned about possible future labor disruptions, but as of now, I believe the labor markets are consistent with full employment.
+
+ But on the price-stability side of our mandate, the numbers are more concerning. The Fed's preferred measure of inflation, the 12-month change in the PCE price index, stands at 3.7 percent, while the six-month change is 4.1 percent. The comparable measures from the consumer price index (CPI) are also elevated, as are the core measures of both PCE and CPI inflation. None of these measures are perfect, but they all tell a similar story: Inflation is running above our 2 percent target. So the Fed's predominant focus right now should be on prices.
+
+ The job for policymakers is to capture underlying trend inflation—that is, the generalized change in prices in the economy, unaffected by idiosyncratic factors. We want to gauge whether underlying inflation is rising, falling, or stuck in place. We also want to understand not just the direction of travel, but also the speed. Each of these broad inflation measures has fallen significantly from their 2022 heights. But progress over the past two years has been modest.
+
+ And while this summer's PCE and CPI readings were better than expected, they do not tell me that underlying trends have meaningfully improved.
+
+ The data also show moderate wage growth. But in tracking underlying inflation, wage growth has not proven a reliable indicator of future inflation for a very long time. 18 
+
+ To try to gauge underlying inflation, I find it instructive to disaggregate the 199 individual components of the PCE price measure. Over the past 12 months, 54 percent of goods and services in the PCE basket showed price increases above 3 percent. This is well below the post-pandemic highs of about 77 percent, but it remains well above the level of 32 percent in the two decades that preceded the pandemic.
+
+ Looking over just the past six months, the conclusion is similar: Of goods and services in the PCE basket, 49 percent showed annualized price increases above 3 percent. Again, this is well below the post-pandemic highs but still quite elevated.
+
+ The recent rise in overall commodity prices also bears watching. What we need to judge is whether trends indicate upside inflation risks.
+
+ It matters, too, whether the inflation readings of the past five-plus years have seeped into expectations. The good news is that measures of inflation expectations in the medium term, by and large, look stable. And inflation compensation measures from the swaps market send a strong and similar message.
+
+ Especially in light of recent developments, it is a credit to the Fed as an institution—and consistent with the best of the Fed's traditions—that market prices show confidence that we will deliver price stability. And I can assure you . . . they're right.
+
+ The thing about market measures of inflation expectations in economic history is that they tend to look strong and durable until they don't. Those expectations are not pushed around easily, and right now they are well anchored. But they must be closely minded. It's the Fed's job to make sure that inflation expectations do not get unanchored.
+
+ There is one signal nobody can miss: The responsibility for 65 months of sustained, elevated inflation sits squarely with the central bank. And that is where it belongs.
+
+ Here is my standard: We must be confident that underlying inflation is moving to our objective, clearly and at sufficient speed. Otherwise, we have work to do. That's our job . . . our mandate . . . and our charge to keep.
+
+ Conclusion 
+
+I stand here today committed to a discipline, not to a decision.
+
+ My Fed colleagues and I are hardly the first to hold these positions in a time of great consequence. We are determined to redeem the time by doing our very best work.
+
+ We take our responsibility seriously, with humility and with resolve. So much depends on choices we make. Sound monetary policy helps households and businesses to prosper. When carried out effectively, it broadens and deepens the momentum of our economy . . . and helps to secure America's leadership in the world. And I know that our country needs us to think carefully and act wisely.
+
+ It is a tremendous honor to serve once again at the Federal Reserve. I am truly grateful for the encouragement and good counsel I've received from my colleagues . . . and from so many of you in this room. For that, and for your kind attention this morning, I thank you.
+
+ 1. See Lawrence H. Summers (2015), "Have We Entered an Age of Secular Stagnation? IMF Fourteenth Annual Research Conference in Honor of Stanley Fischer, Washington, DC," IMF Economic Review, vol. 63 (1), pp. 277–80, https://doi.org/10.1057/imfer.2015.6; and Ben S. Bernanke (2005), " The Global Saving Glut and the U.S. Current Account Deficit ," speech delivered at the Sandridge Lecture, Virginia Association of Economists, Richmond, Va., March 10. Return to text 
+
+ 2. See Robert J. Gordon (2017), The Rise and Fall of American Growth: The U.S. Standard of Living since the Civil War (Princeton, N.J.: Princeton University Press). Return to text 
+
+ 3. See George P. Shultz and James Timbie (2020), A Hinge of History: Governance in an Emerging New World (Stanford, Calif.: Hoover Institution Press). Return to text 
+
+ 4. See Sha Sajadieh, Loredana Fattorini, Raymond Perrault, Yolanda Gil, Vanessa Parli, Lapo Santarlasci, Juan Pava, Nestor Maslej, Russ Altman, Erik Brynjolfsson, Carla Brodley, Jack Clark, Virginia Dignum, Vipin Kumar, James Landay, Terah Lyons, James Manyika, Juan Carlos Niebles, Yoav Shoham, Elham Tabassi, Russell Wald, Toby Walsh, and Dan Weld (2026), The AI Index 2026 Annual Report (PDF) (Stanford, Calif.: AI Index Steering Committee, Institute for Human-Centered AI, Stanford University, April). Return to text 
+
+ 5. See Kevin M. Warsh (2014), " Transparency and the Bank of England's Monetary Policy Committee (PDF) ," Review commissioned by the Bank of England (London: BOE, December). Return to text 
+
+ 6. While forward guidance became a regular feature of Federal Open Market Committee (FOMC) policy statements beginning in December 2008, there are earlier examples of the practice; see Edward Nelson (2021), " The Emergence of Forward Guidance as a Monetary Policy Tool ," Finance and Economics Discussion Series 2021-033 (Washington: Board of Governors of the Federal Reserve System, May). Return to text 
+
+ 7. Consistent with this concern, some evidence suggests that survey and market expectations adjust too slowly away from prior projections of the Summary of Economic Projections, resulting in predictable forecast errors; see Eric Engstrom (2026), " Anchored to the Dot Plot: Central Bank Projections and Interest Rate Expectations ," Finance and Economics Discussion Series 2026-026 (Washington: Board of Governors of the Federal Reserve System, May). Return to text 
+
+ 8. See Ben S. Bernanke (2004), " What Policymakers Can Learn from Asset Prices ," speech delivered at the Investment Analysts Society of Chicago, Chicago, Ill., April 15; and Jeremy C. Stein and Adi Sunderam (2018), "The Fed, the Bond Market, and Gradualism in Monetary Policy," Journal of Finance, vol. 73 (June), pp. 1015–60. Return to text 
+
+ 9. See Stephen Morris and Hyun Song Shin (2002), "Social Value of Public Information," American Economic Review, vol. 92 (December), pp. 1521–34. Return to text 
+
+ 10. Romer and Romer argue that the 2021 inflation experience "reinforces the view that forward guidance can be a barrier to reacting quickly to changed conditions and risks policy becoming overly based on internal considerations rather than macroeconomic fundamentals." See Christina D. Romer and David H. Romer (2026), " An Early Retrospective on Monetary Policy in the Powell Era (PDF) ," Hutchins Center Working Paper 108 (Washington: Hutchins Center on Fiscal and Monetary Policy, June, page 3). Return to text 
+
+ 11. This framing echoes Sherman Kent, who argued that intelligence must be "useful to the people who make the decisions: that is, that it is relevant to their problems, that it is complete, accurate, and timely." See Sherman Kent (1949), Strategic Intelligence for American World Policy (Princeton, N.J.: Princeton University Press), page 69. Return to text 
+
+ 12. See N. Gregory Mankiw (2024), "Six Beliefs I Have About Inflation: Remarks Prepared for NBER Conference on 'Inflation in the Covid Era and Beyond'," Journal of Monetary Economics, vol. 148 (November), 103631. Return to text 
+
+ 13. See Kevin M. Warsh (2022), "Money Matters: The US Dollar, Cryptocurrency, and the National Interest," in Paul Ryan and Angela Rachidi, eds., American Renewal (Washington: American Enterprise Institute), pp. 283−303, https://www.americanrenewalbook.com/money-matters-the-us-dollar-cryptocurrency-and-the-national-interest. Return to text 
+
+ 14. As Ravi Menon, former managing director of the Monetary Authority of Singapore, has observed: "The credibility of money is underpinned by this two-tier monetary structure where commercial banks create money and central banks preserve its value." See Ravi Menon (2021), " The Future of Money, Finance and the Internet (PDF) ," speech delivered at the Singapore FinTech Festival, November 9, page 1. Return to text 
+
+ 15. See Scott McDonald (2020), "Top 20 Quotes from Chuck Yeager, the First Man to Break the Sound Barrier," Newsweek, December 8, https://www.newsweek.com/top-20-quotes-chuck-yeager-first-man-break-sound-barrier-1553038. Return to text 
+
+ 16. Or, as Kay and King put it, the question to ask is, "What is going on here?" See John Kay and Mervyn King (2020), Radical Uncertainty: Decision-Making Beyond the Numbers (New York: W.W. Norton & Company). Return to text 
+
+ 17. See Federal Open Market Committee (2026), " Minutes of the Federal Open Market Committee: July 28–29, 2026 (PDF) " (Washington: FOMC, July). Return to text 
+
+ 18. See Gadi Barlevy and Luojia Hu (2023), " Unit Labor Costs and Inflation in the Non-Housing Service Sector (PDF) ," Chicago Fed Letter 477 (Federal Reserve Bank of Chicago, March); and Adam H. Shapiro (2023), " How Much Do Labor Costs Drive Inflation? " FRBSF Economic Letter 2023-13 (Federal Reserve Bank of San Francisco, May 30). Return to text

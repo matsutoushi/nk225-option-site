@@ -145,5 +145,12 @@
     "role": "chair",
     "source": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20260729.pdf",
     "file": "2026-07-29_fomc-press-conference-transcript-2026-07-29.txt"
+  },
+  {
+    "date": "2026-08-28",
+    "title": "Warsh, In Our Time",
+    "role": "chair",
+    "source": "https://www.federalreserve.gov/newsevents/speech/warsh20260828a.htm",
+    "file": "2026-08-28_warsh-in-our-time.txt"
   }
 ]
