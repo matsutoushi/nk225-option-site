@@ -39,6 +39,7 @@ LAYOUT = dict(
 T = {
     "ja": {
         "title": "データ分析ツール | 日経225オプション データ分析",
+        "desc": "海外投資家の累積売買、COT投機筋ポジション、証券会社別の先物建玉、Put/Callレシオの時系列を、期間を変えながら自分で確かめられるページです。各グラフに読み方の解説を添えています。",
         "h1": "データ分析ツール",
         "lead": "日次・週次で更新している時系列データを、期間を変えながら自分で確かめるためのページです。グラフはドラッグで期間ズーム、ダブルクリックでリセット、凡例クリックで系列の表示/非表示ができます。",
         "intro": "ダッシュボードが「今日どうなっているか」を示すのに対して、このページは<b>「これまでどう動いてきたか」</b>を見るためのものです。"
@@ -99,6 +100,7 @@ T = {
     },
     "en": {
         "title": "Data Explorer | Nikkei 225 Options Data",
+        "desc": "Interactive history for foreign-investor flows, CFTC speculator positioning, Nikkei futures open interest by named participant, and the put/call ratio. Each chart carries a note on what it does and does not tell you.",
         "h1": "Data Explorer",
         "lead": "Interactive history for the daily and weekly series this site collects. Drag to zoom, double-click to reset, click legend entries to show/hide series.",
         "intro": "The dashboard shows where things stand today. This page shows <b>how they got there</b>. "
@@ -344,6 +346,7 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {gsv}
 {og}
+<meta name="description" content="{t['desc']}">
 <title>{t['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="{PLOTLY_CDN}" charset="utf-8"></script>

@@ -1233,8 +1233,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
 {og}
-<title>{P['title']}</title>
 <meta name="description" content="{P['desc']}">
+<title>{P['title']}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -1342,6 +1342,7 @@ def compose_post(date: str, pcr: dict, oi: pd.DataFrame, expiry: str,
 RISKPAGE = {
     "ja": {
         "title": "マクロリスクモニター | 景気後退・インフレ再燃・金融ストレスの兆候チェック",
+        "desc": "景気後退・インフレ・金融ストレスの主要指標を、FRED等の公式統計から毎営業日自動更新。Sahmルール、イールドカーブ、期待インフレ率、ハイイールドスプレッド、VIXを一枚で確認できます。",
         "h1": "マクロリスクモニター",
         "updated": "最終更新: {now} JST(毎営業日 自動更新。指標により月次・週次)",
         "lead": "米国の公式統計・市場データから、リスクイベントの兆候を機械的にチェックするページです。信号は出典に記載の閾値による自動判定で、当サイトの相場予想ではありません。",
@@ -1357,6 +1358,7 @@ RISKPAGE = {
     },
     "en": {
         "title": "Macro Risk Monitor | Recession, Inflation & Financial Stress Signals",
+        "desc": "Recession, inflation and financial-stress indicators on one page, rebuilt every business day from FRED and other official sources: Sahm rule, yield curve, breakeven inflation, high-yield spreads and the VIX.",
         "h1": "Macro Risk Monitor",
         "updated": "Last updated {now} JST (auto-updated every business day; some series weekly/monthly)",
         "lead": "A mechanical check of risk-event signals from official US statistics and market data. Signals are threshold-based flags per the cited sources — not this site's market forecast.",
@@ -1443,7 +1445,7 @@ def chart_rates(series: dict, lang: str) -> str | None:
 def render_risk(risk: dict, lang: str, chart_rel: str | None,
                 rates_rel: str | None = None) -> None:
     P = RISKPAGE[lang]
-    og = og_meta(P["title"], pair=("risk.html", "en/risk.html"))
+    og = og_meta(P["title"], P["desc"], ("risk.html", "en/risk.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     counts = {"green": 0, "yellow": 0, "red": 0}
@@ -1480,6 +1482,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
 {og}
+<meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -1519,6 +1522,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
 FEDPAGE = {
     "ja": {
         "title": "FRB要人発言・公式文書トラッカー | FOMC声明・講演・議会証言",
+        "desc": "FOMC声明・議事要旨・理事の講演・議会証言を、FRB公式RSSから毎営業日自動収集して一覧にしています。リンク先はすべてfederalreserve.govの英語原文です。",
         "h1": "FRB要人発言トラッカー",
         "updated": "最終更新: {now} JST(毎営業日 自動更新)",
         "lead": "米連邦準備制度理事会(FRB)の公式サイトから、FOMC関連リリース・講演・議会証言を自動収集しています。リンク先はすべて英語の原文(federalreserve.gov)です。FOMC声明など重要文書の日本語解説は、今後不定期で追加予定です。",
@@ -1530,6 +1534,7 @@ FEDPAGE = {
     },
     "en": {
         "title": "Fed Watch | FOMC Releases, Speeches & Testimony Tracker",
+        "desc": "FOMC statements, minutes, governor speeches and congressional testimony, collected automatically every business day from the Federal Reserve Board's official RSS feeds and linked to the original documents.",
         "h1": "Fed Watch",
         "updated": "Last updated {now} JST (auto-updated every business day)",
         "lead": "Latest FOMC-related releases, speeches and congressional testimony, collected automatically from the Federal Reserve Board's official RSS feeds. All links go to original documents on federalreserve.gov.",
@@ -1545,7 +1550,7 @@ FEDPAGE = {
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
-    og = og_meta(P["title"], pair=("fedwatch.html", "en/fedwatch.html"))
+    og = og_meta(P["title"], P["desc"], ("fedwatch.html", "en/fedwatch.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     sections = []
     head = "".join(f"<th>{c}</th>" for c in P["cols"])
@@ -1569,6 +1574,7 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
 {og}
+<meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -1600,6 +1606,7 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 USPAGE = {
     "ja": {
         "title": "米国市場データ | COTポジション・CBOE Put/Callレシオ",
+        "desc": "CFTCのCOT投機筋ポジション、CBOEのPut/Callレシオ、SPXの建玉とガンマエクスポージャー推定、レバレッジETFの純資産推移を毎営業日自動更新しています。",
         "h1": "米国市場データ",
         "updated": "COT基準日: {cot_date}(毎週金曜更新) | CBOE基準日: {pcr_date} | 最終更新: {now} JST",
         "kpi": ["CBOE 全体PCR", "株式PCR", "SPX PCR"],
@@ -1626,6 +1633,7 @@ USPAGE = {
     },
     "en": {
         "title": "US Markets | COT Positioning & CBOE Put/Call Ratios",
+        "desc": "CFTC Commitments of Traders positioning, CBOE put/call ratios, SPX open interest with estimated gamma exposure, and leveraged-ETF assets under management. Rebuilt every business day from official data.",
         "h1": "US Markets Data",
         "updated": "COT as of {cot_date} (updated every Friday) | CBOE as of {pcr_date} | Last updated {now} JST",
         "kpi": ["CBOE Total P/C", "Equity P/C", "SPX P/C"],
@@ -2035,7 +2043,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
               letf: dict | None = None) -> None:
     import us_data
     P = USPAGE[lang]
-    og = og_meta(P["title"], pair=("us.html", "en/us.html"))
+    og = og_meta(P["title"], P["desc"], ("us.html", "en/us.html"))
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     ver = datetime.now(JST).strftime("%Y%m%d%H%M")
     chart_src = f"{P['prefix']}{chart_rel}?v={ver}"
@@ -2112,6 +2120,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
 {og}
+<meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{CSS_MAIN}</style>
@@ -2427,18 +2436,19 @@ EN_GUIDE_PAIRS = {en.split("/", 1)[1]: ja for ja, en in GUIDE_PAIRS.items()}
 
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
-    def shell(title, body, ad="", pair=None):
+    def shell(title, body, ad="", pair=None, desc=""):
         # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
         # ADSENSE_CLIENT さえ入っていれば出す。
         ad_head = adsense_head()
-        og = og_meta(f"{title} | 日経225オプション データ分析", pair=pair)
+        og = og_meta(f"{title} | 日経225オプション データ分析", desc, pair)
+        meta_desc = f'\n<meta name="description" content="{desc}">' if desc else ""
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {GSV_META}
-{og}
+{og}{meta_desc}
 <title>{title} | 日経225オプション データ分析</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>{SUB_CSS}</style>{ad_head}
@@ -2494,16 +2504,23 @@ Googleが広告Cookieを使用することにより、ユーザーは
 <p>2026年7月18日</p>
 """
     with open(os.path.join(SITE, "about.html"), "w", encoding="utf-8") as f:
-        f.write(shell("運営者情報", about))
+        f.write(shell("運営者情報", about, desc=(
+            "当サイトの運営者と、掲載しているデータの出典・作成方法について。"
+            "日本取引所グループ・CFTC・CBOE・FRED等の公表データを集計しており、"
+            "取引所の生データをそのまま再配布することはしていません。")))
     with open(os.path.join(SITE, "privacy.html"), "w", encoding="utf-8") as f:
-        f.write(shell("プライバシーポリシー", privacy))
+        f.write(shell("プライバシーポリシー", privacy, desc=(
+            "当サイトのプライバシーポリシー。アクセス解析(Google Analytics)、"
+            "第三者配信の広告サービス、アフィリエイトプログラムの利用と、"
+            "Cookieの取り扱いについて記載しています。")))
     # guide-start はアフィリエイトが4枠あるので広告を入れない(宣伝ページ感が強まるため)
     NO_AD = {"guide-start.html"}
     for fname, (title, body) in pages.GUIDE_PAGES.items():
         ad = "" if fname in NO_AD else adsense_unit("ja")
         en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
-            f.write(shell(title, body, ad, (fname, en) if en else None))
+            f.write(shell(title, body, ad, (fname, en) if en else None,
+                          pages.GUIDE_DESC.get(fname, "")))
 
     def shell_en(title, body, desc="", ad="", pair=None):
         # 審査中はまだ広告枠を出せないが、読み込みタグはサイト確認に必要なので
