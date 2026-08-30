@@ -923,10 +923,11 @@ PAGE = {
         "vol_unit": " 億株",
         "kpi_sq": "次回SQ",
         "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
-        "mini_lead": "日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。",
+        "mini_lead": '日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
         "sec_flows": "海外投資家の売買動向(週次)",
         "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より。上段=累積ネット売買(日経平均を重ね描き)、下段=直近1年の週次。プラス=買い越し、マイナス=売り越し。{latest}",
         "sec_oitable": "オプション建玉一覧(限月別)",
+        "oitable_lead": 'JPXが日次公開する直近3限月分。手前の限月より先の限月の方が厚いことがあります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a> ・ <a href="guide-sq.html" style="color:#1f6fd0">→ SQとは</a>)',
         "sec_oi": "行使価格別 建玉分布",
         "mini_note": "※ミニオプション({n:,}枚)を1/10のラージ換算で合算しています。",
         "sm_price": "日経平均は<b>{spot:,.0f}円</b>({chg:+,.0f}円)。",
@@ -943,13 +944,14 @@ PAGE = {
         "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
         "hedge_more": '見方の詳しい解説は <a href="guide-gex.html">ガンマエクスポージャーとは</a> をどうぞ。',
         "sec_pv": "手口上位一覧(取引参加者別 取引高)",
+        "pv_lead": '売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a>)',
         "sec_fut": "先物の出来高(ラージ換算での比較)",
-        "fut_lead": "miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。",
+        "fut_lead": 'miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
         "fut_cols": ["商品", "出来高(枚)", "ラージ換算", "取引代金"],
         "fut_total": "合計",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
         "sec_weekly": "先物 取引参加者別建玉(週次)",
-        "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。",
+        "wk_chart_lead": '棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。<b>ゼロと比べても意味がありません</b>。その会社自身の平常値と比べてください。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a>)',
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
         "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
@@ -996,10 +998,11 @@ PAGE = {
         "vol_unit": " M sh",
         "kpi_sq": "Next SQ",
         "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
-        "mini_lead": "Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines.",
+        "mini_lead": 'Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Field guide</a>)',
         "sec_flows": "Foreign Investor Flows (Weekly)",
         "flows_lead": "Weekly net buying by foreign investors in TSE Prime cash equities, shown as a cumulative line (top) and weekly bars (bottom), from JPX trading-by-investor-type data. Positive = net buying. {latest}",
         "sec_oitable": "Options Open Interest by Expiry",
+        "oitable_lead": 'The nearest three expiries, as published daily by JPX. The back month is sometimes larger than the front. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Field guide</a> ・ <a href="guide-sq.html" style="color:#1f6fd0">→ SQ explained</a>)',
         "sec_oi": "Open Interest Distribution by Strike",
         "mini_note": "Includes mini options ({n:,} contracts) converted to large-equivalent (1/10).",
         "sm_price": "Nikkei 225 closed at <b>{spot:,.0f}</b> ({chg:+,.0f}). ",
@@ -1016,15 +1019,16 @@ PAGE = {
         "hedge_damp": "dampening moves", "hedge_amp": "amplifying moves",
         "hedge_more": '',
         "sec_pv": "Trading Volume by Participant (daily ranking)",
+        "pv_lead": 'Volume only — this says nothing about direction. It shows which firms are active. (<a href="guide-participants.html" style="color:#1f6fd0">→ How to read it</a>)',
         "sec_fut": "Futures Volume (large-equivalent comparison)",
-        "fut_lead": "Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown.",
+        "fut_lead": 'Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown. (<a href="glossary.html" style="color:#1f6fd0">→ Glossary</a>)',
         "fut_cols": ["Product", "Volume (contracts)", "Large-equiv", "Turnover"],
         "fut_total": "Total",
-        "oi_lead": "Strikes with heavy open interest often act as reference levels (\"walls\") watched by market participants.",
+        "oi_lead": 'Strikes with heavy open interest often act as reference levels ("walls"). The largest open interest in the chain is usually a far out-of-the-money legacy position, so look near spot. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Why</a>)',
         "sec_weekly": "Futures Open Interest by Trading Participant (Weekly)",
-        "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size.",
+        "wk_chart_lead": 'Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size. <b>Comparing against zero is useless</b> — compare each firm against its own baseline. (<a href="guide-participants.html" style="color:#1f6fd0">→ How to read it</a>)',
         "sec_pcr": "Put/Call Ratio Trend",
-        "pcr_lead": "Above 1.0 = puts dominant (hedging demand); below 1.0 = calls dominant. Participant names in the tables are Japanese trading-participant names as published by JPX.",
+        "pcr_lead": 'Above 1.0 = puts dominant; below 1.0 = calls dominant. <b>1.0 is not the neutral line</b> — the measured average is 1.57 for large contracts. (<a href="guide-put-call-ratio.html" style="color:#1f6fd0">→ Full explanation</a>)',
         "kpi_guide": 'What do these numbers mean? → '
                      '<a href="guide-put-call-ratio.html">Put/call ratio</a>'
                      ' ・ <a href="guide-gamma-exposure.html">Gamma exposure</a>'
@@ -1178,7 +1182,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     if extras.get("pv"):
         inner = participant_volume_html(extras["pv"], lang)
         if inner:
-            pv_section = f'<h2 id="pv">{P["sec_pv"]}</h2>\n  {inner}'
+            pv_section = (f'<h2 id="pv">{P["sec_pv"]}</h2>'
+                          f'<p>{P["pv_lead"]}</p>{inner}')
 
     # 建玉分布にミニを合算した場合の注記
     mini_note = ""
@@ -1261,6 +1266,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   {market_section}
 
   <h2 id="oitable">{P['sec_oitable']}</h2>
+  <p>{P['oitable_lead']}</p>
   {tables['oi']}
 
   <h2 id="oi">{P['sec_oi']}</h2>
