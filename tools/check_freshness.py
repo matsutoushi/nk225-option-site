@@ -173,7 +173,10 @@ def main() -> int:
         print(body)
         return 1
 
-    if send_mail(subject, body):
+    sent = send_mail(subject, body)
+    # 記録するのは本当に遅れていたときだけ。--force のテスト送信で記録してしまうと、
+    # 同じ日に本物の遅延が起きても「通知済み」と判定されて黙ってしまう。
+    if sent and stale:
         state["alerted_for"] = jpx
         state["alerted_at"] = now.isoformat()
         save_state(state)
