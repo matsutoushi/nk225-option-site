@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 # site/ はビルド生成物(GitHub Actionsが毎回作り直す)
 site/
+tools/.freshness_state.json
+tools/check_freshness.log
