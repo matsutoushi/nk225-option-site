@@ -57,20 +57,35 @@ python tools\check_freshness.py             通常実行
 
 `check_freshness.bat` を呼ぶ。実行ログは `tools\check_freshness.log` に上書きで残る。
 
-推奨する時刻（JST）。JPXの建玉は20:00頃に出るので、その後に2回。
+登録済みの時刻（JST）:
 
-- **21:00** — 定刻どおり動いていれば、この時点で当日分になっている
-- **23:00** — 21:00に間に合わなかった場合の保険
+| タスク名 | 時刻 |
+|---|---|
+| `nk225-freshness-1800` | 毎日 18:00 |
+| `nk225-freshness-1900` | 毎日 19:00 |
 
-登録手順:
+**なぜ18時台で判定できるのか。** サイトの「データ基準日」は
+`discover_files()` が返す**出来高ファイルの日付**で、JPXはこれを16時台に公開する。
+最初のcronは16:37なので、正常なら18:00の時点で当日分になっている。
+建玉(20:00頃)を待つ必要はない。
 
-1. タスクスケジューラ →「基本タスクの作成」
-2. トリガー: 毎日 21:00（同じ手順でもう1つ 23:00 のタスクを作る）
-3. 操作:「プログラムの開始」→ プログラム欄に
-   `C:\Users\tomo0\Projects\nk225-options-site\tools\check_freshness.bat`
-4. 「最上位の特権で実行する」は不要
-5. 作成後、プロパティで「ユーザーがログオンしているときのみ実行する」を選ぶ
-   （バックグラウンド実行にするとネットワークに出られないことがある）
+ただし**JPXの出来高公開がいつもより遅れた日**は、18:00の時点で
+「JPXは当日・サイトは前日」に見えて空振りすることがある。
+その場合19:00には解消しているが、同じJPX日付には二度送らない作りなので
+撤回のメールは来ない。ログ(`check_freshness.log`)を見れば分かる。
+
+PowerShellから登録し直す場合（タスク名にコロンは使えない）:
+
+```powershell
+$bat = "C:\Users\tomo0\Projects\nk225-options-site\tools\check_freshness.bat"
+$action  = New-ScheduledTaskAction -Execute $bat -WorkingDirectory (Split-Path $bat -Parent)
+$trigger = New-ScheduledTaskTrigger -Daily -At "18:00"
+$set     = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName "nk225-freshness-1800" -Action $action -Trigger $trigger -Settings $set
+```
+
+「ユーザーがログオンしているときのみ実行する」(Interactive) にしてある。
+バックグラウンド実行にするとネットワークに出られないことがあるため。
 
 土日祝も動くが、JPXが公開していない日は何も送らないので放置してよい。
 
