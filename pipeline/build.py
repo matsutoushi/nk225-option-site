@@ -1243,7 +1243,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{CSS_MAIN}</style>
+<style>{CSS_MAIN}</style>{adsense_head()}
 </head>
 <body>
 <header>
@@ -1491,7 +1491,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
 <meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{CSS_MAIN}</style>
+<style>{CSS_MAIN}</style>{adsense_head()}
 </head>
 <body>
 <header>
@@ -1583,7 +1583,7 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 <meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{CSS_MAIN}</style>
+<style>{CSS_MAIN}</style>{adsense_head()}
 </head>
 <body>
 <header>
@@ -2129,7 +2129,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <meta name="description" content="{P['desc']}">
 <title>{P['title']}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>{CSS_MAIN}</style>
+<style>{CSS_MAIN}</style>{adsense_head()}
 </head>
 <body>
 <header>
@@ -2932,9 +2932,10 @@ def main() -> None:
             tools_page.render_tools(
                 SITE, lang, DATA, n225_hist, us_data.COT_MARKETS,
                 CSS_MAIN, GSV_META,
-                og_meta(tools_page.T[lang]["title"]),
+                og_meta(tools_page.T[lang]["title"], tools_page.T[lang]["desc"]),
                 site_nav(lang, tools_page.T[lang]["lang"]),
-                footer_sitemap(lang), PAGE[lang]["footer_disclaimer"])
+                footer_sitemap(lang), PAGE[lang]["footer_disclaimer"],
+                adsense_head())
         print("tools page generated")
     except Exception as e:
         warn(f"tools page failed: {e!r}")

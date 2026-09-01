@@ -284,7 +284,7 @@ def _pcr_fig(pcr_hist: pd.DataFrame, lang: str):
 def render_tools(site_dir: str, lang: str, data_dir: str,
                  n225: pd.DataFrame | None, cot_markets: list,
                  css: str, gsv: str, og: str, nav: str, sitemap: str,
-                 disclaimer: str) -> None:
+                 disclaimer: str, ad_head: str = "") -> None:
     """tools.html を生成する。データが無いセクションは自動的に省略する。"""
     t = T[lang]
     prefix = "../" if lang == "en" else ""
@@ -362,7 +362,7 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
     .plot {{ padding: 4px; }}
     .plot .modebar {{ transform: scale(0.85); transform-origin: top right; }}
   }}
-</style>
+</style>{ad_head}
 </head>
 <body>
 <header>
