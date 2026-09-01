@@ -944,14 +944,14 @@ PAGE = {
         "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
         "hedge_more": '見方の詳しい解説は <a href="guide-gex.html">ガンマエクスポージャーとは</a> をどうぞ。',
         "sec_pv": "手口上位一覧(取引参加者別 取引高)",
-        "pv_lead": '売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a>)',
+        "pv_lead": '売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a> ・ <a href="guide-brokers.html" style="color:#1f6fd0">→ 各社が何をしているのか</a>)',
         "sec_fut": "先物の出来高(ラージ換算での比較)",
         "fut_lead": 'miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
         "fut_cols": ["商品", "出来高(枚)", "ラージ換算", "取引代金"],
         "fut_total": "合計",
         "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
         "sec_weekly": "先物 取引参加者別建玉(週次)",
-        "wk_chart_lead": '棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。<b>ゼロと比べても意味がありません</b>。その会社自身の平常値と比べてください。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a>)',
+        "wk_chart_lead": '棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。<b>ゼロと比べても意味がありません</b>。その会社自身の平常値と比べてください。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a> ・ <a href="guide-brokers.html" style="color:#1f6fd0">→ 各社が何をしているのか</a>)',
         "sec_pcr": "Put/Call レシオの推移",
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
         "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
@@ -2321,7 +2321,7 @@ def footer_sitemap(lang: str) -> str:
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
-            ("guide-teguchi.html", "手口の見方"), ("guide-sq.html", "SQとは"),
+            ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             ("en/", "English")]
@@ -2410,6 +2410,7 @@ def render_seo_files() -> None:
              "fedwatch.html", "en/fedwatch.html",
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
+             "guide-brokers.html",
              "guide-sq.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
