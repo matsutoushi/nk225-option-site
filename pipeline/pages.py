@@ -594,6 +594,10 @@ GUIDE_DESC = {
         "ＡＢＮクリアリン、ソシエテＧ、ＨＳＢＣなど、日経225先物の手口に出てくる証券会社が"
         "それぞれ何をしているのか。直近52週の実測では、ラージで8社が52週すべて同じ方向でした。"
         "会社ごとの性格と、手口から読めること・読めないことを整理します。",
+    "guide-jpx-data.html":
+        "日経225の公式データがどこにあり、いつ・どのファイル名で出るのか。"
+        "JPXの当日取引高・清算値段・建玉残高・取引参加者別建玉と、日経公式のCSVを一覧にしました。"
+        "取引参加者別建玉は毎週30社を実名で公表しており、米CFTCが3分類までしか出さないのと対照的です。",
 }
 
 # {ファイル名: (タイトル, 本文HTML)}
@@ -912,6 +916,94 @@ SQが近づくにつれて、現値の周辺にどれだけ建玉が残ってい
 <li><a href="guide-oi.html">建玉分布の見方</a> — 「壁」はどう読むか</li>
 <li><a href="guide-pcr.html">Put/Callレシオとは</a> — 市場心理の偏りを見る</li>
 <li><a href="glossary.html">用語集</a> — SQ・限月・デルタなどの基本用語</li>
+</ul>
+"""),
+    "guide-jpx-data.html": ("日経225の公式データはどこにあるか", """
+<h1>日経225の公式データはどこにあるか — ファイル名・公表時刻の一覧</h1>
+<p>当サイトの数字は、すべてJPXと日本経済新聞社が無料で公開しているファイルから作っています。
+有料の端末は使っていません。どこに何があるのかを知っていれば、誰でも同じものを再現できます。</p>
+<p>ただし<b>ファイルは種類ごとに公表時刻がバラバラ</b>で、形式にもクセがあります。
+このページでは、どのデータがいつ・どのファイル名で出るのかを整理します。</p>
+
+<h2>一覧</h2>
+<p>時刻はいずれも平日の日本時間で、実測にもとづく目安です。JPXは公式に時刻を約束していません。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>データ</th><th>提供元</th><th>ファイル名</th><th>公表</th><th>分かること</th></tr></thead>
+<tbody>
+<tr><td>当日取引高</td><td>JPX</td><td><code>YYYYMMDD_derivatives_market_data_whole_day.xlsx</code></td><td>16:30頃</td><td>商品ごとの出来高。プット/コール別なので<a href="guide-pcr.html">PCR</a>が出せる</td></tr>
+<tr><td>清算値段</td><td>JPX</td><td><code>rbYYYYMMDD.csv</code></td><td>18:00頃</td><td>権利行使価格ごとの清算値段・<b>ボラティリティ</b>・残存日数・原資産価格</td></tr>
+<tr><td>取引参加者別取引高(手口)</td><td>JPX</td><td>JSON形式</td><td>17:45頃</td><td>どの会社を通じて何枚売買されたか。<b>方向は含まない</b></td></tr>
+<tr><td>建玉残高</td><td>JPX</td><td><code>YYYYMMDDopen_interest.xlsx</code></td><td>20:00頃</td><td>権利行使価格ごとの未決済建玉。<a href="guide-oi.html">建玉の見方</a></td></tr>
+<tr><td>取引参加者別建玉残高</td><td>JPX</td><td><code>indexfut_oi_by_tp.xlsx</code></td><td>週次(週の第1営業日)</td><td>会社ごとの買い越し/売り越し。<b>方向が分かる</b></td></tr>
+<tr><td>投資部門別売買状況</td><td>JPX</td><td>週次xls</td><td>週次(木曜頃)</td><td>海外投資家・個人など主体別の現物売買代金</td></tr>
+<tr><td>日経平均 日次四本値</td><td>日経</td><td><code>nikkei_stock_average_daily_jp.csv</code></td><td>毎営業日</td><td>日経平均の始値・高値・安値・終値</td></tr>
+<tr><td>日経平均VI</td><td>日経</td><td><code>nikkei_stock_average_vi_daily_jp.csv</code></td><td>毎営業日</td><td>期待変動率の指数。<a href="glossary.html">用語集</a></td></tr>
+<tr><td>構成銘柄ウエート</td><td>日経</td><td><code>nikkei_stock_average_weight_jp.csv</code></td><td>月次</td><td>どの銘柄が指数をどれだけ動かすか</td></tr>
+<tr><td>トータルリターン指数</td><td>日経</td><td><code>nikkei_225_total_return_index_monthly_en.csv</code></td><td>月次</td><td>配当込みの日経平均</td></tr>
+</tbody>
+</table></div>
+<p>JPXのデリバティブ関連は
+<a href="https://www.jpx.co.jp/markets/derivatives/trading-volume/index.html" rel="nofollow">当日取引高のページ</a>と
+<a href="https://www.jpx.co.jp/markets/derivatives/settlement-price/index.html" rel="nofollow">清算値段のページ</a>に、
+日経公式のCSVは<a href="https://indexes.nikkei.co.jp/nkave/archives/data" rel="nofollow">日経平均プロフィルのアーカイブ</a>にあります。</p>
+
+<h2>世界的に見ると珍しいのは「取引参加者別建玉」です</h2>
+<p>この表のなかで一つだけ性格が違うのが <code>indexfut_oi_by_tp.xlsx</code> です。
+<b>どの証券会社が、どちら側に、何枚持っているかを実名で公表しています。</b></p>
+<p>2026年8月28日時点で、日経225先物では30社、日経225miniでも30社、TOPIX先物で26社の名前が出ています。
+直近52週で一度でも載った会社は49社でした。</p>
+<p>米国の同種のデータはCFTCのCOTレポートですが、こちらは
+<b>商業筋・非商業筋・その他</b>という分類までしか出ません。会社名は永久に出ません。
+欧州のEMIRも、監督当局が集めているだけで公表はされません。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th></th><th>JPX 取引参加者別建玉</th><th>米CFTC COT</th></tr></thead>
+<tbody>
+<tr><td>粒度</td><td><b>会社名(30社)</b></td><td>3分類</td></tr>
+<tr><td>頻度</td><td>週次</td><td>週次</td></tr>
+<tr><td>遅れ</td><td>約1営業日</td><td>3営業日</td></tr>
+<tr><td>費用</td><td>無料</td><td>無料</td></tr>
+</tbody>
+</table></div>
+<p>ただし<b>珍しいことと、役に立つことは別です。</b>
+上位に並ぶ会社の多くは清算・執行を請け負う立場で、表示されている数字はその会社自身の相場観ではなく、
+背後にいる顧客の注文の合計です。実際に直近52週を数えると、ラージでは8社が52週すべて同じ方向でした。
+つまり<b>ポジションを持ち続けているだけで、相場観を反映して動かしているわけではない</b>会社が多いということです。
+このあたりは<a href="guide-brokers.html">手口に出てくる証券会社</a>で詳しく扱っています。</p>
+
+<h2>清算値段CSVには、行使価格ごとのIVが入っています</h2>
+<p>もう一つ、あまり知られていないのが清算値段ファイルです。
+<code>rbYYYYMMDD.csv</code> には銘柄ごとに<b>清算値段・ボラティリティ・残存日数・金利・原資産価格</b>が並んでいます。</p>
+<p>つまり<b>ボラティリティ・スマイルが毎日、無料で手に入ります。</b>
+当サイトの<a href="guide-gex.html">ガンマ・エクスポージャー</a>の推計は、
+このIVと建玉残高を組み合わせて計算しています。IVを自分で逆算する必要がありません。</p>
+
+<h2>形式のクセ</h2>
+<ul>
+<li><b>文字コード</b> — 日経のCSVと JPXの清算値段CSVは Shift_JIS(cp932)です。UTF-8で開くと文字化けします</li>
+<li><b>シートが分かれている</b> — <code>open_interest.xlsx</code> は商品ごとにシートが分かれ、日経225オプションは別紙にあります</li>
+<li><b>見出し行が固定でない</b> — 商品名の行を探してから相対位置で読む必要があります。行番号を決め打ちすると、商品が増えた月に壊れます</li>
+<li><b>ファイル名は毎日変わる</b> — 日付が入るので、一覧ページのリンクから見つける作りにしないと追随できません</li>
+<li><b>週次ファイルは一覧JSONから辿る</b> — 建玉の年別JSONに週ごとのファイルパスが入っています</li>
+</ul>
+<p>当サイトは、これらのファイルを毎営業日ダウンロードして解析し、失敗した日は
+<b>前日の生成物をそのまま残す</b>作りにしています。JPXの書式が変わったときに、
+壊れた数字を表示するより古い数字を出したほうがましだからです。</p>
+
+<h2>使うときの注意</h2>
+<ul>
+<li><b>公表時刻は約束されていません。</b>実際、出来高の公開が普段より遅れる日があります</li>
+<li><b>手口(日次)に方向はありません。</b>買いか売りかは含まれず、取引高の合計だけです</li>
+<li><b>建玉(週次)は週末時点の残高です。</b>今週の途中で何が起きたかは分かりません</li>
+<li><b>再配布には条件があります。</b>個人が分析に使うぶんには問題ありませんが、
+そのまま転載・販売する場合は各社の利用条件を確認してください</li>
+</ul>
+
+<h2>関連ページ</h2>
+<ul>
+<li><a href="guide-teguchi.html">先物の手口の見方</a> — 日次の手口をどう読むか</li>
+<li><a href="guide-brokers.html">手口に出てくる証券会社</a> — 52週の実測から見た各社の性格</li>
+<li><a href="guide-oi.html">建玉残高の見方</a> — 権利行使価格別の建玉から何が読めるか</li>
+<li><a href="about.html">このサイトについて</a> — 計算方法と前提</li>
 </ul>
 """),
     "guide-brokers.html": ("先物の手口に出てくる証券会社", """
