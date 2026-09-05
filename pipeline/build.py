@@ -972,8 +972,8 @@ PAGE = {
              "直近52週の実測。ラージでは8社が52週すべて同じ方向だった"),
             ("guide-jpx-data.html", "公式データはどこにあるか",
              "JPXと日経が無料で出しているファイルの一覧・公表時刻・形式のクセ"),
-            ("guide-sq.html", "SQとは",
-             "満期の決済価格。SQ値は日経平均の始値とは別物"),
+            ("guide-sq.html", "SQとは — 次回はいつ、何時に決まるか",
+             "算出日カレンダーと過去24か月のSQ値。始値との差は平均225円"),
             ("guide-cot.html", "COT(投機筋ポジション)の見方",
              "米国先物市場のポジションの偏りを週次で追う"),
             ("glossary.html", "用語集",
@@ -2448,6 +2448,12 @@ GUIDE_PAIRS = {
 EN_GUIDE_PAIRS = {en.split("/", 1)[1]: ja for ja, en in GUIDE_PAIRS.items()}
 
 
+def n225_daily_for_sq():
+    """SQ値と突き合わせるための日経平均の日次データ(date/始値)。無ければNone。"""
+    p = os.path.join(DATA, "_nikkei_daily.csv")
+    return pd.read_csv(p) if os.path.exists(p) else None
+
+
 def render_static_pages() -> None:
     """運営者情報・プライバシーポリシー(ASP審査・ステマ規制対応の必須ページ)。"""
     def shell(title, body, ad="", pair=None, desc=""):
@@ -2666,6 +2672,15 @@ def main() -> None:
             part_charts[lg] = chart_participants(ph, n225_hist, lg)
     except Exception as e:
         warn(f"participant history failed: {e}")
+    # SQ値の履歴を更新(JPXのPDF)。落ちても日本側のビルドは止めない。
+    # 静的ページ側は data/sq_history.csv を読むだけなので、前回分が残っていれば表示は続く。
+    try:
+        import sq as sq_mod
+        sq_mod.build_history(n225_daily_for_sq()).to_csv(
+            os.path.join(DATA, "sq_history.csv"), index=False)
+    except Exception as e:
+        warn(f"sq history failed: {e}")
+
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
     # --- 日経VI・SQカレンダー・ミニオプション・海外投資家動向 ---
