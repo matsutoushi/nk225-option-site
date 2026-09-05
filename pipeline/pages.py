@@ -1706,7 +1706,8 @@ CTA_BROKER = f"""
 
 # 読まれている解説記事にPR表記+口座開設導線を付与する
 for _key in ("guide-oi.html", "guide-pcr.html", "guide-gex.html", "guide-cot.html",
-             "guide-teguchi.html", "guide-sq.html"):
+             "guide-teguchi.html", "guide-sq.html", "guide-brokers.html",
+             "guide-jpx-data.html"):
     if _key in GUIDE_PAGES:
         _title, _body = GUIDE_PAGES[_key]
         GUIDE_PAGES[_key] = (_title, PR_NOTE + _body + CTA_BROKER)
