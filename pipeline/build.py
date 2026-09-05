@@ -1040,6 +1040,8 @@ PAGE = {
              "Contract basics, SQ, and what the official data covers"),
             ("guide-gamma-exposure.html", "Gamma Exposure, Honestly",
              "What it measures, and the two errors that inflate most published estimates"),
+            ("guide-gamma-flip.html", "The Gamma Flip Level",
+             "Absent on 16 of 34 sessions — when the level matters and when it is noise"),
             ("guide-put-call-ratio.html", "The Put/Call Ratio Trap",
              "Why it falls on some of the worst down days, and how to read it instead"),
             ("guide-sq.html", "Nikkei SQ Explained",
@@ -2329,6 +2331,7 @@ def footer_sitemap(lang: str) -> str:
         items = NAV_LINKS["en"] + [
             ("guide-participants.html", "Participant Positioning"),
             ("guide-gamma-exposure.html", "Gamma Exposure"),
+            ("guide-gamma-flip.html", "Gamma Flip"),
             ("guide-put-call-ratio.html", "Put/Call Ratio"),
             ("guide-sq.html", "SQ Explained"),
             ("../about.html", "About"), ("../privacy.html", "Privacy"),
@@ -2414,7 +2417,7 @@ def render_seo_files() -> None:
              "guide-sq.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
-             "en/guide-gamma-exposure.html", "en/guide-sq.html",
+             "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
              "en/guide-put-call-ratio.html", "en/glossary.html",
              "about.html", "privacy.html"]
     today = datetime.now(JST).strftime("%Y-%m-%d")

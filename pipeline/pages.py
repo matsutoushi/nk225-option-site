@@ -36,6 +36,10 @@ EN_GUIDE_DESC = {
         "Glossary of Japanese index-derivatives terms for global traders: SQ, genkyoku, "
         "tategyoku, teguchi, large vs mini vs micro contracts, Nikkei VI, and the JPX data "
         "files each one comes from.",
+    "guide-gamma-flip.html":
+        "The gamma flip level is quoted as if it always exists. Across 34 sessions of our own "
+        "SPX estimates it was absent on 16 of them, and when it did appear it sometimes sat "
+        "10% away from spot. What the level means, when it is worth watching, and when it is noise.",
 }
 
 # 英語ページ {ファイル名: (タイトル, 本文HTML)} — en/ 配下に出力される
@@ -405,6 +409,87 @@ nothing about it.</p>
 <p><a href="./">→ Live put/call ratio and volumes</a> ・
 <a href="guide-nikkei-options.html">→ Nikkei options field guide</a> ・
 <a href="guide-gamma-exposure.html">→ Gamma exposure explained</a></p>
+"""),
+
+    "guide-gamma-flip.html": ("The Gamma Flip Level", """
+<h1>The Gamma Flip Level — and How Often It Isn't There</h1>
+<p>The "gamma flip" is the index level where aggregate dealer gamma changes sign: above it,
+hedging is assumed to dampen moves; below it, to amplify them. It gets quoted as a hard number,
+often to the point, as though it always exists and always matters.</p>
+<p>We compute it daily for the S&amp;P 500. Over the 34 sessions from 17 July to 4 September 2026,
+<b>the level was absent on 16 of them</b> — no sign change anywhere within ±10% of spot.
+That is the part almost nobody mentions, and it changes how the number should be used.</p>
+
+<h2>What the level actually is</h2>
+<p>Gamma exposure is summed per strike and signed by an assumed dealer convention. Near-the-money
+strikes dominate, so the aggregate is positive where call open interest is concentrated and
+negative where put open interest is. Walk the index level up and down and the sum crosses zero
+somewhere. That crossing is the flip.</p>
+<p>It is not a support or resistance level. It is the point where the <b>sign of an estimated
+hedging flow</b> changes — and the estimate rests on an assumption about dealer positioning that
+nobody publishes (<a href="guide-gamma-exposure.html">the full caveat is here</a>).</p>
+
+<h2>Sixteen sessions had no flip at all</h2>
+<p>When aggregate gamma is negative across the entire ±10% band, there is no crossing to report.
+That happened on 16 of 34 sessions — 47% of the time. Those were not quiet days:</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Date</th><th>SPX</th><th>Total GEX</th><th>Flip</th></tr></thead>
+<tbody>
+<tr><td>2026-07-24</td><td>7,411.98</td><td>−$32.8bn</td><td>none</td></tr>
+<tr><td>2026-08-18</td><td>7,691.76</td><td>−$26.9bn</td><td>none</td></tr>
+<tr><td>2026-08-24</td><td>7,649.34</td><td>−$40.2bn</td><td>none</td></tr>
+<tr><td>2026-09-01</td><td>7,654.59</td><td>−$35.4bn</td><td>none</td></tr>
+</tbody>
+</table></div>
+<p><b>"No flip" is information, not a gap in the data.</b> It says the whole tradable range sits on
+the amplifying side. A site that always prints a number is either widening its search range until
+it finds one, or filling in the blank.</p>
+
+<h2>When it does appear, check the distance</h2>
+<p>On the 18 sessions where a flip existed, it usually sat within about 1.5% of spot — close enough
+to be crossed in a session or two. But not always:</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Date</th><th>SPX</th><th>Flip</th><th>Distance</th></tr></thead>
+<tbody>
+<tr><td>2026-08-14</td><td>7,798.99</td><td>7,800</td><td><b>+0.01%</b></td></tr>
+<tr><td>2026-08-19</td><td>7,716.02</td><td>8,075</td><td>+4.65%</td></tr>
+<tr><td>2026-08-21</td><td>7,674.37</td><td>6,920</td><td><b>−9.83%</b></td></tr>
+<tr><td>2026-08-26</td><td>7,675.70</td><td>6,920</td><td>−9.85%</td></tr>
+<tr><td>2026-09-04</td><td>7,747.71</td><td>7,810</td><td>+0.80%</td></tr>
+</tbody>
+</table></div>
+<p>On 14 August the flip sat one point from spot. That is a level worth watching: hedging behaviour
+would invert on any ordinary move.</p>
+<p>On 21 August it sat 9.8% below. <b>A flip that far away is not a level to trade around</b> — it is
+just the edge of our search window, telling you gamma was negative across everything in between.
+Quoting "the flip is 6,920" without the distance makes a structural fact look like a target.</p>
+
+<h2>The total swings far more than positioning does</h2>
+<p>Our SPX gamma estimate ranged from <b>−$40.2bn to +$282.9bn</b> over these 34 sessions.
+The single largest reading, $282.9bn on 13 August, fell to $97.6bn the next day — <b>down 65% in
+one session</b>.</p>
+<p>Very little positioning changed overnight. What changed is which contracts were still alive:
+gamma is largest near expiry, so a large series rolling off removes most of the total at once.
+The same mechanic runs the Nikkei, where a single SQ removed 156,105 contracts of open interest
+in one session (<a href="guide-sq.html">→ SQ explained</a>).</p>
+<p>So <b>comparing a gamma total across an expiry boundary tells you almost nothing.</b> Compare
+within a cycle, or compare the shape rather than the level.</p>
+
+<h2>How to use it, briefly</h2>
+<ul>
+<li><b>Check whether a flip exists at all</b> before treating the level as meaningful</li>
+<li><b>Check the distance from spot.</b> Within ~1%, the sign can genuinely invert intraday.
+Beyond a few percent, it is a description of the regime, not a level</li>
+<li><b>Do not compare totals across expiries.</b> The drop after settlement is mechanical</li>
+<li><b>Read the sign and the shape</b> — above spot versus below spot — rather than one aggregate.
+A net near zero can hide a large positive above and a large negative below</li>
+</ul>
+<p>We publish the SPX flip level, the total, and the profile by strike every business day,
+alongside the same estimate for the Nikkei 225 built from JPX settlement data.</p>
+
+<p><a href="us.html">→ Live SPX gamma and flip level</a> ・
+<a href="guide-gamma-exposure.html">→ How the estimate is built</a> ・
+<a href="./">→ Nikkei 225 dashboard</a></p>
 """),
 
     "glossary.html": ("Glossary", """
