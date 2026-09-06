@@ -12,6 +12,18 @@
 # 「JPXは証券会社名まで公表する」「日経の建玉・ガンマは公式データだけで組める」という、
 # 英語圏でほとんど書かれていない事実を先頭に置いている。
 EN_GUIDE_DESC = {
+    "guide-data-sources.html":
+        "Every number on this site comes from files JPX and Nikkei Inc. publish for free. "
+        "Exact filenames, publication times, encodings and the format quirks that break parsers "
+        "- including the participant open interest file, which names 30 firms where the CFTC COT stops at three categories.",
+    "guide-contract-specs.html":
+        "Nikkei 225 options settle at Option Price x JPY 1,000; mini options at x JPY 100. "
+        "European exercise, cash settled at SQ, 08:45-15:45 and 17:00-06:00 JST, tick JPY 1 at or below JPY 300. "
+        "Full specifications including strike intervals and the last trading day rule.",
+    "guide-implied-volatility.html":
+        "JPX publishes implied volatility for every strike in its daily settlement file, free. "
+        "On 4 September 2026 the September series carried 298 strikes: 25.0% at the money, "
+        "50.2% fifteen percent below spot. One trap - deep in-the-money options print 1.0%, a placeholder.",
     "guide-participants.html":
         "JPX publishes weekly Nikkei 225 futures open interest by named trading participant — "
         "Nomura, Goldman Sachs, HSBC and others — unlike the CFTC's anonymous COT categories. "
@@ -44,6 +56,221 @@ EN_GUIDE_DESC = {
 
 # 英語ページ {ファイル名: (タイトル, 本文HTML)} — en/ 配下に出力される
 EN_GUIDE_PAGES = {
+    "guide-data-sources.html": ("Where to Get Nikkei 225 Data for Free", """
+<h1>Where to Get Nikkei 225 Data for Free</h1>
+<p>Every number on this site is built from files that JPX and Nikkei Inc. publish at no cost.
+No terminal, no vendor feed. If you know which file holds what, you can rebuild all of it.</p>
+<p>The catch is that the files are scattered across two organisations, publish at different
+times, and carry format quirks that quietly break parsers. Here is the map.</p>
+
+<h2>The files</h2>
+<p>Times are Japan Standard Time on business days, measured rather than promised &mdash;
+JPX does not commit to a publication schedule.</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Data</th><th>Source</th><th>Filename</th><th>Published</th><th>What it gives you</th></tr></thead>
+<tbody>
+<tr><td>Daily volume</td><td>JPX</td><td><code>YYYYMMDD_derivatives_market_data_whole_day.xlsx</code></td><td>~16:30</td><td>Volume by product, split put/call &mdash; the basis of a <a href="guide-put-call-ratio.html">put/call ratio</a></td></tr>
+<tr><td>Settlement prices</td><td>JPX</td><td><code>rbYYYYMMDD.csv</code></td><td>~18:00</td><td>Settlement price, <b>implied volatility</b>, days to expiry and spot for every strike</td></tr>
+<tr><td>Participant volume</td><td>JPX</td><td>JSON endpoints</td><td>~17:45</td><td>Volume routed through each broker. <b>No direction</b></td></tr>
+<tr><td>Open interest</td><td>JPX</td><td><code>YYYYMMDDopen_interest.xlsx</code></td><td>~20:00</td><td>Open interest by strike for the nearest expiries</td></tr>
+<tr><td>Participant open interest</td><td>JPX</td><td><code>indexfut_oi_by_tp.xlsx</code></td><td>Weekly</td><td>Net long or short <b>by named firm</b> &mdash; direction included</td></tr>
+<tr><td>Investor flows</td><td>JPX</td><td>Weekly xls</td><td>Weekly</td><td>Cash equity buying and selling by investor category</td></tr>
+<tr><td>Index OHLC</td><td>Nikkei</td><td><code>nikkei_stock_average_daily_jp.csv</code></td><td>Every session</td><td>Open, high, low and close of the index itself</td></tr>
+<tr><td>Volatility index</td><td>Nikkei</td><td><code>nikkei_stock_average_vi_daily_jp.csv</code></td><td>Every session</td><td>Nikkei 225 VI, Japan&rsquo;s equivalent of the VIX</td></tr>
+<tr><td>Constituent weights</td><td>Nikkei</td><td><code>nikkei_stock_average_weight_jp.csv</code></td><td>Monthly</td><td>Which names actually move the index</td></tr>
+<tr><td>Total return index</td><td>Nikkei</td><td><code>nikkei_225_total_return_index_monthly_en.csv</code></td><td>Monthly</td><td>The index with dividends reinvested</td></tr>
+</tbody>
+</table></div>
+<p>Derivatives files sit on the JPX
+<a href="https://www.jpx.co.jp/english/markets/derivatives/trading-volume/index.html" rel="nofollow">trading volume</a> and
+<a href="https://www.jpx.co.jp/english/markets/derivatives/settlement-price/index.html" rel="nofollow">settlement price</a> pages;
+the index CSVs live in the
+<a href="https://indexes.nikkei.co.jp/en/nkave/archives/data" rel="nofollow">Nikkei Indexes archive</a>.</p>
+
+<h2>The one nobody outside Japan expects</h2>
+<p><code>indexfut_oi_by_tp.xlsx</code> is different in kind from the rest.
+<b>It names the securities firms and states which side each one is on.</b></p>
+<p>On 28 August 2026 it listed 30 firms in Nikkei 225 futures, 30 in Nikkei 225 mini and
+26 in TOPIX futures. Across the last 52 weeks, 49 distinct firms appeared at least once.</p>
+<p>The closest US equivalent is the CFTC Commitments of Traders report, which stops at
+<b>commercial, non-commercial and other</b>. Firm names are never disclosed. Europe&rsquo;s EMIR
+data is collected by regulators but not published at all.</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th></th><th>JPX participant OI</th><th>CFTC COT</th></tr></thead>
+<tbody>
+<tr><td>Granularity</td><td><b>Named firms (30)</b></td><td>Three categories</td></tr>
+<tr><td>Frequency</td><td>Weekly</td><td>Weekly</td></tr>
+<tr><td>Lag</td><td>About one business day</td><td>Three business days</td></tr>
+<tr><td>Cost</td><td>Free</td><td>Free</td></tr>
+</tbody>
+</table></div>
+<p><b>Rare is not the same as useful.</b> Most of the firms at the top of the table are
+clearing and execution venues, so the number is the sum of their clients&rsquo; orders rather
+than a house view. Over the last 52 weeks, eight firms sat on the same side of Nikkei 225
+futures every single week. Positions that never change direction are not signals.
+The detail is in <a href="guide-participants.html">Japan&rsquo;s hidden COT</a>.</p>
+
+<h2>The settlement file carries a free volatility surface</h2>
+<p>The other underrated file is <code>rbYYYYMMDD.csv</code>. Alongside settlement prices it
+carries <b>implied volatility, days to expiry, the interest rate and the underlying level for
+every listed strike</b>. You do not have to back out volatility yourself, and you do not need
+an options data vendor to see the skew.
+That is what our <a href="guide-gamma-exposure.html">gamma exposure</a> estimates run on
+&mdash; details in <a href="guide-implied-volatility.html">implied volatility by strike</a>.</p>
+
+<h2>Format quirks that break parsers</h2>
+<ul>
+<li><b>Encoding.</b> The Nikkei CSVs and the JPX settlement CSV are Shift_JIS (cp932), not UTF-8</li>
+<li><b>Sheets.</b> <code>open_interest.xlsx</code> splits products across sheets, with Nikkei 225 options on a separate one</li>
+<li><b>Header rows move.</b> Find the product name row and read relative to it. Hard-coded row numbers break the month a product is added</li>
+<li><b>Filenames change daily.</b> They embed the date, so you have to discover the link from the index page rather than construct it</li>
+<li><b>Weekly files are indexed by JSON.</b> A per-year JSON lists the path of each week&rsquo;s file</li>
+<li><b>The <code>_jp</code> and <code>_en</code> suffixes</b> refer to the column headers, not to different data</li>
+</ul>
+<p>We download and parse these every business day, and when parsing fails we keep the previous
+day&rsquo;s output rather than publishing a broken number.</p>
+
+<h2>Before you redistribute</h2>
+<p>Using the files for your own analysis is uncontroversial. Republishing or reselling them
+is governed by each publisher&rsquo;s terms &mdash; check before you do it.</p>
+
+<p><a href="./">&rarr; Live Nikkei 225 options data</a> &middot;
+<a href="guide-contract-specs.html">&rarr; Contract specifications</a> &middot;
+<a href="guide-nikkei-options.html">&rarr; Field guide for global traders</a></p>
+"""),
+
+    "guide-contract-specs.html": ("Nikkei 225 Options Contract Specifications", """
+<h1>Nikkei 225 Options &mdash; Contract Specifications</h1>
+<p>The number people look for first is the multiplier.
+<b>Nikkei 225 options settle at Option Price &times; JPY 1,000.</b>
+Nikkei 225 mini options settle at <b>Option Price &times; JPY 100</b> &mdash; one tenth the size.</p>
+<p>Everything below is from the Osaka Exchange contract specifications. Where the two products
+differ, both are shown.</p>
+
+<h2>Side by side</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th></th><th>Nikkei 225 Options</th><th>Nikkei 225 mini Options</th></tr></thead>
+<tbody>
+<tr><td>Underlying</td><td colspan="2">Nikkei Stock Average (Nikkei 225)</td></tr>
+<tr><td><b>Contract unit</b></td><td><b>Option price &times; JPY 1,000</b></td><td><b>Option price &times; JPY 100</b></td></tr>
+<tr><td>Exercise</td><td colspan="2">European &mdash; exercisable only at expiry</td></tr>
+<tr><td>Settlement</td><td colspan="2">Cash, against the SQ value</td></tr>
+<tr><td>Trading hours</td><td colspan="2">08:45&ndash;15:45 and 17:00&ndash;06:00 JST</td></tr>
+<tr><td>Tick size</td><td colspan="2">JPY 1 at or below JPY 300; JPY 5 above</td></tr>
+<tr><td>Strike interval</td><td>JPY 125 across &plusmn;24 strikes for the nearest three months; JPY 250 across &plusmn;16 further out</td><td>JPY 125 across &plusmn;24 strikes</td></tr>
+<tr><td>Expiry cycle</td><td>Monthly (nearest 8) plus quarterly months out to eight years</td><td>Weekly Friday expiries, plus Wednesday expiry contracts</td></tr>
+<tr><td>Last trading day</td><td colspan="2">The business day before expiry day</td></tr>
+<tr><td>Launched</td><td>June 1989</td><td>May 2023 (Wednesday expiries from May 2025)</td></tr>
+</tbody>
+</table></div>
+
+<h2>What the multiplier means in practice</h2>
+<p>A regular Nikkei 225 option quoted at 250 costs <b>JPY 250,000</b> per contract
+(250 &times; 1,000). The same quote in mini options costs <b>JPY 25,000</b>.</p>
+<p>Because settlement is cash against SQ, an in-the-money call pays
+<b>(SQ value &minus; strike) &times; JPY 1,000</b> per contract, and a put pays
+<b>(strike &minus; SQ value) &times; JPY 1,000</b>. Out-of-the-money contracts expire worthless.</p>
+<p>The night session matters more than newcomers expect. Trading runs to 06:00 JST, which
+covers the entire US cash session, so Nikkei options price US moves before Tokyo reopens.</p>
+
+<h2>Expiry, and the rule that trips people up</h2>
+<p>Monthly contracts expire on the <b>second Friday</b>. If that Friday is an exchange holiday,
+expiry moves <b>backwards</b> to the preceding business day &mdash; not forwards.
+The last trading day is the business day before that, so in a normal month the last trading
+day is the Thursday.</p>
+<p>March, June, September and December are Major SQ months, when index futures expire
+alongside options. The settlement price is computed from the opening prices of all 225
+constituents, which is <b>not</b> the same as the index&rsquo;s own opening print.
+<a href="guide-sq.html">How SQ actually works</a> covers the mechanics.</p>
+<p>Mini options add weekly Friday expiries and, since May 2025, Wednesday expiry contracts.
+Something is expiring most weeks, not just on the second Friday.</p>
+
+<h2>Strike coverage is wider than it looks</h2>
+<p>For the nearest three months, strikes are listed every JPY 125 across &plusmn;24 strikes,
+with additional on-demand strikes available on application. In practice the listed chain runs
+far into the tails: on 4 September 2026 the September series carried
+<b>298 distinct strikes</b>, spanning well below and well above spot.</p>
+<p>That matters when you read open interest. The largest open interest in a series often sits
+at a round number a long way out of the money &mdash; a legacy hedge rather than a level the
+index is likely to reach. <a href="guide-gamma-exposure.html">Gamma exposure</a> and the
+<a href="guide-put-call-ratio.html">put/call ratio</a> both need that filtering.</p>
+
+<h2>Where the numbers come from</h2>
+<p>Specifications are published by the Osaka Exchange; daily open interest, settlement prices
+and implied volatility come from JPX files that are free to download.
+<a href="guide-data-sources.html">Where to get Nikkei 225 data</a> lists the filenames and
+publication times.</p>
+
+<p><a href="./">&rarr; Live open interest and put/call ratio</a> &middot;
+<a href="guide-nikkei-options.html">&rarr; Field guide for global traders</a> &middot;
+<a href="guide-sq.html">&rarr; How SQ works</a></p>
+"""),
+
+    "guide-implied-volatility.html": ("Nikkei 225 Implied Volatility by Strike", """
+<h1>Nikkei 225 Implied Volatility by Strike &mdash; Published Free, Every Day</h1>
+<p>Most people reach for the Nikkei 225 VI when they want Japanese equity volatility.
+That is one number for the whole surface. <b>JPX publishes implied volatility for every
+listed strike, every business day, at no cost</b> &mdash; in the daily settlement file
+<code>rbYYYYMMDD.csv</code>.</p>
+<p>You do not have to imply the volatility yourself, and you do not need an options vendor
+to see the skew.</p>
+
+<h2>What one day looks like</h2>
+<p>On 4 September 2026 the September series had seven days to expiry with the index at
+65,020.94, and the file carried <b>298 distinct strikes</b>. Selected points:</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Strike</th><th>Distance from spot</th><th>Call IV</th><th>Put IV</th></tr></thead>
+<tbody>
+<tr><td>55,000</td><td>&minus;15.4%</td><td>&mdash;</td><td><b>50.2%</b></td></tr>
+<tr><td>58,000</td><td>&minus;10.8%</td><td>37.0%</td><td>40.0%</td></tr>
+<tr><td>62,000</td><td>&minus;4.6%</td><td>28.8%</td><td>29.6%</td></tr>
+<tr><td>65,000</td><td>at the money</td><td><b>25.0%</b></td><td><b>25.8%</b></td></tr>
+<tr><td>68,000</td><td>+4.6%</td><td>25.2%</td><td>26.2%</td></tr>
+<tr><td>72,000</td><td>+10.7%</td><td>27.5%</td><td>34.2%</td></tr>
+<tr><td>75,000</td><td>+15.3%</td><td><b>30.1%</b></td><td>&mdash;</td></tr>
+</tbody>
+</table></div>
+<p>The shape is the familiar equity smile, and it is steeply one-sided.
+<b>Fifteen percent below spot prices at roughly double the at-the-money level</b>
+(50.2% against 25.0%), while the same distance above spot prices at 30.1%.
+Downside protection is expensive; upside is not. A single volatility index cannot show you that.</p>
+
+<h2>The trap in this file</h2>
+<p>Read the whole column and the range looks absurd: <b>1.0% to 114.8%</b> on the same day
+in the same expiry. Neither extreme is a market volatility.</p>
+<p><b>Deep in-the-money options print 1.0%.</b> It is a floor value, not a quote &mdash;
+those contracts barely trade and their settlement price is essentially intrinsic value,
+so no meaningful volatility can be implied from them. In the chain above, every call struck
+below 55,000 shows exactly 1.0% for this reason.</p>
+<p>The rule that follows is simple and easy to get wrong:
+<b>build each side of the smile from out-of-the-money contracts.</b>
+Puts below spot, calls above spot. If you average calls and puts at every strike without
+filtering, the in-the-money placeholders drag the whole surface toward zero.</p>
+
+<h2>Why it matters</h2>
+<p>Volatility per strike is what makes gamma computable from public data alone.
+Gamma depends on strike, time and volatility; open interest supplies the size.
+With both, dealer gamma exposure can be estimated across the whole chain without a
+vendor feed. That is how our <a href="guide-gamma-exposure.html">gamma exposure</a> series is
+produced, and why the <a href="guide-gamma-flip.html">gamma flip level</a> can be located on
+some days and not on others.</p>
+<p>It is also a cross-check on the headline volatility index. When the Nikkei 225 VI rises but
+at-the-money implied volatility does not, the move is in the wings &mdash; someone is paying
+up for tail protection rather than for movement in general.</p>
+
+<h2>Getting the file</h2>
+<p>The settlement CSV is linked from the JPX
+<a href="https://www.jpx.co.jp/english/markets/derivatives/settlement-price/index.html" rel="nofollow">settlement price page</a>,
+published around 18:00 JST, and encoded in Shift_JIS rather than UTF-8.
+Each row carries the strike, settlement price, implied volatility, days to expiry,
+interest rate and underlying level.
+<a href="guide-data-sources.html">Where to get Nikkei 225 data</a> lists the rest of the files.</p>
+
+<p><a href="./">&rarr; Live open interest by strike</a> &middot;
+<a href="guide-gamma-exposure.html">&rarr; Gamma exposure explained</a> &middot;
+<a href="guide-contract-specs.html">&rarr; Contract specifications</a></p>
+"""),
+
     "guide-participants.html": ("Japan's Hidden COT: JPX Participant Positioning", """
 <h1>Japan's Hidden COT — Reading JPX Trading-Participant Positioning</h1>
 <p>Most global traders know the CFTC's Commitments of Traders report. Far fewer know that
@@ -580,9 +807,9 @@ GUIDE_DESC = {
         "JPXは証券会社名を明示して週次の建玉を公表しています。ただしゼロと比べても意味がなく、"
         "HSBC証券は52週すべて売り越しでした。その会社自身の平常値と比べる読み方を解説します。",
     "guide-oi.html":
-        "行使価格に積み上がった建玉が「壁」と呼ばれる理由と、その落とし穴。"
-        "建玉が最大の行使価格は現値から50%以上離れた放置ポジションのことが多く、"
-        "壁として意味があるのは現値の近くにあるものです。",
+        "建玉分布(市場建玉分布)は、権利行使価格ごとに未決済のオプションがどれだけ残っているかを並べたものです。"
+        "2026年9月4日は最大建玉が現値より23%下の50,000円にあり、「最大建玉=壁」ではないことが実データで分かります。"
+        "見方・どこで見られるか・やりがちな誤読を整理しました。",
     "guide-pcr.html":
         "Put/Callレシオは1.0が中立ではありません(ラージの実測平均は1.57)。"
         "日経平均が3.95%下落した日にレシオがむしろ下がった実例で、"
@@ -1353,10 +1580,25 @@ JPXが平日17時45分ごろに、その日の分を公表します。</p>
 <li><a href="guide-pcr.html">Put/Callレシオとは</a> — 市場心理の偏りを見る</li>
 </ul>
 """),
-    "guide-oi.html": ("建玉分布の見方", """
-<h1>建玉分布の見方 — 「壁」はどう読むか</h1>
-<p>当サイトのトップに毎日掲載している「行使価格別 建玉分布」の読み方を解説します。
-実際に当サイトで観測されたデータを例に、よくある誤読も含めて説明します。</p>
+    "guide-oi.html": ("建玉分布とは — 市場建玉分布の見方と壁の読み方", """
+<h1>建玉分布とは — 「市場建玉分布」の見方と、どこで見られるか</h1>
+<p><b>建玉分布</b>は、権利行使価格ごとに未決済のオプションがどれだけ残っているかを並べたものです。
+証券会社のツールでは<b>「市場建玉分布」</b>と呼ばれることもありますが、
+これは<b>自分の建玉ではなく市場全体の建玉</b>という意味で、指しているデータは同じです。</p>
+<p>当サイトのトップに<a href="./#oi">行使価格別の建玉分布</a>を毎営業日掲載しています。
+このページでは、その読み方と、よくある誤読を実データで説明します。</p>
+
+<h2>どこで見られるか</h2>
+<p>元になっているのはJPXが無料で公開しているファイルで、誰でも同じものを再現できます。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>入手先</th><th>形式</th><th>更新</th><th>特徴</th></tr></thead>
+<tbody>
+<tr><td>JPX(原本)</td><td>Excel(<code>open_interest.xlsx</code>)</td><td>毎営業日20:00頃</td><td>一次情報。ただし限月・商品ごとにシートが分かれ、そのままでは読みにくい</td></tr>
+<tr><td>証券会社のツール</td><td>チャート</td><td>各社による</td><td>口座があれば見られる。ミニの扱いや集計範囲は各社で異なる</td></tr>
+<tr><td>当サイト</td><td>表とチャート</td><td>毎営業日</td><td>ラージとミニを換算合算し、前日比の増減も並べている。口座不要</td></tr>
+</tbody>
+</table></div>
+<p>ファイル名や公表時刻は<a href="guide-jpx-data.html">公式データはどこにあるか</a>にまとめています。</p>
 
 <h2>建玉(たてぎょく)とは</h2>
 <p>建玉(Open Interest)は、まだ決済されずに残っているオプション契約の残高です。
@@ -1389,13 +1631,26 @@ JPXが平日17時45分ごろに、その日の分を公表します。</p>
 
 <h2>【重要】「最大建玉=壁」ではない</h2>
 <p>最も多い誤読が、<b>全体で建玉が最大の行使価格を、そのまま壁とみなしてしまうこと</b>です。</p>
-<p>実例を挙げます。2026年8月上旬、日経225オプションで<b>建玉が最も多かったのはプット30,000円で約5,600枚</b>でした。
-しかし当時の日経平均は66,000円前後。<b>現値の約半分(−53%)という、まず到達しない水準</b>です。
-この建玉は8日間で5,592枚→5,623枚とほとんど動いておらず、
-恐らく長期の保険や過去の残骸で、<b>足元の値動きとはほぼ無関係</b>です。</p>
-<p>一方、同じ時期の<b>コール70,000円は4,490枚→4,910枚と明確に増減していました</b>。
-枚数では30,000円プットに負けますが、現値から+6%程度で<b>実際に到達しうる水準</b>であり、
-売買も活発です。壁として意味があるのはこちらです。</p>
+<p>実例を挙げます。2026年9月4日時点の9月限で、建玉の多い行使価格の上位はこうなっていました。
+同日の日経平均終値は65,020円です。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>行使価格</th><th>建玉(枚)</th><th>現値との差</th><th>内訳</th></tr></thead>
+<tbody>
+<tr><td><b>50,000円</b></td><td><b>12,047</b></td><td><b>−23%</b></td><td>プット8,597 / コール3,450</td></tr>
+<tr><td>65,000円</td><td>9,175</td><td>ほぼ現値</td><td>コール4,738 / プット4,437</td></tr>
+<tr><td><b>30,000円</b></td><td><b>7,810</b></td><td><b>−54%</b></td><td>プット5,260 / コール2,550</td></tr>
+<tr><td>60,000円</td><td>7,536</td><td>−8%</td><td>プット6,750 / コール786</td></tr>
+</tbody>
+</table></div>
+<p><b>建玉が最も多いのは50,000円で、現値より23%も下</b>です。
+3番目の30,000円にいたっては54%下——満期まで1週間の限月で、まず到達しません。
+上位4つのうち2つが「届かない水準」だということになります。</p>
+<p>この種の建玉は、長期の保険として買われたものや、
+過去に組まれた戦略の片側が残っているものと考えられます。
+枚数は大きくても<b>足元の値動きとはほぼ無関係</b>です。
+実際、期近の最大建玉の行使価格が現値からどれだけ離れているかを24営業日ぶん測ると、
+<b>中央値で1,696円、最大では19,220円</b>離れていました。</p>
+<p>壁として意味があるのは、上の表なら<b>現値近辺の65,000円と60,000円</b>のほうです。</p>
 <p>そこで当サイトでは、<b>現値から上下10%以内</b>に範囲を限定し、
 その中でコール建玉が最大の行使価格を「上の壁」、プット建玉が最大の行使価格を「下の壁」としています。
 遠い行使価格の巨大建玉に引きずられないようにするためです。</p>
@@ -1431,6 +1686,7 @@ JPXが平日17時45分ごろに、その日の分を公表します。</p>
 <li><b>建玉の多さ=売り手が多い、と決めつける</b> → 建玉は売り買い両方の合計で、どちらが主体かは分からない</li>
 <li><b>壁で必ず反転すると考える</b> → 抜けたときはむしろ加速しやすい</li>
 <li><b>限月をまたいで合計する</b> → 期近と期先では影響力がまったく違う</li>
+<li><b>「市場建玉分布」を自分の建玉と読み違える</b> → 市場全体の残高であって、個別の持ち高ではない</li>
 </ul>
 
 <h2>あわせて見るもの</h2>

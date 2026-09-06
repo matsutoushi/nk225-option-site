@@ -1042,6 +1042,12 @@ PAGE = {
         "guides": [
             ("guide-nikkei-options.html", "Nikkei 225 Options: Field Guide",
              "Contract basics, SQ, and what the official data covers"),
+            ("guide-data-sources.html", "Where to Get Nikkei 225 Data",
+             "Every official file, its exact name, when it publishes and what breaks parsers"),
+            ("guide-contract-specs.html", "Contract Specifications",
+             "Multiplier x JPY 1,000 (mini x 100), European, cash settled at SQ"),
+            ("guide-implied-volatility.html", "Implied Volatility by Strike",
+             "298 strikes on one day: 25.0% at the money, 50.2% fifteen percent below"),
             ("guide-gamma-exposure.html", "Gamma Exposure, Honestly",
              "What it measures, and the two errors that inflate most published estimates"),
             ("guide-gamma-flip.html", "The Gamma Flip Level",
@@ -2337,7 +2343,10 @@ def footer_sitemap(lang: str) -> str:
             ("guide-gamma-exposure.html", "Gamma Exposure"),
             ("guide-gamma-flip.html", "Gamma Flip"),
             ("guide-put-call-ratio.html", "Put/Call Ratio"),
+            ("guide-implied-volatility.html", "Implied Volatility"),
             ("guide-sq.html", "SQ Explained"),
+            ("guide-data-sources.html", "Data Sources"),
+            ("guide-contract-specs.html", "Contract Specs"),
             ("../about.html", "About"), ("../privacy.html", "Privacy"),
             ("../", "日本語")]
     links = " ｜ ".join(f'<a href="{h}" style="color:#1f6fd0">{t}</a>' for h, t in items)
@@ -2422,7 +2431,9 @@ def render_seo_files() -> None:
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
-             "en/guide-put-call-ratio.html", "en/glossary.html",
+             "en/guide-put-call-ratio.html", "en/guide-implied-volatility.html",
+             "en/guide-data-sources.html", "en/guide-contract-specs.html",
+             "en/glossary.html",
              "about.html", "privacy.html"]
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
@@ -2443,15 +2454,10 @@ GUIDE_PAIRS = {
     "guide-pcr.html": "en/guide-put-call-ratio.html",
     "guide-sq.html": "en/guide-sq.html",
     "guide-teguchi.html": "en/guide-participants.html",
+    "guide-jpx-data.html": "en/guide-data-sources.html",
     "glossary.html": "en/glossary.html",
 }
 EN_GUIDE_PAIRS = {en.split("/", 1)[1]: ja for ja, en in GUIDE_PAIRS.items()}
-
-
-def n225_daily_for_sq():
-    """SQ値と突き合わせるための日経平均の日次データ(date/始値)。無ければNone。"""
-    p = os.path.join(DATA, "_nikkei_daily.csv")
-    return pd.read_csv(p) if os.path.exists(p) else None
 
 
 def render_static_pages() -> None:
@@ -2676,7 +2682,7 @@ def main() -> None:
     # 静的ページ側は data/sq_history.csv を読むだけなので、前回分が残っていれば表示は続く。
     try:
         import sq as sq_mod
-        sq_mod.build_history(n225_daily_for_sq()).to_csv(
+        sq_mod.build_history(n225_hist).to_csv(
             os.path.join(DATA, "sq_history.csv"), index=False)
     except Exception as e:
         warn(f"sq history failed: {e}")

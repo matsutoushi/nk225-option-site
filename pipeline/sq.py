@@ -117,19 +117,24 @@ def fetch_sq_values() -> dict:
     return out
 
 
-def build_history(nikkei: pd.DataFrame | None = None) -> pd.DataFrame:
+def build_history(n225: pd.DataFrame | None = None) -> pd.DataFrame:
     """過去のSQ値に、算出日とその日の日経平均始値を並べる。
 
     SQ値は225銘柄それぞれの寄り付き値から作るので、
     「その日の日経平均の始値」とは一致しない。差を出せるようにしておく。
 
+    n225: jpx.fetch_n225_official() が返す OHLC(index=日付, 列 Open)。
+          渡さなければここで取りに行く。キャッシュ済みのCSVは使わない
+          ——古いファイルを掴むと、直近の限月だけ始値が空欄になるため。
+
     Returns: DataFrame[month, sq_date, sq_value, nikkei_open, diff, major]
     """
     values = fetch_sq_values()
-    opens = {}
-    if nikkei is not None and len(nikkei):
-        for _, r in nikkei.iterrows():
-            opens[str(r["date"])] = float(r["始値"])
+    if n225 is None:
+        import jpx
+        n225 = jpx.fetch_n225_official()
+    opens = {d.strftime("%Y-%m-%d"): float(o)
+             for d, o in zip(n225.index, n225["Open"])}
     rows = []
     for month, val in sorted(values.items()):
         y, m = int(month[:4]), int(month[5:])
