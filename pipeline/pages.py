@@ -1924,25 +1924,13 @@ JPXが平日17時45分ごろに、その日の分を公表します。</p>
 <li><b>マイクロ先物は3社とも11円で横並び</b> — 日経225miniのさらに10分の1の単位で、
 金額を絞って先物の値動きに慣れたい場合の入口になります</li>
 </ul>
-<p>なお松井証券のオプションは<b>取扱限月が直近4限月に限られます</b>。
-先の限月を建てたい場合は、この点も確認してください。</p>
-
-<p><b>松井証券</b>はラージ先物・マイクロ先物・一日先物を低コストで扱い、取引ツールや情報提供も充実しています。
-口座開設は無料・ネット完結で、まず総合口座を開いてから先物・オプション口座を申請する流れです。
-→ <a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+64C3M" rel="nofollow">松井証券の口座開設(公式・PR)</a><img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+64C3M" alt=""></p>
-<div style="text-align:center; margin: 16px 0;">
-<a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+6HMHT" rel="nofollow">
-<img border="0" width="300" height="250" alt="松井証券" src="https://www21.a8.net/svt/bgt?aid=260718089257&wid=001&eno=01&mid=s00000018318001090000&mc=1"></a>
-<img border="0" width="1" height="1" src="https://www11.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+6HMHT" alt="">
-</div>
-<p><b>SBI証券</b>は上の表でミニオプションを扱う2社のうちの一つです。
-日経225先物・オプションの専用ページに、取扱商品と手数料がまとまっています。
-総合口座を開いたうえで、先物・オプション取引口座を別途申し込む流れです。
-(PR) <a href="https://h.accesstrade.net/sp/cc?rk=010030jl00ovxn" rel="nofollow" referrerpolicy="no-referrer-when-downgrade">SBI証券の日経225<img src="https://h.accesstrade.net/sp/rr?rk=010030jl00ovxn" width="1" height="1" border="0" alt=""></a></p>
-
-<p><b>三菱UFJ eスマート証券</b>(旧auカブコム証券)も、上の表でミニオプションを扱う2社のうちの一つです。
-ただし手数料の体系がSBI証券と違います。SBI証券のミニオプションが「売買代金の0.22%・最低19.8円」なのに対し、
-こちらは<b>1枚あたり19.8円の定額</b>です。</p>
+<h2>3社をどう選ぶか</h2>
+<p>下では<b>ミニオプションを扱っているかどうかを優先して</b>並べています。
+上の箇条書きに書いたとおり、小さく始めたい場合はこれが最初の分かれ道になるためです。
+先物中心に使うつもりなら、この順番は当てはまりません。</p>
+<h3>三菱UFJ eスマート証券(旧auカブコム証券)</h3>
+<p>ミニオプションを扱う2社のうちの一つで、<b>手数料が1枚あたり19.8円の定額</b>です。
+もう一方のSBI証券は「売買代金の0.22%・最低19.8円」なので、体系そのものが違います。</p>
 <p>ミニオプションは指数1ポイント＝100円なので、プレミアムが90ポイント(売買代金9,000円)を超えたところで
 0.22%が19.8円を上回ります。<b>ATM付近や期近の、プレミアムが高いミニオプションを建てるほど定額のほうが安くなる</b>
 という関係です。逆に、遠い行使価格を数百円で買うような使い方なら、どちらも19.8円で差はつきません。</p>
@@ -1950,6 +1938,23 @@ JPXが平日17時45分ごろに、その日の分を公表します。</p>
 通常の立会は表のとおり275円・38.5円なので、ラージ中心の使い方ならSORの成立次第で松井証券の220円と並ぶ水準まで下がります。
 口座開設は、総合口座を開いたうえで先物・オプション取引口座を別途申し込む流れです。</p>
 <p>(PR) <a href="https://h.accesstrade.net/sp/cc?rk=0100pg9j00ovxn" rel="nofollow" referrerpolicy="no-referrer-when-downgrade">三菱UFJ eスマート証券<img src="https://h.accesstrade.net/sp/rr?rk=0100pg9j00ovxn" width="1" height="1" border="0" alt=""></a>(公式)</p>
+<h3>SBI証券</h3>
+<p>ミニオプションを扱うもう一方です。手数料は<b>売買代金の0.22%(最低19.8円)</b>。
+上で見たとおり、プレミアムが90ポイントを下回る安いオプションを買う使い方なら、
+三菱UFJ eスマート証券の定額19.8円と実質的に同じです。
+総合口座を開いたうえで、先物・オプション取引口座を別途申し込む流れです。
+(PR) <a href="https://h.accesstrade.net/sp/cc?rk=010030jl00ovxn" rel="nofollow" referrerpolicy="no-referrer-when-downgrade">SBI証券の日経225<img src="https://h.accesstrade.net/sp/rr?rk=010030jl00ovxn" width="1" height="1" border="0" alt=""></a></p>
+<h3>松井証券</h3>
+<p><b>ミニオプションは扱っていません</b>。オプションから入るならこの時点で候補から外れます。
+ただし<b>ラージ先物が220円と3社で最安</b>で、返済期限をその日のセッション内に限る
+「一日先物取引」もあります。先物中心に使うなら有力です。
+なおオプションの取扱限月は直近4限月に限られます。
+→ <a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+64C3M" rel="nofollow">松井証券の口座開設(公式・PR)</a><img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+64C3M" alt=""></p>
+<div style="text-align:center; margin: 16px 0;">
+<a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+490F8Y+3XCC+6HMHT" rel="nofollow">
+<img border="0" width="300" height="250" alt="松井証券" src="https://www21.a8.net/svt/bgt?aid=260718089257&wid=001&eno=01&mid=s00000018318001090000&mc=1"></a>
+<img border="0" width="1" height="1" src="https://www11.a8.net/0.gif?a8mat=4B83D5+490F8Y+3XCC+6HMHT" alt="">
+</div>
 
 <p>なお、現物株・信用取引の口座を手数料重視で選びたい方には次のような選択肢もあります:
 <a href="https://px.a8.net/svt/ejp?a8mat=4B83D5+4CL0VM+1WP2+15QHIA" rel="nofollow">日本株を始めるなら【DMM 株】!(PR)</a><img border="0" width="1" height="1" src="https://www17.a8.net/0.gif?a8mat=4B83D5+4CL0VM+1WP2+15QHIA" alt=""></p>
