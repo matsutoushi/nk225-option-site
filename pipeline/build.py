@@ -353,6 +353,83 @@ def chart_pcr(hist: pd.DataFrame, lang: str = "ja") -> str:
     return f"img/{name}"
 
 
+def iv_smile(settle: dict, expiry: str) -> dict | None:
+    """行使価格別IVを、現値を境にOTM側だけで組み立てる。
+
+    深いITMはIVが1.0%固定のプレースホルダーで、実勢ではない。
+    そのため現値より下はプット、上はコールだけを採用する。
+
+    Returns: {"date","spot","days","expiry","strikes","ivs","atm","put25","call25"}
+    """
+    if not settle or "data" not in settle:
+        return None
+    spot = settle.get("spot")
+    df = settle["data"]
+    if not spot or df is None or not len(df):
+        return None
+    g = df[df["expiry"] == expiry]
+    if not len(g):
+        return None
+    g = g.dropna(subset=["strike", "iv"])
+    otm = g[((g["type"] == "P") & (g["strike"] <= spot)) |
+            ((g["type"] == "C") & (g["strike"] > spot))]
+    otm = otm[(otm["iv"] > 0.02) & (otm["iv"] < 2.0)]        # 1.0%のダミーと異常値を除く
+    otm = otm[(otm["strike"] >= spot * 0.80) & (otm["strike"] <= spot * 1.20)]
+    # 裾では同じIVが何十本もの行使価格で使い回される(頭打ち値)。
+    # 2026-09-09の9月限では 73.21%が119本・38.46%が64本あった。
+    # 深いITMの1.0%と同じ性格のダミーなので、実勢として扱わない。
+    # 現値近辺でも隣接する行使価格が同じ値になることはあるが、
+    # 実測では±10%以内の重複は最大6本だった。8本を境にする。
+    rounded = otm["iv"].round(4)
+    plateau = rounded.value_counts()
+    otm = otm[~rounded.isin(plateau[plateau > 8].index)]
+    otm = otm.sort_values("strike")
+    if len(otm) < 8:
+        return None
+
+    def near(target):
+        r = otm.iloc[(otm["strike"] - target).abs().argsort()[:1]]
+        return float(r["iv"].iloc[0]) if len(r) else None
+
+    return {"date": settle.get("date"), "spot": float(spot), "expiry": expiry,
+            "days": int(g["days"].iloc[0]),
+            "strikes": otm["strike"].tolist(), "ivs": otm["iv"].tolist(),
+            "atm": near(spot), "put10": near(spot * 0.90), "call10": near(spot * 1.10)}
+
+
+def chart_iv_smile(sm: dict, lang: str) -> str:
+    """IVスマイル。現値の左がプット、右がコール。"""
+    suffix = L[lang]["suffix"]
+    x = [k / sm["spot"] * 100 - 100 for k in sm["strikes"]]
+    y = [v * 100 for v in sm["ivs"]]
+    fig, ax = plt.subplots(figsize=(10, 3.8))
+    left = [(a, b) for a, b in zip(x, y) if a <= 0]
+    right = [(a, b) for a, b in zip(x, y) if a > 0]
+    if left:
+        ax.plot([a for a, _ in left], [b for _, b in left], color=UP, linewidth=1.8,
+                marker="o", markersize=2.5, label="プット(OTM)" if lang == "ja" else "Puts (OTM)")
+    if right:
+        ax.plot([a for a, _ in right], [b for _, b in right], color=DOWN, linewidth=1.8,
+                marker="o", markersize=2.5, label="コール(OTM)" if lang == "ja" else "Calls (OTM)")
+    ax.axvline(0, color=INK, linestyle="--", linewidth=1.1)
+    if sm["atm"]:
+        ax.axhline(sm["atm"] * 100, color=INK2, linestyle=":", linewidth=0.9)
+    ax.set_xlabel("現値からの距離(%)" if lang == "ja" else "Distance from spot (%)", fontsize=9)
+    ax.set_ylabel("IV(%)" if lang == "ja" else "Implied volatility (%)", fontsize=9)
+    ax.set_title(
+        (f"行使価格別のインプライド・ボラティリティ({sm['expiry'][:2]}年{int(sm['expiry'][2:])}月限・残存{sm['days']}日)"
+         if lang == "ja" else
+         f"Implied volatility by strike (expiry {sm['expiry']}, {sm['days']} days)"), fontsize=10)
+    ax.grid(alpha=0.25)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"ivsmile{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
 def chart_hedge(h: dict, lang: str = "ja") -> str | None:
     """ヘッジ売買が値動きに与える向きを行使価格別に描く。
 
@@ -912,7 +989,7 @@ PAGE = {
         "desc": "日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。",
         "h1": "日経225オプション データ分析",
         "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
-        "nav": ["マーケット", "建玉一覧", "建玉分布", "参加者別建玉", "Put/Callレシオ"],
+        "nav": ["マーケット", "建玉一覧", "建玉分布", "IVスマイル", "参加者別建玉", "Put/Callレシオ"],
         "guide_link": '<a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a><a href="fedwatch.html">要人発言</a><a href="guide-start.html">始め方ガイド</a>',
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
@@ -939,6 +1016,10 @@ PAGE = {
         "src_pv": "手口 {d}",
         "src_oi": "建玉残高 {d}",
         "sec_hedge": "ガンマエクスポージャー",
+        "sec_iv": "行使価格別のIV(スマイル)",
+        "iv_lead": "日経VIは市場全体の期待変動率を1つの数字にまとめたものですが、<b>どちら方向の保険が高く付いているかは消えてしまいます</b>。JPXは清算値段ファイルで<b>行使価格ごとのIV</b>も公表しているので、現値を境にプット側・コール側それぞれのIVを並べました。深いイン・ザ・マネーはIVが1.0%固定のダミー値になるため、<b>アウト・オブ・ザ・マネー側だけ</b>を使っています。",
+        "iv_sum": "現値近辺のIVは{atm:.1f}%。現値から10%下のプットは{put:.1f}%、10%上のコールは{call:.1f}%です。",
+        "iv_more": '下側が高いほど、下落に備える需要が強いことを示します。IVは<a href="guide-gex.html" style="color:#1f6fd0">ガンマの推定</a>にも使っている数字です。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
         "hedge_lead": "オプションを売った側(証券会社)は、リスクを打ち消すために先物を売り買いしてヘッジします。この売買は、相場の位置によって値動きを<b>抑える向き</b>にも<b>増幅する向き</b>にも働きます。下の図は、建玉と清算値段のボラティリティから、その強さを行使価格ごとに推定したものです。<b>証券会社の実際の保有は公表されていないため、あくまで推定値</b>です(コールを買い持ち・プットを売り持ちという一般的な前提を置いています)。",
         "hedge_sum": "現値より上は{up:+,.0f}億円、現値より下は{dn:+,.0f}億円。合計では<b>{word}</b>({total:+,.0f}億円 / 指数1%あたり)。",
         "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
@@ -991,7 +1072,7 @@ PAGE = {
         "desc": "Nikkei 225 options open interest by strike, day-over-day changes, put/call ratio, and futures positions by trading participant. Auto-updated every business day from official JPX data.",
         "h1": "Nikkei 225 Options Data",
         "updated": "Data as of {d} | Last updated {now} JST (auto-updated every business day)",
-        "nav": ["Market", "OI Table", "OI Distribution", "Participants", "Put/Call Ratio"],
+        "nav": ["Market", "OI Table", "OI Distribution", "IV Smile", "Participants", "Put/Call Ratio"],
         "guide_link": '<a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a><a href="fedwatch.html">Fed Watch</a>',
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
@@ -1018,6 +1099,10 @@ PAGE = {
         "src_pv": "Participant volume {d}",
         "src_oi": "Open interest {d}",
         "sec_hedge": "Gamma Exposure",
+        "sec_iv": "Implied Volatility by Strike",
+        "iv_lead": "The Nikkei VI compresses the whole surface into one number, so it cannot tell you <b>which side of the market is paying up for protection</b>. JPX publishes <b>implied volatility for every strike</b> in its daily settlement file, so we plot puts below spot and calls above it. Deep in-the-money contracts print a placeholder 1.0%, so <b>only out-of-the-money strikes</b> are used.",
+        "iv_sum": "At-the-money implied volatility is {atm:.1f}%. Ten percent below spot prices at {put:.1f}%, ten percent above at {call:.1f}%.",
+        "iv_more": 'A steeper left side means downside protection is more expensive. This is the same volatility that feeds our <a href="guide-gamma-exposure.html" style="color:#1f6fd0">gamma estimates</a>. (<a href="guide-implied-volatility.html" style="color:#1f6fd0">&rarr; how to read it</a>)',
         "hedge_lead": "Dealers who sold options hedge by trading futures. Depending on where the index sits, that hedging can either <b>dampen</b> or <b>amplify</b> moves. The chart below estimates that force by strike, using open interest and the implied volatility in JPX settlement prices. <b>Actual dealer positions are not disclosed, so this is an estimate</b> (assuming dealers are long calls and short puts).",
         "hedge_sum": "Above spot {up:+,.0f}, below spot {dn:+,.0f} (100M yen). Net: <b>{word}</b> ({total:+,.0f} per 1% move).",
         "hedge_damp": "dampening moves", "hedge_amp": "amplifying moves",
@@ -1189,6 +1274,21 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'<img src="{charts["hedge"]}" alt="Option hedging direction by strike">'
             f'<p>{P["hedge_more"]}</p>')
 
+    # 行使価格別IV(スマイル)。ガンマの直後に置く——同じ清算値段ファイルの数字なので。
+    iv_section = ""
+    sm = extras.get("iv")
+    if sm and charts.get("iv"):
+        line = ""
+        if sm.get("atm") and sm.get("put10") and sm.get("call10"):
+            line = ("<p><b>" + P["iv_sum"].format(
+                atm=sm["atm"] * 100, put=sm["put10"] * 100, call=sm["call10"] * 100)
+                + "</b></p>")
+        iv_section = (
+            f'<h2 id="iv">{P["sec_iv"]}</h2>'
+            f'<p>{P["iv_lead"]}</p>{line}'
+            f'<img src="{charts["iv"]}" alt="Implied volatility by strike">'
+            f'<p>{P["iv_more"]}</p>')
+
     # 手口上位一覧(日次)。建玉より早く公表されるので独立セクションにする。
     pv_section = ""
     if extras.get("pv"):
@@ -1241,7 +1341,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             for href, title, desc in P["guides"])
         + '  </div>'
     )
-    nav_ids = ["#market", "#oitable", "#oi", "#weekly", "#pcr"]
+    nav_ids = ["#market", "#oitable", "#oi", "#iv", "#weekly", "#pcr"]
     nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
     html_doc = f"""<!DOCTYPE html>
 <html lang="{P['html_lang']}">
@@ -1287,7 +1387,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {mini_section}
 
-  {hedge_section}
+  {hedge_section}{iv_section}
 
   {fut_section}
 
@@ -2739,6 +2839,14 @@ def main() -> None:
                   f"(expiries {hp['expiries']})")
     except Exception as e:
         warn(f"hedge pressure failed: {e}")
+    # 行使価格別IV。同じ清算値段ファイルから作れるので、取得済みのものを使い回す。
+    try:
+        sm = iv_smile(settle, expiry)
+        if sm:
+            base_extras["iv"] = sm
+            print(f"iv smile: {len(sm['strikes'])} strikes, atm {sm['atm']:.1%}")
+    except Exception as e:
+        warn(f"iv smile failed: {e}")
 
     # 先物の出来高・取引代金(ラージ/mini/マイクロをラージ換算で比較)
     try:
@@ -2775,6 +2883,8 @@ def main() -> None:
             hc = chart_hedge(base_extras["hedge"], lang)
             if hc:
                 charts["hedge"] = hc
+        if base_extras.get("iv"):
+            charts["iv"] = chart_iv_smile(base_extras["iv"], lang)
         if mini_df is not None:
             mini_res = chart_mini_oi(mini_df, spot, lang)
             if mini_res:

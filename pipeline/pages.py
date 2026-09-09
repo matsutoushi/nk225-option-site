@@ -23,7 +23,8 @@ EN_GUIDE_DESC = {
     "guide-implied-volatility.html":
         "JPX publishes implied volatility for every strike in its daily settlement file, free. "
         "On 4 September 2026 the September series carried 298 strikes: 25.0% at the money, "
-        "50.2% fifteen percent below spot. One trap - deep in-the-money options print 1.0%, a placeholder.",
+        "50.2% fifteen percent below spot. Two traps to filter: deep in-the-money strikes print 1.0%, "
+        "and far out in the wings one value repeats across dozens of strikes.",
     "guide-participants.html":
         "JPX publishes weekly Nikkei 225 futures open interest by named trading participant — "
         "Nomura, Goldman Sachs, HSBC and others — unlike the CFTC's anonymous COT categories. "
@@ -246,6 +247,20 @@ below 55,000 shows exactly 1.0% for this reason.</p>
 <b>build each side of the smile from out-of-the-money contracts.</b>
 Puts below spot, calls above spot. If you average calls and puts at every strike without
 filtering, the in-the-money placeholders drag the whole surface toward zero.</p>
+
+<h2>And a second one, further out</h2>
+<p>Filtering the in-the-money side is not enough. Far into the wings, the file stops
+producing distinct values and <b>repeats a single number across dozens of strikes</b>.</p>
+<p>On 9 September 2026, in the September series, <b>73.21% appeared at 119 different put
+strikes and 38.46% at 64 different call strikes</b>. Those are ceilings, not quotes.
+Plotted raw they turn the tails of the smile into two flat shelves, which makes the skew
+look milder than it is and invites nonsense if you fit a curve through them.</p>
+<p>The test is mechanical: <b>count how many strikes share each volatility.</b>
+Adjacent strikes genuinely can round to the same value near the money — within 10% of spot
+the largest cluster that day was six strikes — so a threshold somewhere above that separates
+real quotes from the plateau. Drop the repeated values and the smile comes back.</p>
+<p>Neither of these traps is documented anywhere in the file. You only find them by
+plotting the column and noticing the shape is wrong.</p>
 
 <h2>Why it matters</h2>
 <p>Volatility per strike is what makes gamma computable from public data alone.
