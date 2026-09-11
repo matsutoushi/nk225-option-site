@@ -1,17 +1,17 @@
 group,key,ja,disp,date,signal
 recession,sahm,Sahmルール,-0.07,2026-08-01,green
 recession,claims,新規失業保険申請(4週平均),206k,2026-09-05,green
-recession,t10y3m,イールドカーブ(10年-3ヶ月),+0.95%,2026-09-10,green
-recession,t10y2y,イールドカーブ(10年-2年),+0.39%,2026-09-10,green
+recession,t10y3m,イールドカーブ(10年-3ヶ月),+0.89%,2026-09-11,green
+recession,t10y2y,イールドカーブ(10年-2年),+0.33%,2026-09-11,green
 recession,cp_prob,景気後退確率(Chauvet-Piger),0.8%,2026-07-01,green
 recession,nyfed_prob,NY連銀 12ヶ月先景気後退確率,13.9%,2027-08,green
-inflation,bei10,期待インフレ率(10年BEI),2.40%,2026-09-10,green
-inflation,f5y5y,期待インフレ率(5年先5年),2.34%,2026-09-10,green
-inflation,cpi,米CPI(前年比),3.5%,2026-07,yellow
+inflation,bei10,期待インフレ率(10年BEI),2.36%,2026-09-11,green
+inflation,f5y5y,期待インフレ率(5年先5年),2.32%,2026-09-11,green
+inflation,cpi,米CPI(前年比),3.7%,2026-08,yellow
 inflation,corepce,米コアPCE(前年比),3.3%,2026-07,yellow
 inflation,jpcpi,日本CPI(前年比),-0.4%,2021-06,green
 inflation,wti,WTI原油(前年比),$97 (+54%),2026-09-09,red
 stress,nfci,シカゴ連銀 金融環境指数,-0.56,2026-09-04,green
 stress,stlfsi,セントルイス連銀 金融ストレス指数,-0.79,2026-09-04,green
-stress,hy,ハイイールド債スプレッド,2.71%,2026-09-09,green
-stress,vix,VIX指数,16.5,2026-09-09,green
+stress,hy,ハイイールド債スプレッド,2.70%,2026-09-10,green
+stress,vix,VIX指数,17.8,2026-09-10,green
