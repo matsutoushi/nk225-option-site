@@ -1910,6 +1910,45 @@ USPAGE = {
         "h1": "米国市場データ",
         "updated": "COT基準日: {cot_date}(毎週金曜更新) | CBOE基準日: {pcr_date} | 最終更新: {now} JST",
         "kpi": ["CBOE 全体PCR", "株式PCR", "SPX PCR"],
+        "lead": "日経225オプションのサイトで米国のデータを並べているのは、<b>日本株の値動きが米国の金利と地合いに強く連動している</b>ためです。米国の建玉やポジションの偏りは、翌日の日経平均の寄り付きと、その日のオプションのボラティリティに直接効いてきます。このページは、その米国側の材料を毎営業日まとめたものです。",
+        "explain": """
+<h2>4つのデータの性格の違い</h2>
+<p>同じ「米国の需給」でも、更新の速さも、示しているものも違います。混ぜて読むと誤ります。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>データ</th><th>示すもの</th><th>更新</th><th>遅れ</th></tr></thead>
+<tbody>
+<tr><td>COT</td><td>投機筋の建玉の偏り</td><td>週次</td><td><b>3営業日</b>(火曜集計・金曜公表)</td></tr>
+<tr><td>CBOE Put/Callレシオ</td><td>その日の売買の偏り</td><td>毎営業日</td><td>1営業日</td></tr>
+<tr><td>SPXガンマ</td><td>ヘッジ売買が働く向き</td><td>毎営業日</td><td>1営業日(遅延データ)</td></tr>
+<tr><td>レバレッジETF</td><td>引けの機械的な売買圧力</td><td>毎営業日</td><td>1営業日</td></tr>
+</tbody>
+</table></div>
+<p><b>COTの3営業日の遅れは軽くありません。</b>相場が大きく動いた週は、
+公表された時点で中身が変わっていることがあります。転換点を当てる道具ではなく、
+<b>偏りが極端まで積み上がっているかを確認する</b>道具として使うほうが実際的です。</p>
+
+<h2>ガンマとレバレッジETFは足し算できません</h2>
+<p>どちらも「機械的に発生する売買」ですが、働く仕組みが別です。</p>
+<ul>
+<li><b>オプションのガンマ</b>は、ディーラーが値動きに応じて随時ヘッジするもので、
+プラス圏なら変動を抑え、マイナス圏なら増幅します。<b>一日中働きます</b></li>
+<li><b>レバレッジETFのリバランス</b>は、倍率を保つために<b>引けに集中して</b>執行されます。
+上昇日は買い・下落日は売りで、常に値動きを増幅する方向です</li>
+</ul>
+<p>時間帯も向きの決まり方も違うため、金額を合算して「合計でいくらの買い圧力」と読むことはできません。
+当サイトが別の指標として並べているのはこのためです。</p>
+
+<h2>日本側と突き合わせる</h2>
+<p>米国のSPXでガンマがマイナス圏に入っている日は、
+米国時間の値動きが増幅されやすく、その結果が翌朝の日経平均の寄り付きに乗ってきます。
+<a href="./">日本側のガンマ</a>と向きが揃っているか、逆かを見ると、
+日中の値動きの荒さを想定しやすくなります。</p>
+<p><b>ただしどちらも推定値です。</b>ディーラーの実際の持ち高は公表されていません。
+前提の置き方は<a href="guide-gex.html">ガンマエクスポージャーとは</a>に書いています。</p>
+<p>関連: <a href="risk.html">マクロリスクモニター</a> ・
+<a href="fedwatch.html">FRB要人発言トラッカー</a> ・
+<a href="guide-cot.html">COTの見方</a></p>
+""",
         "sec_cot": "COT 投機筋ネットポジション(週次)",
         "cot_lead": "CFTC建玉明細報告より。株価指数・通貨はレバレッジファンド、金・原油はマネージドマネーのネットポジション(買い−売り)。毎週火曜時点のデータが金曜に公表されます。<b>灰色の線は各市場の価格(右軸)</b>で、ポジションの偏りと値動きを見比べられます。",
         "cot_cols": ["市場", "ネットポジション", "前週比"],
@@ -1937,6 +1976,37 @@ USPAGE = {
         "h1": "US Markets Data",
         "updated": "COT as of {cot_date} (updated every Friday) | CBOE as of {pcr_date} | Last updated {now} JST",
         "kpi": ["CBOE Total P/C", "Equity P/C", "SPX P/C"],
+        "lead": "US data sits on a Nikkei options site because <b>Japanese equities track US rates and risk appetite closely</b>. Positioning in US markets feeds straight into the Nikkei's opening print and into Nikkei option volatility the same session. This page collects that backdrop every business day.",
+        "explain": """
+<h2>Four datasets, four different clocks</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Data</th><th>What it shows</th><th>Frequency</th><th>Lag</th></tr></thead>
+<tbody>
+<tr><td>COT</td><td>Speculative positioning</td><td>Weekly</td><td><b>Three business days</b></td></tr>
+<tr><td>CBOE put/call ratio</td><td>That day's trading skew</td><td>Daily</td><td>One session</td></tr>
+<tr><td>SPX gamma</td><td>Direction of dealer hedging</td><td>Daily</td><td>One session (delayed data)</td></tr>
+<tr><td>Leveraged ETFs</td><td>Mechanical flow into the close</td><td>Daily</td><td>One session</td></tr>
+</tbody>
+</table></div>
+<p><b>The COT lag matters.</b> In a week the market moves hard, the report can be stale by the
+time it lands. It works better as a check on <b>whether positioning has reached an extreme</b>
+than as a timing tool.</p>
+
+<h2>Gamma and leveraged ETFs do not add up</h2>
+<p>Both are mechanical flows, but the mechanisms differ. <b>Option gamma</b> is dealers
+re-hedging continuously through the session — dampening when positive, amplifying when
+negative. <b>Leveraged ETF rebalancing</b> is concentrated <b>at the close</b> and always
+amplifies: buying on up days, selling on down days. Different clocks, different sign
+conventions; the notionals cannot be summed.</p>
+
+<h2>Reading it against Japan</h2>
+<p>When SPX gamma sits negative, US-hours moves get amplified, and the result arrives in the
+Nikkei's opening print. Comparing the sign against <a href="../">the Japanese gamma estimate</a>
+gives a rough read on how choppy the Tokyo session may be.</p>
+<p><b>Both are estimates.</b> Dealer inventories are not disclosed; the assumptions are set out
+in <a href="guide-gamma-exposure.html">Gamma Exposure, Honestly</a>.</p>
+<p>See also: <a href="risk.html">Macro Risk Monitor</a> ・ <a href="fedwatch.html">Fed Watch</a></p>
+""",
         "sec_cot": "COT Speculator Net Positions (Weekly)",
         "cot_lead": "From the CFTC Commitments of Traders report. Leveraged funds for index/FX futures, managed money for gold/crude. Tuesday data, released Friday. <b>The gray line is the price of each market (right axis)</b>, so positioning can be compared against price action.",
         "cot_cols": ["Market", "Net Position", "WoW"],
@@ -2432,6 +2502,7 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   {site_nav(lang, P['lang_switch'])}
 </header>
 <main>
+  <p>{P.get('lead', '')}</p>
   <div class="kpi">
     <div>{P['kpi'][0]}<br><b>{pcr_us['total']:.2f}</b></div>
     <div>{P['kpi'][1]}<br><b>{pcr_us['equity']:.2f}</b></div>
@@ -2454,6 +2525,8 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
   {spx_section}
 
   {letf_section}
+
+  {P.get('explain', '')}
 
 </main>
 <footer>
