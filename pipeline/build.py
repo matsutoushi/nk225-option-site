@@ -40,6 +40,11 @@ JST = timezone(timedelta(hours=9))
 # 白背景・濃い文字で可読性を優先。チャート画像もこの配色で生成する。
 PAGE_BG = "#f6f7f9"   # ページ背景(わずかにグレー)
 PANEL = "#ffffff"     # カード・チャート面
+# 問い合わせ先。リポジトリに個人のアドレスを書かないため環境変数から読む。
+# 未設定のときはXのDMを案内する(AdSense審査では連絡手段の明示が見られる)。
+CONTACT_EMAIL = os.environ.get("NK225_CONTACT_EMAIL", "").strip()
+X_ACCOUNT = "https://x.com/matsutoushi"
+
 INK = "#111820"       # 主要テキスト
 INK2 = "#5b6675"      # 補助テキスト(白地で十分なコントラスト)
 GRID = "#dfe3e9"      # グリッド・罫線
@@ -1464,6 +1469,53 @@ RISKPAGE = {
         "h1": "マクロリスクモニター",
         "updated": "最終更新: {now} JST(毎営業日 自動更新。指標により月次・週次)",
         "lead": "米国の公式統計・市場データから、リスクイベントの兆候を機械的にチェックするページです。信号は出典に記載の閾値による自動判定で、当サイトの相場予想ではありません。",
+        "explain": """
+<h2>この表の考え方</h2>
+<p>景気後退やインフレの再燃は、ある日突然わかるものではありません。
+いくつもの指標が少しずつ傾いていき、あとから振り返って「あれが転換点だった」と分かります。
+このページは<b>その傾きを、判断を挟まずに毎営業日そのまま並べる</b>ことを目的にしています。</p>
+<p>信号の色は<b>各指標の出典や学術研究、市場で使われてきた目安にもとづく自動判定</b>です。
+当サイトが相場を予想して色を付けているわけではありません。
+判定基準は表の右端に書いてあるので、納得できなければご自身の基準で読み替えてください。</p>
+
+<h2>3つに分けている理由</h2>
+<p>リスクの種類によって、効く指標も、効くまでの時間も違います。混ぜると読めなくなります。</p>
+<ul>
+<li><b>景気後退リスク</b> — 実体経済が縮むかどうか。雇用と金利の形に現れます。
+動きは遅く、シグナルが出てから実際の後退までに<b>1年以上かかることもあります</b></li>
+<li><b>インフレ再燃リスク</b> — 物価が再び上がるかどうか。
+期待インフレ率は市場が織り込んだ将来の物価で、実績のCPIより早く動きます</li>
+<li><b>金融ストレス</b> — 市場の資金繰りが詰まっていないか。
+ここだけは<b>数日で急変します</b>。景気の話より先に相場に出ます</li>
+</ul>
+
+<h2>読むときの注意</h2>
+<p><b>1つの指標で判断しない。</b>どの指標にも誤警報の歴史があります。
+イールドカーブの逆転は景気後退の先行指標としてよく知られていますが、
+逆転してから後退が始まるまでの期間は毎回ばらばらで、
+<b>逆転が解消したあとに後退入りした例もあります</b>。単独では時期を決められません。</p>
+<p><b>Sahmルールは後追いです。</b>失業率の3か月平均が直近1年の最低から0.5ポイント上がったら、
+というルールで、過去の景気後退をよく当ててきました。
+ただし<b>雇用統計は毎月しか出ず、改定もされます</b>。気づいたときには始まっている種類の指標です。</p>
+<p><b>期待インフレ率は市場の値です。</b>10年BEIは物価連動債と普通国債の利回り差で、
+実際の物価ではなく<b>投資家が織り込んでいる物価</b>です。
+流動性が細ると実態以上に動くことがあります。</p>
+<p><b>赤が出ていないことは安全を意味しません。</b>
+ここに並べているのは過去の危機で機能した指標です。
+次の危機が別の経路で来れば、全部が緑のまま起きます。</p>
+
+<h2>なぜ米国の指標を並べているのか</h2>
+<p>日経225オプションのサイトで米国の統計を追っているのは、
+<b>日本株の値動きが米国の金利と景気に強く連動している</b>ためです。
+FOMCの政策金利見通しが動けば日経平均の先物が動き、
+その日のうちにオプションのボラティリティに反映されます。
+米国側の地合いを押さえておくと、
+<a href="./">日本側の建玉やガンマ</a>で見えている需給が
+「なぜそうなっているか」を考えやすくなります。</p>
+<p>関連: <a href="us.html">米国市場データ</a> ・
+<a href="fedwatch.html">FRB要人発言トラッカー</a> ・
+<a href="guide-cot.html">COT(投機筋ポジション)の見方</a></p>
+""",
         "groups": {"recession": "景気後退リスク", "inflation": "インフレ再燃リスク", "stress": "金融ストレス"},
         "cols": ["信号", "指標", "最新値", "基準日", "判定基準"],
         "legend": "●緑=平常 / ●黄=注意 / ●赤=警告",
@@ -1480,6 +1532,48 @@ RISKPAGE = {
         "h1": "Macro Risk Monitor",
         "updated": "Last updated {now} JST (auto-updated every business day; some series weekly/monthly)",
         "lead": "A mechanical check of risk-event signals from official US statistics and market data. Signals are threshold-based flags per the cited sources — not this site's market forecast.",
+        "explain": """
+<h2>How to read this page</h2>
+<p>Recessions and inflation restarts are never obvious on the day. Several indicators tilt a
+little at a time, and only in hindsight does one of them look like the turning point.
+This page exists to <b>lay out those tilts every business day without editorialising</b>.</p>
+<p>The signal colours are <b>set mechanically from thresholds published by the data source,
+drawn from academic work, or established by market convention</b> — not from any view of ours.
+Each threshold is printed in the right-hand column, so you can substitute your own.</p>
+
+<h2>Why three groups</h2>
+<ul>
+<li><b>Recession risk</b> — whether the real economy is contracting. It shows up in labour
+data and the shape of the curve, and it moves slowly; the gap between a signal and an actual
+downturn <b>has run well over a year</b></li>
+<li><b>Inflation restart risk</b> — breakeven rates are the market's forecast of future
+inflation, so they move earlier than realised CPI</li>
+<li><b>Financial stress</b> — whether funding is seizing up. This is the only group that
+<b>can change within days</b>, and it reaches equity prices before the macro data does</li>
+</ul>
+
+<h2>Caveats</h2>
+<p><b>No single indicator decides anything.</b> Every one of these has a false-positive history.
+Curve inversion is the best known recession lead, but the lag to the actual downturn has
+varied enormously, and <b>some recessions began only after the inversion had already
+un-inverted</b>. It cannot time anything on its own.</p>
+<p><b>The Sahm rule is backward-looking.</b> It fires when the three-month average
+unemployment rate rises half a point above its twelve-month low. It has a strong record, but
+<b>payroll data is monthly and gets revised</b>, so by the time it fires the thing has started.</p>
+<p><b>Breakevens are market prices.</b> The ten-year breakeven is the spread between nominal
+and inflation-linked Treasuries — what investors are pricing, not what prices are doing. Thin
+liquidity can exaggerate it.</p>
+<p><b>An absence of red is not safety.</b> These are indicators that worked in past crises.
+A crisis that arrives by another route will happen with every light still green.</p>
+
+<h2>Why US data on a Nikkei site</h2>
+<p>Japanese equities track US rates and growth closely. When the FOMC's rate path shifts,
+Nikkei futures move, and it reaches Nikkei option volatility the same session. Having the US
+backdrop makes the positioning visible on the
+<a href="../">Japanese open interest and gamma pages</a> easier to reason about.</p>
+<p>See also: <a href="us.html">US market data</a> ・
+<a href="fedwatch.html">Fed Watch</a></p>
+""",
         "groups": {"recession": "Recession Risk", "inflation": "Inflation Re-acceleration Risk", "stress": "Financial Stress"},
         "cols": ["Signal", "Indicator", "Latest", "As of", "Threshold Basis"],
         "legend": "●Green = normal / ●Yellow = caution / ●Red = warning",
@@ -1622,6 +1716,7 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
   <p>{P['legend']}</p>
   {''.join(sections)}
   {chart_html}
+  {P.get('explain', '')}
 </main>
 <footer>
   {footer_sitemap(lang)}
@@ -1643,7 +1738,53 @@ FEDPAGE = {
         "desc": "FOMC声明・議事要旨・理事の講演・議会証言を、FRB公式RSSから毎営業日自動収集して一覧にしています。リンク先はすべてfederalreserve.govの英語原文です。",
         "h1": "FRB要人発言トラッカー",
         "updated": "最終更新: {now} JST(毎営業日 自動更新)",
-        "lead": "米連邦準備制度理事会(FRB)の公式サイトから、FOMC関連リリース・講演・議会証言を自動収集しています。リンク先はすべて英語の原文(federalreserve.gov)です。FOMC声明など重要文書の日本語解説は、今後不定期で追加予定です。",
+        "lead": "米連邦準備制度理事会(FRB)の公式サイトから、FOMC関連リリース・講演・議会証言を自動収集しています。リンク先はすべて英語の原文(federalreserve.gov)です。文書の種類ごとの重みと読み方は、下の解説にまとめています。",
+        "explain": """
+<h2>FRBが出す文書の種類と性格</h2>
+<p>同じ「FRB発」でも、文書によって重みがまったく違います。
+ここを取り違えると、一人の理事の講演を委員会の決定のように受け取ってしまいます。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>文書</th><th>誰の意思か</th><th>出るタイミング</th><th>何が分かるか</th></tr></thead>
+<tbody>
+<tr><td><b>FOMC声明</b></td><td><b>委員会の決定</b></td><td>会合の最終日</td><td>政策金利と、今後の方向づけ。最も重い</td></tr>
+<tr><td>経済見通し(SEP)</td><td>参加者の予測の分布</td><td>年4回、声明と同時</td><td>いわゆるドットチャート。金利見通しの中央値</td></tr>
+<tr><td>議長記者会見</td><td>議長の説明</td><td>声明の30分後</td><td>声明の言葉づかいの意図。質疑で本音が出る</td></tr>
+<tr><td>議事要旨</td><td>委員会の議論</td><td><b>会合の約3週間後</b></td><td>反対意見や、どこで割れたか</td></tr>
+<tr><td>講演</td><td><b>個人の見解</b></td><td>随時</td><td>委員個々の立ち位置。決定ではない</td></tr>
+<tr><td>議会証言</td><td>議長の公式説明</td><td>年2回ほか</td><td>議員の質問に答える形なので、論点が広い</td></tr>
+</tbody>
+</table></div>
+
+<h2>声明は「前回との差分」を読む</h2>
+<p>FOMC声明は毎回ほぼ同じ構成で、<b>変わった単語がそのままメッセージ</b>になります。
+「緩やかに拡大している」が「拡大のペースが鈍化した」に変わる、
+「追加の引き締めが適切と見込まれる」という一文が消える——
+市場が反応するのはこうした一語一句です。
+全文を通して読むより、前回と並べて差分を探すほうが早く要点に届きます。</p>
+
+<h2>議事要旨は3週間遅れで出る</h2>
+<p>議事要旨の価値は<b>「割れ方」が分かること</b>です。
+声明は全会一致の体裁に整えられますが、議事要旨には
+「数名の参加者は」「何人かの参加者は」といった表現で意見の分布が書かれます。
+この言い回しにはおおよその人数感の慣例があり、
+<b>少数派がどれだけいたか</b>が次回の判断材料になります。
+ただし会合から3週間経っているため、その間に出た経済指標で前提が変わっていることもあります。</p>
+
+<h2>講演を決定と混同しない</h2>
+<p>理事や地区連銀総裁の講演は個人の見解で、<b>委員会の決定ではありません</b>。
+投票権を持たない地区連銀総裁の発言も多く含まれます。
+それでも追う価値があるのは、<b>複数の委員が同じ言い回しを使い始めたとき</b>に、
+次の声明の方向が読めることがあるためです。一本の講演ではなく、並べて見るものです。</p>
+
+<h2>なぜ原文へのリンクなのか</h2>
+<p>このページが英語原文にリンクしているのは、<b>政策文書は訳した時点で解釈が入る</b>からです。
+上に書いたとおり、FOMC声明は単語の差し替えがメッセージそのものです。
+日本語の報道は要約や意訳を経ているため、どの語が変わったのかは原文でしか確認できません。
+当サイトは収集と整理までを担当し、<b>読むのは原文で</b>という方針にしています。</p>
+<p>関連: <a href="risk.html">マクロリスクモニター</a> ・
+<a href="us.html">米国市場データ</a> ・
+<a href="guide-cot.html">COT(投機筋ポジション)の見方</a></p>
+""",
         "cols": ["日付", "タイトル(英語原文へのリンク)"],
         "back": '<a href="./">← 日本市場データ</a><a href="us.html">米国市場</a><a href="risk.html">リスクモニター</a>',
         "lang_switch": '<a href="en/fedwatch.html" lang="en">English</a>',
@@ -1656,6 +1797,46 @@ FEDPAGE = {
         "h1": "Fed Watch",
         "updated": "Last updated {now} JST (auto-updated every business day)",
         "lead": "Latest FOMC-related releases, speeches and congressional testimony, collected automatically from the Federal Reserve Board's official RSS feeds. All links go to original documents on federalreserve.gov.",
+        "explain": """
+<h2>What the Fed publishes, and what each thing is worth</h2>
+<p>Not everything from the Federal Reserve carries the same weight. Confusing a single
+governor's speech with a committee decision is the most common mistake.</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Document</th><th>Whose view</th><th>When</th><th>What it tells you</th></tr></thead>
+<tbody>
+<tr><td><b>FOMC statement</b></td><td><b>The committee</b></td><td>Final day of the meeting</td><td>The rate decision and forward guidance. The heaviest document</td></tr>
+<tr><td>Projections (SEP)</td><td>Distribution of participants' forecasts</td><td>Quarterly, with the statement</td><td>The dot plot and the median rate path</td></tr>
+<tr><td>Chair's press conference</td><td>The Chair</td><td>30 minutes after the statement</td><td>The intent behind the wording; the Q&amp;A is where it shows</td></tr>
+<tr><td>Minutes</td><td>The committee's discussion</td><td><b>About three weeks later</b></td><td>Dissents, and where opinion split</td></tr>
+<tr><td>Speeches</td><td><b>One individual</b></td><td>Anytime</td><td>Where each official stands. Not a decision</td></tr>
+<tr><td>Testimony</td><td>The Chair, on the record</td><td>Twice yearly and ad hoc</td><td>Wider ground, driven by legislators' questions</td></tr>
+</tbody>
+</table></div>
+
+<h2>Read the statement as a diff</h2>
+<p>FOMC statements follow the same skeleton every time, so <b>the words that changed are the
+message</b>. "Expanding at a moderate pace" becoming "the pace of expansion has slowed", or a
+sentence about further tightening simply disappearing — that is what moves markets. Comparing
+against the previous statement gets you there faster than reading it straight through.</p>
+
+<h2>The minutes show the split</h2>
+<p>The statement is smoothed into consensus language; the minutes are not. Phrases like
+"several participants" and "a few participants" map loosely onto headcounts, and
+<b>how large the minority was</b> feeds into the next decision. The catch is the three-week
+lag: data released in between may already have moved the ground.</p>
+
+<h2>Speeches are not decisions</h2>
+<p>Governors and regional presidents speak for themselves, and many speakers do not hold a
+vote in a given year. They are still worth following, because <b>when several officials start
+using the same phrase</b>, the next statement often follows. Read them as a set, not one by one.</p>
+
+<h2>Why we link to the originals</h2>
+<p>Policy documents acquire interpretation the moment they are translated or summarised, and
+as above, the substitution of single words <b>is</b> the message. We handle collection and
+ordering; the reading should happen in the source text.</p>
+<p>See also: <a href="risk.html">Macro Risk Monitor</a> ・
+<a href="us.html">US market data</a></p>
+""",
         "cols": ["Date", "Title"],
         "back": '<a href="../">← Nikkei data</a><a href="us.html">US Markets</a><a href="risk.html">Risk Monitor</a>',
         "lang_switch": '<a href="../fedwatch.html" lang="ja">日本語</a>',
@@ -1706,6 +1887,7 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 <main>
   <p>{P['lead']}</p>
   {''.join(sections)}
+  {P.get('explain', '')}
 </main>
 <footer>
   {footer_sitemap(lang)}
@@ -2590,44 +2772,155 @@ def render_static_pages() -> None:
 </html>
 """
 
+    contact = (
+        f'<p>ご意見・誤りのご指摘・掲載に関するお問い合わせは '
+        f'<a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a> までお願いします。'
+        f'X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> のダイレクトメッセージでも受け付けています。</p>'
+        if CONTACT_EMAIL else
+        f'<p>X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> の'
+        f'ダイレクトメッセージにてご連絡ください。</p>')
+
     about = """
 <h1>運営者情報</h1>
+
 <h2>運営者</h2>
-<p>matsutoushi(個人投資家)</p>
-<h2>サイトについて</h2>
-<p>日経225オプション・先物のパブリックデータ(日本取引所グループ公表)を毎営業日自動集計し、
-建玉分布・Put/Callレシオ・取引参加者別建玉などを可視化しています。
-以前より金融データの収集・分析を行っており、個人投資家のマーケット分析の一助となることを目的としています。</p>
+<p>matsutoushi(個人投資家)。日経225オプション・先物の需給データを継続的に収集・分析しています。
+分析の一部はX(旧Twitter) <a href="""" + X_ACCOUNT + """" rel="me">@matsutoushi</a> でも毎営業日公開しています。</p>
+
+<h2>このサイトは何をしているか</h2>
+<p>日経225オプションの需給を知りたいとき、必要なデータは公開されているのに
+<b>ファイルがばらばらで、そのままでは読めない</b>という問題があります。
+JPXは建玉・出来高・清算値段・取引参加者別建玉を別々のファイルで、別々の時刻に、
+別々の形式(Excel・CSV・JSON)で出しています。文字コードもShift_JISです。</p>
+<p>当サイトは<b>これを毎営業日まとめて取得・解析し、比較できる形に直して掲載</b>しています。
+具体的には次のことをしています。</p>
+<ul>
+<li><b>単位を揃える</b> — ラージ・ミニ・マイクロは取引単位が10倍ずつ違います。
+枚数のままでは規模を比較できないので、ラージ換算した値を併記しています</li>
+<li><b>推計する</b> — ガンマ・エクスポージャーは公表されていません。
+建玉と清算値段のボラティリティから当サイトが計算しています</li>
+<li><b>履歴を積む</b> — JPXは過去ファイルをまとめて提供していません。
+取引参加者別建玉は52週分、SQ値は2021年以降、日次の建玉は公開以降を蓄積しています</li>
+<li><b>読み方を書く</b> — データだけでは誤読されます。
+「最大建玉=壁ではない」「PCRは1.0が中立ではない」といった、
+実測にもとづく注意点を<a href="index.html#guides">解説記事</a>にまとめています</li>
+</ul>
+
+<h2>掲載データの出典</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th>データ</th><th>出典</th><th>更新</th></tr></thead>
+<tbody>
+<tr><td>建玉残高・出来高・清算値段・取引参加者別建玉</td><td>日本取引所グループ(JPX)</td><td>毎営業日</td></tr>
+<tr><td>日経平均株価・日経平均VI</td><td>日本経済新聞社</td><td>毎営業日</td></tr>
+<tr><td>投機筋ポジション(COT)</td><td>米商品先物取引委員会(CFTC)</td><td>週次</td></tr>
+<tr><td>米国オプションのPut/Callレシオ・建玉</td><td>Cboe Global Markets</td><td>毎営業日</td></tr>
+<tr><td>金利・物価・雇用などのマクロ指標</td><td>セントルイス連銀(FRED)</td><td>随時</td></tr>
+<tr><td>FOMC声明・議事要旨・講演・議会証言</td><td>米連邦準備制度理事会(FRB)</td><td>随時</td></tr>
+</tbody>
+</table></div>
+<p>いずれも各機関が無料で公開しているものです。
+<b>取引所の生データをそのまま再配布することはしていません。</b>
+集計・換算・推計を加えたうえで掲載しています。
+どのファイルをどこから取得しているかは
+<a href="guide-jpx-data.html">公式データはどこにあるか</a>に一覧をまとめています。</p>
+
+<h2>推計を含む項目</h2>
+<p>次の項目は<b>公表値ではなく当サイトの推計</b>です。前提を置いて計算しているため、
+実際の値とは異なります。</p>
+<ul>
+<li><b>ガンマ・エクスポージャー</b> — 証券会社の実際の保有は公表されていません。
+コールを買い持ち・プットを売り持ちという一般的な前提を置いた推定値です
+(<a href="guide-gex.html">解説</a>)</li>
+<li><b>行使価格別IV</b> — JPXの公表値ですが、深いイン・ザ・マネーは1.0%固定のダミー値、
+裾では同じ値が何十本もの行使価格で使い回されるため、それらを除外して表示しています</li>
+<li><b>ラージ換算</b> — ミニを1/10、マイクロを1/100として合算した値です</li>
+</ul>
+
+<h2>編集方針</h2>
+<ul>
+<li><b>個別の売買を推奨しません。</b>データの読み方と事実に徹します</li>
+<li><b>観測と解釈を分けます。</b>建玉の増減から動機は分かりません。
+「保険かもしれないし、ポジション調整かもしれない」と併記するか、観測事実だけを書きます</li>
+<li><b>数字には日付と出典を付けます。</b>「最近増えている」ではなく「9月4日時点で何枚」と書きます</li>
+<li><b>間違いは直します。</b>お気づきの点はご連絡ください</li>
+</ul>
+
+<h2>更新の体制</h2>
+<p>毎営業日、自動で取得・生成しています。JPXの公表時刻はデータの種類ごとに違い、
+出来高は16時台、取引参加者別取引高は17時台、建玉残高は20時頃です。
+そのため<b>ページ上部に種類ごとの基準日を表示</b>しています。</p>
+<p>取得や解析に失敗した日は、<b>壊れた数字を出すより前日の内容をそのまま残す</b>作りにしています。
+JPXのファイル形式が変わったときに誤った値を表示しないためです。</p>
+
 <h2>お問い合わせ</h2>
-<p>X(旧Twitter)のダイレクトメッセージにてご連絡ください。</p>
+""" + contact + """
+
 <h2>広告掲載について</h2>
-<p>当サイトは、アフィリエイトプログラムに参加し、広告を掲載する場合があります。
-広告を含むページにはその旨を表記します。</p>
+<p>当サイトはアフィリエイトプログラムに参加しており、広告を掲載しています。
+広告を含むページには冒頭にその旨を表記しています。
+広告の有無によって掲載する数値や評価を変えることはありません。</p>
+<p>詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</p>
 """
     privacy = """
 <h1>プライバシーポリシー</h1>
+
 <h2>個人情報の取り扱い</h2>
-<p>当サイトは、閲覧にあたって個人情報の入力を求めることはありません。</p>
+<p>当サイトは、閲覧にあたって氏名・住所・電話番号などの個人情報の入力を求めることはありません。
+会員登録もありません。お問い合わせをいただいた場合、返信のためにのみ連絡先を利用し、
+第三者に提供することはありません。</p>
+
+<h2>アクセス解析について</h2>
+<p>当サイトは<b>Google Analytics 4</b>を利用しています。
+Googleがトラフィックデータの収集のためにCookieを使用しますが、個人を特定する情報は含まれません。
+収集される内容と利用方法は
+<a href="https://policies.google.com/technologies/partner-sites">Googleのポリシーと規約</a>をご覧ください。
+<a href="https://tools.google.com/dlpage/gaoptout?hl=ja">Google アナリティクス オプトアウト アドオン</a>で
+無効にできます。</p>
+
 <h2>広告について</h2>
-<p>当サイトは、第三者配信の広告サービスおよびアフィリエイトプログラム
-(Google AdSense、A8.net、アクセストレード、TGアフィリエイト等)を利用する場合があります。
-広告配信事業者は、ユーザーの興味に応じた広告を表示するためにCookieを使用することがあります。</p>
-<p>Googleを含む第三者配信事業者は、Cookieを使用して、ユーザーが当サイトや他のサイトに
-過去にアクセスした際の情報に基づいて広告を配信します。
-Googleが広告Cookieを使用することにより、ユーザーは
+<p>当サイトは第三者配信の広告サービスとアフィリエイトプログラムを利用しています。
+現在の利用状況は次のとおりです。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>サービス</th><th>種類</th><th>状況</th></tr></thead>
+<tbody>
+<tr><td>A8.net</td><td>アフィリエイト</td><td>利用中</td></tr>
+<tr><td>アクセストレード</td><td>アフィリエイト</td><td>利用中</td></tr>
+<tr><td>Google AdSense</td><td>第三者配信広告</td><td>申請中(配信タグを設置済み)</td></tr>
+</tbody>
+</table></div>
+<p>広告配信事業者は、ユーザーの興味に応じた広告を表示するためにCookieを使用することがあります。
+Googleを含む第三者配信事業者は、Cookieを使用して、ユーザーが当サイトや他のサイトに
+過去にアクセスした際の情報に基づいて広告を配信します。</p>
+<p>Googleが広告Cookieを使用することにより、ユーザーは
 <a href="https://adssettings.google.com/">広告設定</a>でパーソナライズ広告を無効にできます。
 また <a href="https://www.aboutads.info/choices/">aboutads.info</a> で
 第三者配信事業者のCookieを無効にできます。</p>
-<h2>アクセス解析について</h2>
-<p>当サイトは、アクセス解析ツールを利用する場合があります。
-これらのツールはトラフィックデータの収集のためにCookieを使用することがありますが、
-個人を特定する情報は含まれません。</p>
+<p>広告を含むページには冒頭に「本ページにはプロモーションが含まれる場合があります」と表記しています
+(景品表示法・ステルスマーケティング規制への対応)。</p>
+
+<h2>掲載データの出典と権利</h2>
+<p>当サイトが掲載する数値は、日本取引所グループ(JPX)、日本経済新聞社、米商品先物取引委員会(CFTC)、
+Cboe Global Markets、セントルイス連銀(FRED)、米連邦準備制度理事会(FRB)が公表するデータを
+集計・換算・推計したものです。各データの権利は各公表元に帰属します。
+出典の一覧は<a href="about.html">運営者情報</a>に記載しています。</p>
+
 <h2>免責事項</h2>
-<p>当サイトに掲載する情報の正確性には万全を期していますが、その内容の正確性・安全性を保証するものではありません。
-当サイトの利用によって生じた損害について、運営者は一切の責任を負いません。
-掲載データの出典は日本取引所グループ(JPX)および日本経済新聞社の公表データです。</p>
-<h2>制定日</h2>
-<p>2026年7月18日</p>
+<p>当サイトは情報提供を目的としたものであり、<b>投資勧誘・投資助言ではありません</b>。
+掲載する情報の正確性には万全を期していますが、その内容の正確性・完全性・安全性を保証するものではありません。
+とくにガンマ・エクスポージャーなどの推計値は一定の前提を置いた試算であり、実際の値とは異なります。</p>
+<p>当サイトの利用によって生じた損害について、運営者は一切の責任を負いません。
+投資判断はご自身の責任でお願いします。</p>
+
+<h2>リンクについて</h2>
+<p>当サイトへのリンクは自由です。外部サイトへのリンクについて、
+リンク先の内容や運営については責任を負いかねます。</p>
+
+<h2>お問い合わせ</h2>
+""" + contact + """
+
+<h2>改定</h2>
+<p>制定: 2026年7月18日 / 最終改定: 2026年9月12日</p>
+<p>本ポリシーの内容は、必要に応じて変更することがあります。</p>
 """
     with open(os.path.join(SITE, "about.html"), "w", encoding="utf-8") as f:
         f.write(shell("運営者情報", about, desc=(
