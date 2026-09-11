@@ -43,7 +43,11 @@ PANEL = "#ffffff"     # カード・チャート面
 # 問い合わせ先。リポジトリに個人のアドレスを書かないため環境変数から読む。
 # 未設定のときはXのDMを案内する(AdSense審査では連絡手段の明示が見られる)。
 CONTACT_EMAIL = os.environ.get("NK225_CONTACT_EMAIL", "").strip()
+# 問い合わせフォーム(Googleフォーム)のURL。設定されていれば contact.html を作る。
+# アドレスを公開せずに窓口を持てる。埋め込み用に ?embedded=true を付けて使う。
+CONTACT_FORM = os.environ.get("NK225_CONTACT_FORM", "").strip()
 X_ACCOUNT = "https://x.com/matsutoushi"
+
 
 INK = "#111820"       # 主要テキスト
 INK2 = "#5b6675"      # 補助テキスト(白地で十分なコントラスト)
@@ -2691,6 +2695,7 @@ def footer_sitemap(lang: str) -> str:
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
+            *(( ("contact.html", "お問い合わせ"), ) if CONTACT_FORM else ()),
             ("en/", "English")]
     else:
         items = NAV_LINKS["en"] + [
@@ -2789,7 +2794,7 @@ def render_seo_files() -> None:
              "en/guide-put-call-ratio.html", "en/guide-implied-volatility.html",
              "en/guide-data-sources.html", "en/guide-contract-specs.html",
              "en/glossary.html",
-             "about.html", "privacy.html"]
+             "about.html", "privacy.html"] + (["contact.html"] if CONTACT_FORM else [])
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
         f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod></url>" for p in pages)
@@ -2845,13 +2850,21 @@ def render_static_pages() -> None:
 </html>
 """
 
-    contact = (
-        f'<p>ご意見・誤りのご指摘・掲載に関するお問い合わせは '
-        f'<a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a> までお願いします。'
-        f'X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> のダイレクトメッセージでも受け付けています。</p>'
-        if CONTACT_EMAIL else
-        f'<p>X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> の'
-        f'ダイレクトメッセージにてご連絡ください。</p>')
+    if CONTACT_FORM:
+        contact = (
+            f'<p>ご意見・誤りのご指摘・掲載に関するお問い合わせは'
+            f'<a href="contact.html"><b>お問い合わせフォーム</b></a>からお願いします。</p>'
+            f'<p>X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> の'
+            f'ダイレクトメッセージでも受け付けています。</p>')
+    elif CONTACT_EMAIL:
+        contact = (
+            f'<p>ご意見・誤りのご指摘・掲載に関するお問い合わせは '
+            f'<a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a> までお願いします。'
+            f'X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> のダイレクトメッセージでも受け付けています。</p>')
+    else:
+        contact = (
+            f'<p>X(旧Twitter) <a href="{X_ACCOUNT}" rel="me">@matsutoushi</a> の'
+            f'ダイレクトメッセージにてご連絡ください。</p>')
 
     about = """
 <h1>運営者情報</h1>
@@ -2939,8 +2952,13 @@ JPXのファイル形式が変わったときに誤った値を表示しない�
 
 <h2>個人情報の取り扱い</h2>
 <p>当サイトは、閲覧にあたって氏名・住所・電話番号などの個人情報の入力を求めることはありません。
-会員登録もありません。お問い合わせをいただいた場合、返信のためにのみ連絡先を利用し、
-第三者に提供することはありません。</p>
+会員登録もありません。</p>
+<p>お問い合わせフォーム(Googleフォーム)にご入力いただいた内容は、
+運営者のみが閲覧し、<b>お問い合わせへの対応以外の目的では利用しません</b>。
+第三者に提供することもありません。返信先をご記入いただかない限り、
+こちらから個人を特定することはできません。
+Googleによる取り扱いは
+<a href="https://policies.google.com/privacy">Googleのプライバシーポリシー</a>をご覧ください。</p>
 
 <h2>アクセス解析について</h2>
 <p>当サイトは<b>Google Analytics 4</b>を利用しています。
@@ -2995,6 +3013,53 @@ Cboe Global Markets、セントルイス連銀(FRED)、米連邦準備制度理�
 <p>制定: 2026年7月18日 / 最終改定: 2026年9月12日</p>
 <p>本ポリシーの内容は、必要に応じて変更することがあります。</p>
 """
+    if CONTACT_FORM:
+        embed = CONTACT_FORM
+        if "docs.google.com/forms" in embed and "embedded=true" not in embed:
+            embed += ("&" if "?" in embed else "?") + "embedded=true"
+        contact_body = """
+<h1>お問い合わせ</h1>
+<p>下のフォームからご連絡ください。メールアドレスの登録は不要です。
+返信をご希望の場合のみ、連絡先をご記入ください。</p>
+
+<h2>こんなご連絡をお待ちしています</h2>
+<ul>
+<li><b>数字の誤り・計算のおかしい点</b> — 当サイトの数値は公表ファイルを自前で解析したものです。
+おかしいと思われた箇所があれば、ページ名と日付を添えてご指摘ください。確認して直します</li>
+<li><b>取り上げてほしいデータ</b> — 公表されているのに読みにくいデータがあれば教えてください</li>
+<li><b>解説してほしい用語・仕組み</b></li>
+<li><b>掲載・引用のご相談</b></li>
+</ul>
+<p>なお当サイトは情報提供を目的としており、<b>個別の銘柄や売買についてのご相談・助言はお受けできません</b>。
+投資判断はご自身の責任でお願いします。</p>
+
+<h2>フォーム</h2>
+<div style="margin:16px 0;">
+<iframe src="{embed}" width="100%" height="900" frameborder="0"
+        marginheight="0" marginwidth="0" title="お問い合わせフォーム"
+        loading="lazy">読み込んでいます…</iframe>
+</div>
+<p style="font-size:0.9em;">フォームが表示されない場合は
+<a href="{direct}" rel="noopener" target="_blank">こちらから直接開けます</a>。</p>
+
+<h2>お預かりする情報について</h2>
+<p>このフォームはGoogleフォームを使用しています。
+ご入力いただいた内容は運営者のみが閲覧し、<b>お問い合わせへの対応以外には利用しません</b>。
+第三者に提供することもありません。
+Googleによる取り扱いについては
+<a href="https://policies.google.com/privacy" rel="noopener" target="_blank">Googleのプライバシーポリシー</a>をご覧ください。</p>
+<p>そのほかの取り扱いは<a href="privacy.html">プライバシーポリシー</a>に記載しています。</p>
+
+<h2>そのほかの連絡手段</h2>
+<p>X(旧Twitter) <a href="{x}" rel="me">@matsutoushi</a> の
+ダイレクトメッセージでも受け付けています。</p>
+""".format(embed=embed, direct=CONTACT_FORM, x=X_ACCOUNT)
+        with open(os.path.join(SITE, "contact.html"), "w", encoding="utf-8") as f:
+            f.write(shell("お問い合わせ", contact_body, desc=(
+                "当サイトへのお問い合わせフォームです。数値の誤りのご指摘、"
+                "取り上げてほしいデータ、掲載・引用のご相談などを受け付けています。"
+                "メールアドレスの登録は不要です。")))
+
     with open(os.path.join(SITE, "about.html"), "w", encoding="utf-8") as f:
         f.write(shell("運営者情報", about, desc=(
             "当サイトの運営者と、掲載しているデータの出典・作成方法について。"
