@@ -2223,3 +2223,33 @@ for _key in ("guide-oi.html", "guide-pcr.html", "guide-gex.html", "guide-cot.htm
     if _key in GUIDE_PAGES:
         _title, _body = GUIDE_PAGES[_key]
         GUIDE_PAGES[_key] = (_title, PR_NOTE + _body + CTA_BROKER)
+
+
+# ---------------------------------------------------------------------------
+# SQページのタイトル・説明文に「次回の日付」を入れる(毎日の生成時に更新)
+#
+# Search Console(2026-09-13確認)で「sq いつ 2026」9位・「sqいつ 2026」11位まで
+# 上がったのに、直近7日の表示266回でクリック0だった。
+# 検索している人は日付を知りたいのに、タイトルは「SQとは」で始まり、
+# 説明文もルール(第2金曜)から始まっていて、答えの日付が検索結果に出ていなかった。
+# 順位10位以内でCTR 0なら文言の問題、という診断どおりの形。
+# 日本語のタイトルは32字前後で切れるので、日付と年を先頭30字に収める。
+# ---------------------------------------------------------------------------
+if _SQ_CAL:
+    _W = "月火水木金土日"
+    _n = _SQ_CAL[0]
+    _sq, _last = _n["sq"], _n["last"]
+    _kind = "メジャーSQ" if _n["major"] else "マイナーSQ"
+    _title = f"SQはいつ？次回は{_sq.month}月{_sq.day}日({_W[_sq.weekday()]})｜{_sq.year}年のSQ日程一覧"
+    _desc = (f"次回のSQ算出日は{_sq.year}年{_sq.month}月{_sq.day}日({_W[_sq.weekday()]})、"
+             f"取引最終日は{_last.month}月{_last.day}日({_W[_last.weekday()]})です({_kind})。"
+             f"今後12回のSQ日程、SQ値が決まる時刻(寄り付き後の9時台、JPXの公式掲載は15:45以降)、"
+             f"過去24か月のSQ値を毎営業日更新しています。")
+    _old_h1 = "<h1>SQとは — 次回はいつ、SQ値は何時に決まるのか</h1>"
+    _new_h1 = (f"<h1>SQはいつ？ 次回は{_sq.month}月{_sq.day}日({_W[_sq.weekday()]})"
+               f" — SQとは何か、SQ値は何時に決まるのか</h1>")
+    _t, _b = GUIDE_PAGES["guide-sq.html"]
+    if _old_h1 in _b:
+        _b = _b.replace(_old_h1, _new_h1, 1)
+    GUIDE_PAGES["guide-sq.html"] = (_title, _b)
+    GUIDE_DESC["guide-sq.html"] = _desc
