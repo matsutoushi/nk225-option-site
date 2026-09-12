@@ -46,6 +46,9 @@ jobs:
       # 未登録なら広告タグは一切出力されない。
       ADSENSE_CLIENT: ${{ secrets.ADSENSE_CLIENT }}
       ADSENSE_SLOT: ${{ secrets.ADSENSE_SLOT }}
+      # 問い合わせフォーム(Googleフォーム)のURL。設定されていれば contact.html を作る。
+      # URLに個人情報は含まれないのでSecretsではなくVariablesに置いている。
+      NK225_CONTACT_FORM: ${{ vars.NK225_CONTACT_FORM }}
     steps:
       - uses: actions/checkout@v4
 
