@@ -45,6 +45,7 @@ PANEL = "#ffffff"     # カード・チャート面
 CONTACT_EMAIL = os.environ.get("NK225_CONTACT_EMAIL", "").strip()
 # 問い合わせフォーム(Googleフォーム)のURL。設定されていれば contact.html を作る。
 # アドレスを公開せずに窓口を持てる。埋め込み用に ?embedded=true を付けて使う。
+UA_STR = "Mozilla/5.0 (compatible; nk225-options-site)"
 CONTACT_FORM = os.environ.get("NK225_CONTACT_FORM", "").strip()
 X_ACCOUNT = "https://x.com/matsutoushi"
 
@@ -3014,7 +3015,20 @@ Cboe Global Markets、セントルイス連銀(FRED)、米連邦準備制度理�
 <p>本ポリシーの内容は、必要に応じて変更することがあります。</p>
 """
     if CONTACT_FORM:
+        # forms.gle の短縮URLでも渡せるようにする。
+        # 転送先(docs.google.com/.../viewform)まで解決してから embedded=true を付ける。
+        # embedded=true だとGoogleのヘッダ・フッタが落ちて枠に収まりがよくなる。
+        # ネットワークが使えないときは元のURLのまま埋め込む(X-Frame-Optionsは付いて
+        # いないので、短縮URLのままでも表示自体はできる)。
         embed = CONTACT_FORM
+        if "forms.gle" in embed or "goo.gl/forms" in embed:
+            try:
+                import urllib.request
+                req = urllib.request.Request(embed, headers={"User-Agent": UA_STR})
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    embed = r.geturl()
+            except Exception as e:
+                warn(f"contact form: could not resolve short link ({e})")
         if "docs.google.com/forms" in embed and "embedded=true" not in embed:
             embed += ("&" if "?" in embed else "?") + "embedded=true"
         contact_body = """
