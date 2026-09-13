@@ -120,6 +120,26 @@ def save_history(date: str, pcr: dict, oi: pd.DataFrame, weekly: dict | None,
 # チャート
 # ---------------------------------------------------------------------------
 
+def rank_note(series, value, lang: str, since=None) -> str:
+    """その値が履歴の中で高い順に何番目か。件数で書く(割合にしない)。
+
+    since を渡すと「◯月◯日以降のN日」、渡さなければ「直近N営業日」と書く。
+    20件未満では比べる意味が薄いので出さない。"""
+    vals = [float(v) for v in series if v is not None and v == v]
+    n = len(vals)
+    if n < 20 or value is None:
+        return ""
+    r = 1 + sum(1 for v in vals if v > float(value) + 1e-9)
+    if lang == "ja":
+        span = f"{since.month}/{since.day}以降の{n}日" if since is not None else f"直近{n}営業日"
+        txt = f"{span}で高い順に{r}番目"
+    else:
+        span = (f"of {n} days since {since.strftime('%b')} {since.day}" if since is not None
+                else f"of the last {n} trading days")
+        txt = f"#{r} highest {span}"
+    return f"<small class='rank'>{txt}</small>"
+
+
 def nearest_expiry(oi: pd.DataFrame) -> str:
     totals = oi.groupby("expiry")["oi"].sum()
     for exp in sorted(totals.index):
@@ -669,6 +689,8 @@ L = {
         "tbl_note": "前営業日終値を挟んで上下3,000円の範囲({lo:,.0f}〜{hi:,.0f}円)を表示。JPXが日次公開する直近3限月分。増減は前日比。",
         "tbl_caption": "左: 建玉残高(緑=各限月の最大) / 右: 建玉増減(前日比: 増加=緑・減少=赤)",
         "spot_marker": "▶ 前営業日終値 {spot:,.0f}",
+        "tbl_cap_cur": "建玉残高(緑=各限月の最大)",
+        "tbl_cap_chg": "建玉の増減(前日比: 増加=緑・減少=赤)",
         "wk_note": "基準日: {date}(毎週第1営業日に更新される週次データ。前週比は1週間でのネット建玉の増減)",
         "wk_sellers": "{product} 売超上位", "wk_buyers": "{product} 買超上位",
         "wk_cols": ["参加者", "ネット建玉", "前週比"],
@@ -696,6 +718,8 @@ L = {
         "tbl_note": "Strikes within ±3,000 yen of the previous close ({lo:,.0f}–{hi:,.0f}). Nearest 3 expiries published daily by JPX. Change is day-over-day.",
         "tbl_caption": "Left: Open Interest (green = largest per expiry) / Right: DoD Change (increase = green, decrease = red)",
         "spot_marker": "▶ Prev. close {spot:,.0f}",
+        "tbl_cap_cur": "Open interest (green = largest per expiry)",
+        "tbl_cap_chg": "Day-over-day change (increase = green, decrease = red)",
         "wk_note": "As of {date} (weekly data published on the first business day of each week; WoW = one-week change in net open interest)",
         "wk_sellers": "{product} — Top Net Sellers", "wk_buyers": "{product} — Top Net Buyers",
         "wk_cols": ["Participant", "Net OI", "WoW"],
@@ -738,10 +762,10 @@ def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
     maxabs = max((abs(v) for tbl in chg.values() for v in tbl.values()), default=0)
 
     def render(table, is_change, with_strike):
-        ncols = (1 if with_strike else 0) + 2 * len(expiries)
-        head1 = "<tr>"
-        if with_strike:
-            head1 += f"<th rowspan='2'>{tx['strike']}</th>"
+        # 増減表の行使価格列はスマホで縦に積んだときだけ見せる(PCでは左の表と重複するので隠す)
+        k = "" if with_strike else " class='k'"
+        ncols = 1 + 2 * len(expiries)
+        head1 = f"<tr><th rowspan='2'{k}>{tx['strike']}</th>"
         head1 += f"<th colspan='{len(expiries)}'>Call</th><th colspan='{len(expiries)}'>Put</th></tr>"
         head2 = "<tr>" + "".join(f"<th>{_exp_label(e, lang)}</th>" for e in expiries) * 2 + "</tr>"
         body = []
@@ -749,10 +773,10 @@ def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
         for s in strikes:
             # 降順リストの中で、終値を最初に下回る行の直前に終値ラインを挿入(両表で同位置)
             if not spot_inserted and s < center:
-                label = tx["spot_marker"].format(spot=center) if with_strike else "▶"
+                label = tx["spot_marker"].format(spot=center)
                 body.append(f"<tr class='spot'><td colspan='{ncols}'>{label}</td></tr>")
                 spot_inserted = True
-            tds = [f"<th>{s:,}</th>"] if with_strike else []
+            tds = [f"<th{k}>{s:,}</th>"]
             for t in ("C", "P"):
                 for e in expiries:
                     v = table[(t, e)].get(s)
@@ -767,11 +791,14 @@ def oi_tables_html(oi: pd.DataFrame, center: float, lang: str = "ja") -> str:
                         style = " style='background:rgba(25,158,112,0.45); font-weight:bold'" if is_max else ""
                         tds.append(f"<td{style}>{v:,}</td>")
             body.append("<tr>" + "".join(tds) + "</tr>")
-        return (f"<table><thead>{head1}{head2}</thead>"
-                f"<tbody>{''.join(body)}</tbody></table>")
+        cls = "chg" if is_change else "cur"
+        cap = tx["tbl_cap_chg"] if is_change else tx["tbl_cap_cur"]
+        return (f"<div class='duo-one'><p class='duo-cap'>{cap}</p>"
+                f"<table class='{cls}'><thead>{head1}{head2}</thead>"
+                f"<tbody>{''.join(body)}</tbody></table></div>")
 
     note = f"<p>{tx['tbl_note'].format(lo=lo, hi=hi)}</p>"
-    caption = f"<h3>{tx['tbl_caption']}</h3>"
+    caption = f"<h3 class='duo-h'>{tx['tbl_caption']}</h3>"
     return (f"{note}{caption}<div class='tbl-duo'>"
             f"{render(cur, False, True)}{render(chg, True, False)}</div>")
 
@@ -941,6 +968,7 @@ CSS_MAIN = """
   .kpi b { font-size: 1.9em; color: var(--ink); font-variant-numeric: tabular-nums;
             display: block; margin-top: 4px; line-height: 1.2; }
   .kpi div:first-child b { color: var(--aqua); }
+  .kpi small.rank { display: block; margin-top: 4px; font-size: 0.82em; color: var(--ink2); }
   img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
   .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
   .tbl-box { flex: 1 1 420px; min-width: 320px; }
@@ -953,6 +981,7 @@ CSS_MAIN = """
   /* 縦スクロール枠を外したので、見出しの固定も解除する。
      固定したままだとページ上部のヘッダー(sticky)と重なって読めなくなる。 */
   .tbl-duo thead th { position: static; }
+  .tbl-duo .k, .duo-cap { display: none; }
   table { border-collapse: collapse; font-size: 14px; white-space: nowrap; width: 100%;
            font-variant-numeric: tabular-nums; background: var(--panel); }
   th, td { border: 1px solid var(--line); padding: 5px 10px; text-align: right; }
@@ -989,6 +1018,14 @@ CSS_MAIN = """
     table { font-size: 11px; }
     .tbl-scroll { max-height: 420px; }
     nav a { margin-right: 4px; font-size: 0.78em; }
+    /* 建玉一覧: 2表を縦に積み、それぞれに行使価格列と見出しを付ける */
+    .tbl-duo { flex-direction: column; gap: 14px; overflow-x: visible; border: none; }
+    .duo-one { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .duo-cap { display: block; margin: 8px 10px 6px; font-size: 0.85em; color: var(--ink); font-weight: 700; }
+    .duo-h { display: none; }
+    .tbl-duo .k { display: table-cell; }
+    .tbl-duo th, .tbl-duo td { padding: 4px 6px; }
+    .kpi small.rank { font-size: 0.78em; }
   }
 """
 
@@ -1182,11 +1219,18 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     if charts.get("vi"):
         market_section += f'\n  <img src="{charts["vi"]}" alt="Nikkei VI">'
 
+    ranks = extras.get("ranks") or {}
+
+    def _rank(key):
+        h = ranks.get(key)
+        return rank_note(h["values"], h["value"], lang, h.get("since")) if h else ""
+
     extra_kpi = ""
     if extras.get("vi_last") is not None:
         delta = extras.get("vi_delta")
         dtxt = f" ({delta:+.1f})" if delta is not None else ""
-        extra_kpi += f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>{dtxt}</div>"
+        extra_kpi += (f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>{dtxt}"
+                      f"{_rank('vi')}</div>")
     if extras.get("n225_vol"):
         v = extras["n225_vol"]
         pct = v.get("pct")
@@ -1378,9 +1422,9 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 <main>
   {summary_section}
   <div class="kpi">
-    <div>{P['kpi'][0]}<br><b>{pcr['pcr']}</b></div>
-    <div>{P['kpi'][1]}<br><b>{pcr['put_volume']:,}</b>{P['unit']}</div>
-    <div>{P['kpi'][2]}<br><b>{pcr['call_volume']:,}</b>{P['unit']}</div>
+    <div>{P['kpi'][0]}<br><b>{pcr['pcr']}</b>{_rank('pcr')}</div>
+    <div>{P['kpi'][1]}<br><b>{pcr['put_volume']:,}</b>{P['unit']}{_rank('put_volume')}</div>
+    <div>{P['kpi'][2]}<br><b>{pcr['call_volume']:,}</b>{P['unit']}{_rank('call_volume')}</div>
     {extra_kpi}
   </div>
   <p class="kpi-guide">{P['kpi_guide']}</p>
@@ -3246,6 +3290,11 @@ def main() -> None:
             base_extras["walls"] = w
         if len(hist) >= 2:
             base_extras["pcr_prev"] = float(hist["pcr"].iloc[-2])
+        # PCRと出来高の順位。履歴は2026-07-17からなので「以降N日」と書く
+        since = datetime.strptime(str(hist["date"].iloc[0]), "%Y%m%d")
+        rk = base_extras.setdefault("ranks", {})
+        for col in ("pcr", "put_volume", "call_volume"):
+            rk[col] = {"values": hist[col].tolist(), "value": pcr[col], "since": since}
     except Exception as e:
         warn(f"summary data failed: {e}")
     if pv_head:
@@ -3259,6 +3308,8 @@ def main() -> None:
         if len(vi_df) > 1:
             base_extras["vi_delta"] = float(vi_df["Close"].iloc[-1] - vi_df["Close"].iloc[-2])
         print(f"nikkei VI: {base_extras['vi_last']:.2f}")
+        base_extras.setdefault("ranks", {})["vi"] = {
+            "values": vi_df["Close"].tail(250).tolist(), "value": base_extras["vi_last"]}
     except Exception as e:
         warn(f"nikkei VI failed: {e}")
     try:
