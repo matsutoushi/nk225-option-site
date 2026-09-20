@@ -1895,6 +1895,52 @@ ordering; the reading should happen in the source text.</p>
 }
 
 
+def fedwatch_summary(feeds: dict, lang: str) -> str:
+    """収集の中身を数えて文章にする。
+
+    このページは外部リンクの一覧に見えやすい。何をどれだけ集めたのかを
+    自分の言葉で書いておくと、リンク集ではなく収集物の説明になる。"""
+    import fed_watch
+    counts, dates, latest = [], [], None
+    for f in fed_watch.FEEDS:
+        items = feeds.get(f["key"], [])
+        if not items:
+            continue
+        counts.append((f[lang], len(items)))
+        for it in items:
+            try:
+                d = datetime.strptime(it["date"][:10], "%Y-%m-%d").date()
+            except Exception:
+                continue
+            # RSSに日付が入っていない項目は1899-12-30などになる。範囲の表示が壊れるので捨てる
+            if d.year < 2000:
+                continue
+            dates.append(d)
+            if latest is None or d > latest[0]:
+                latest = (d, it["title"], f[lang])
+    if not counts or not dates:
+        return ""
+    total = sum(n for _, n in counts)
+    oldest = min(dates)
+    if lang == "ja":
+        naka = "、".join(f"{name} {n}件" for name, n in counts)
+        head = (f"<p>いま掲載しているのは<b>{total}件</b>"
+                f"({naka})で、{oldest.year}年{oldest.month}月{oldest.day}日以降に公表されたものです。")
+        if latest:
+            head += (f"最も新しいのは{latest[0].month}月{latest[0].day}日の"
+                     f"「{html.escape(latest[1])}」({latest[2]})です。")
+        head += "各表は日付の新しい順で、リンクをクリックすると原文が開きます。</p>"
+    else:
+        naka = ", ".join(f"{n} in {name}" for name, n in counts)
+        head = (f"<p>The tables below hold <b>{total} documents</b> ({naka}), "
+                f"published on or after {oldest.strftime('%B %-d, %Y') if os.name != 'nt' else oldest.strftime('%B %d, %Y')}. ")
+        if latest:
+            head += (f"The most recent is &quot;{html.escape(latest[1])}&quot; "
+                     f"({latest[2]}, {latest[0].strftime('%B %d, %Y')}). ")
+        head += "Each table is sorted newest first and links to the original document.</p>"
+    return head
+
+
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
@@ -1935,6 +1981,7 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 </header>
 <main>
   <p>{P['lead']}</p>
+  {fedwatch_summary(feeds, lang)}
   {''.join(sections)}
   {P.get('explain', '')}
 </main>
@@ -3099,6 +3146,29 @@ Cboe Global Markets、セントルイス連銀(FRED)、米連邦準備制度理�
 </div>
 <p style="font-size:0.9em;">フォームが表示されない場合は
 <a href="{direct}" rel="noopener" target="_blank">こちらから直接開けます</a>。</p>
+
+<h2>よくあるご質問</h2>
+<p><b>返信はもらえますか</b><br>
+いただいた内容はすべて読んでいます。返信が必要な場合は、フォームに連絡先をご記入ください。
+記入がない場合は返信できませんが、指摘は同じように確認して反映します。</p>
+
+<p><b>数値が公式サイトと違うようです</b><br>
+当サイトの数値は、公表ファイルを自前で解析・換算したものです。
+次の3点を書いていただけると確認が早くなります。
+(1)ページ名、(2)データ基準日(各ページの上部に出ています)、(3)ご覧になった公式の値。
+解析の誤りであれば直し、換算の前提による差であればその旨を本文に書き足します。</p>
+
+<p><b>数字が前日から更新されていません</b><br>
+公表ファイルの取得や解析に失敗した日は、誤った数字を出すより前日の内容を残す作りにしています。
+ページ上部の「データ基準日」が前営業日のままのときはこの状態です。
+翌営業日になっても直らない場合はご連絡ください。</p>
+
+<p><b>グラフや表を引用してもいいですか</b><br>
+出典として当サイトの名前とページのURLを添えていただければ、引用していただいて構いません。
+元データの権利は各公表元(JPX・日本経済新聞社・CFTC・Cboe・FRED・FRB)に帰属します。</p>
+
+<p><b>銘柄や売買の相談に乗ってもらえますか</b><br>
+お受けできません。当サイトは情報提供を目的としており、投資助言は行っていません。</p>
 
 <h2>お預かりする情報について</h2>
 <p>このフォームはGoogleフォームを使用しています。
