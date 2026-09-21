@@ -2640,6 +2640,12 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 
 
 SUB_CSS = """
+  .latest { background: var(--panel); border: 1px solid var(--line);
+            border-left: 4px solid var(--aqua); border-radius: 0 10px 10px 0;
+            padding: 4px 16px 12px; margin: 0 0 22px; }
+  .latest h2 { margin-top: 12px; }
+  .latest-note { font-size: 0.9em; color: var(--ink2); margin-bottom: 4px; }
+
   :root { --bg: #f6f7f9; --panel: #ffffff; --panel2: #eef1f5; --ink: #111820; --ink2: #4b5563;
           --line: #dfe3e9; --aqua: #0f8a5f; }
   nav a { color: var(--ink2); text-decoration: none; font-size: 0.82em; margin-right: 6px;
@@ -2703,6 +2709,10 @@ GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymC
 #
 # 自動広告(Auto ads)はAdSense管理画面側でオフにしておくこと。オンにすると
 # ページ上部にも勝手に挿入され、数秒で要点を届けるという設計が崩れる。
+# 解説ページ(guide-oi/guide-gex)の冒頭に出す最新値。main()で詰めて
+# render_static_pages()で読む。空なら解説ページは従来どおり解説だけになる。
+LATEST: dict = {}
+
 ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "").strip()
 ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "").strip()
 
@@ -2910,6 +2920,50 @@ GUIDE_PAIRS = {
     "glossary.html": "en/glossary.html",
 }
 EN_GUIDE_PAIRS = {en.split("/", 1)[1]: ja for ja, en in GUIDE_PAIRS.items()}
+
+
+def _fmt_md(d: str) -> str:
+    """20260918 → 9月18日。"""
+    return f"{int(d[4:6])}月{int(d[6:8])}日"
+
+
+def latest_block(kind: str) -> str:
+    """解説ページの冒頭に置く「今日の数字」。データが無ければ空文字。
+
+    タイトルで毎日更新をうたう以上、ページにも当日の数字が無いと釣りになる。
+    トップと同じ図を使い、詳細はトップへ誘導する。"""
+    d = LATEST.get("date")
+    if not d:
+        return ""
+    md = _fmt_md(str(d))
+    if kind == "oi":
+        c, p = LATEST.get("wall_call"), LATEST.get("wall_put")
+        if not (c and p):
+            return ""
+        spot = LATEST.get("spot")
+        sp = f"(前営業日終値 {spot:,.0f}円)" if spot else ""
+        return (f'<div class="latest"><h2>{md}時点の建玉分布</h2>'
+                f'<p>現値近辺で建玉がいちばん厚いのは、'
+                f'<b>コール{c[0]:,.0f}円({c[1]:,}枚)・プット{p[0]:,.0f}円({p[1]:,}枚)</b>です{sp}。'
+                f'行使価格ごとの建玉と前日からの増減は、'
+                f'<a href="./#oitable">トップページの一覧表</a>で毎営業日更新しています。</p>'
+                f'<img src="img/oi_dist.png?v={d}" alt="行使価格別の建玉分布">'
+                f'<p class="latest-note">この図の読み方を、以下で説明します。</p></div>')
+    if kind == "gex":
+        tot = LATEST.get("gex_total")
+        if tot is None:
+            return ""
+        word = "値動きを抑える向き" if tot >= 0 else "値動きを増幅する向き"
+        return (f'<div class="latest"><h2>{md}時点のガンマエクスポージャー(推定)</h2>'
+                f'<p>合計は<b>{tot:+,.0f}億円(指数1%あたり)で、{word}</b>です。'
+                f'内訳は現値より上が{LATEST.get("gex_up", 0):+,.0f}億円、'
+                f'下が{LATEST.get("gex_dn", 0):+,.0f}億円。'
+                f'ディーラーの実際の持ち高は公表されていないため、'
+                f'一般的な前提を置いた当サイトの推定値です。'
+                f'毎営業日の値は<a href="./#hedge">トップページ</a>に掲載しています。</p>'
+                f'<img src="img/hedge.png?v={d}" alt="行使価格別のヘッジ圧力">'
+                f'<p class="latest-note">なぜこの向きになるのかを、以下で説明します。</p></div>')
+    return ""
 
 
 def render_static_pages() -> None:
@@ -3201,6 +3255,11 @@ Googleによる取り扱いについては
     # guide-start はアフィリエイトが4枠あるので広告を入れない(宣伝ページ感が強まるため)
     NO_AD = {"guide-start.html"}
     for fname, (title, body) in pages.GUIDE_PAGES.items():
+        # 「毎営業日更新」と名乗るページには、その日の数字を実際に差し込む
+        if "{latest_oi}" in body:
+            body = body.replace("{latest_oi}", latest_block("oi"))
+        if "{latest_gex}" in body:
+            body = body.replace("{latest_gex}", latest_block("gex"))
         ad = "" if fname in NO_AD else adsense_unit("ja")
         en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
@@ -3473,6 +3532,24 @@ def main() -> None:
             "weekly": weekly_tables_html(weekly, lang) if weekly else None,
         }
         render_index(date, pcr, charts, tables, lang, extras)
+    # 解説ページに載せる最新値をまとめる(日本語ページの数字をそのまま使う)
+    try:
+        LATEST["date"] = base_extras.get("src_oi") or date
+        LATEST["spot"] = base_extras.get("spot")
+        w = base_extras.get("walls") or {}
+        if w.get("call"):
+            LATEST["wall_call"] = w["call"]
+        if w.get("put"):
+            LATEST["wall_put"] = w["put"]
+        hp = base_extras.get("hedge")
+        if hp is not None:
+            by = hp["by_strike"]
+            LATEST["gex_up"] = by[by["strike"] > hp["spot"]]["force"].sum() / 1e8
+            LATEST["gex_dn"] = by[by["strike"] < hp["spot"]]["force"].sum() / 1e8
+            LATEST["gex_total"] = hp["total"] / 1e8
+    except Exception as e:
+        warn(f"latest for guides failed: {e}")
+
     render_static_pages()
     render_seo_files()
 
