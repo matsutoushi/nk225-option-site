@@ -1084,7 +1084,8 @@ PAGE = {
         "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
         "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
                      ' ・ <a href="guide-oi.html">建玉の「壁」の見方</a>'
-                     ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>',
+                     ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>'
+                     ' ・ <a href="nikkei-vi.html">日経VIの実測</a>',
         "sec_guides": "データの読み方ガイド",
         "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
         "guides": [
@@ -1941,6 +1942,291 @@ def fedwatch_summary(feeds: dict, lang: str) -> str:
     return head
 
 
+def chart_vi_long(vi: pd.Series) -> str:
+    """日経VIの全期間(公式CSVのある2023年以降)。20と30に線を引く。"""
+    fig, ax = plt.subplots(figsize=(10, 3.8))
+    ax.plot(vi.index, vi.values, color=ACCENT, linewidth=1.2)
+    ax.fill_between(vi.index, vi.values, vi.min() * 0.95, color=ACCENT, alpha=0.08)
+    ax.axhline(30, color=UP, linestyle="--", linewidth=0.9, label="30")
+    ax.axhline(20, color=INK2, linestyle="--", linewidth=0.9, label="20")
+    top = vi.idxmax()
+    ax.annotate(f"{vi.max():.1f}({top.year}/{top.month}/{top.day})", (top, vi.max()),
+                xytext=(10, -4), textcoords="offset points", fontsize=8, color=INK2)
+    ax.set_title(f"日経VIの推移({vi.index[0].year}年{vi.index[0].month}月〜)", fontsize=10)
+    ax.grid(alpha=0.25)
+    ax.legend(fontsize=8, loc="upper left")
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    fig.savefig(os.path.join(IMG, "vi_long.png"), dpi=120)
+    plt.close(fig)
+    return "img/vi_long.png"
+
+
+def vi_stats(vi: pd.Series, n225: pd.Series | None) -> dict:
+    """ページに載せる数字をすべてここで数える。"""
+    st: dict = {}
+    last_d = vi.index[-1]
+    st["date"] = last_d
+    st["last"] = float(vi.iloc[-1])
+    st["delta"] = float(vi.iloc[-1] - vi.iloc[-2]) if len(vi) > 1 else None
+    t250 = vi.tail(250)
+    st["n250"] = len(t250)
+    st["rank250"] = 1 + int((t250 > st["last"] + 1e-9).sum())
+    st["ge30_250"] = int((t250 >= 30).sum())
+    st["lt20_250"] = int((t250 < 20).sum())
+    st["since"] = vi.index[0]
+
+    rows = []
+    for y, g in vi.groupby(vi.index.year):
+        rows.append({"year": y, "n": len(g), "mean": g.mean(), "max": g.max(),
+                     "max_d": g.idxmax(), "min": g.min(),
+                     "ge30": int((g >= 30).sum()), "lt20": int((g < 20).sum())})
+    st["years"] = rows
+    st["top"] = [(d, float(x)) for d, x in vi.nlargest(5).items()]
+
+    # 3ポイント以上の急騰のその後
+    d1 = vi.diff()
+    jumps = []
+    for t in d1[d1 >= 3].index:
+        i = vi.index.get_loc(t)
+        if i + 5 < len(vi):
+            jumps.append({"date": t, "level": float(vi.iloc[i]), "jump": float(d1[t]),
+                          "next1": float(vi.iloc[i + 1] - vi.iloc[i]),
+                          "next5": float(vi.iloc[i + 5] - vi.iloc[i])})
+    st["jumps"] = jumps
+    st["jump_up_next"] = sum(1 for j in jumps if j["next1"] > 0)
+    st["jump_half_back5"] = sum(1 for j in jumps if j["next5"] <= -j["jump"] / 2)
+
+    if n225 is not None and len(n225):
+        df = pd.concat([vi.rename("vi"), n225.rename("n")], axis=1).dropna()
+        st["spot"] = float(df["n"].iloc[-1])
+        r = df.pct_change().dropna()
+        st["n_days"] = len(r)
+        st["opp"] = int((((r.vi > 0) & (r.n < 0)) | ((r.vi < 0) & (r.n > 0))).sum())
+        dn = r[r.n <= -0.03]
+        up = r[r.n >= 0.03]
+        st["dn3"], st["dn3_viup"] = len(dn), int((dn.vi > 0).sum())
+        st["up3"], st["up3_vidn"] = len(up), int((up.vi < 0).sum())
+        ret = np.log(df["n"]).diff()
+        rv = ret.rolling(20).std().shift(-20) * np.sqrt(250) * 100
+        cmp = pd.concat([df["vi"], rv.rename("rv")], axis=1).dropna()
+        st["rv_n"] = len(cmp)
+        st["vi_gt_rv"] = int((cmp["vi"] > cmp["rv"]).sum())
+        st["vi_rv_gap"] = float((cmp["vi"] - cmp["rv"]).mean())
+        tail = df.tail(10).copy()
+        tail["vi_d"] = df["vi"].diff().tail(10)
+        tail["n_r"] = df["n"].pct_change().tail(10) * 100
+        st["recent"] = tail.iloc[::-1]
+
+    try:
+        vx = pd.read_csv(os.path.join(DATA, "fred_cache", "VIXCLS.csv"))
+        vx = vx.dropna()
+        vx["date"] = pd.to_datetime(vx["date"])
+        vx = vx.set_index("date")["value"].astype(float)
+        st["vix"] = float(vx.iloc[-1])
+        st["vix_date"] = vx.index[-1]
+        both = pd.concat([vi.rename("vi"), vx.rename("vix")], axis=1).dropna()
+        if len(both) > 100:
+            st["spread_mean"] = float((both.vi - both.vix).mean())
+            st["spread_n"] = len(both)
+    except Exception:
+        pass
+    return st
+
+
+def render_vi_page(vi_df: pd.DataFrame, n225_hist: pd.DataFrame | None) -> None:
+    """日経VIのページ。数字はすべて vi_stats() の結果から書く。"""
+    vi = vi_df["Close"].dropna()
+    n225 = n225_hist["Close"] if n225_hist is not None else None
+    st = vi_stats(vi, n225)
+    chart = chart_vi_long(vi)
+    d = st["date"]
+    md = f"{d.month}月{d.day}日"
+    ymd = f"{d.year}年{d.month}月{d.day}日"
+    v = st["last"]
+    dl = f"(前営業日比{st['delta']:+.1f})" if st["delta"] is not None else ""
+
+    # 1日の値幅に直す
+    daily_pct = v / np.sqrt(250)
+    spot = st.get("spot")
+    yen_line = ""
+    if spot:
+        yen_line = (f"日経平均{spot:,.0f}円に当てはめると<b>約±{spot * daily_pct / 100:,.0f}円</b>です。")
+    conv_rows = "".join(
+        f"<tr><td>{lv}</td><td>±{lv / np.sqrt(250):.2f}%</td>"
+        + (f"<td>±{spot * lv / np.sqrt(250) / 100:,.0f}円</td>" if spot else "<td>-</td>")
+        + "</tr>" for lv in (15, 20, 25, 30, 40, 50))
+
+    year_rows = "".join(
+        f"<tr><td>{r['year']}年</td><td>{r['n']}</td><td>{r['mean']:.1f}</td>"
+        f"<td>{r['max']:.1f}({r['max_d'].month}/{r['max_d'].day})</td><td>{r['min']:.1f}</td>"
+        f"<td>{r['ge30']}日</td><td>{r['lt20']}日</td></tr>" for r in st["years"])
+    this_year = st["years"][-1]
+
+    recent_rows = ""
+    if "recent" in st:
+        for dt, r in st["recent"].iterrows():
+            vd = "" if pd.isna(r["vi_d"]) else f"{r['vi_d']:+.1f}"
+            nr = "" if pd.isna(r["n_r"]) else f"{r['n_r']:+.2f}%"
+            recent_rows += (f"<tr><td>{dt.month}/{dt.day}</td><td>{r['vi']:.2f}</td><td>{vd}</td>"
+                            f"<td>{r['n']:,.0f}</td><td>{nr}</td></tr>")
+
+    jumps = st["jumps"]
+    jump_rows = "".join(
+        f"<tr><td>{j['date'].year}/{j['date'].month}/{j['date'].day}</td><td>{j['level']:.1f}</td>"
+        f"<td>+{j['jump']:.1f}</td><td>{j['next1']:+.1f}</td><td>{j['next5']:+.1f}</td></tr>"
+        for j in reversed(jumps[-8:]))
+    top_txt = "、".join(f"{t.year}年{t.month}月{t.day}日の{x:.1f}" for t, x in st["top"][:3])
+
+    vix_block = ""
+    if st.get("vix") is not None:
+        vd = st["vix_date"]
+        sp = (f"{st['spread_n']}営業日の平均では、日経VIがVIXを<b>{st['spread_mean']:.1f}ポイント</b>上回っています。"
+              if st.get("spread_mean") is not None else "")
+        vix_block = f"""
+<h2>米国のVIXとの比較</h2>
+<p>同じ仕組みで米国S&amp;P500から計算されるのがVIXです。
+直近のVIXは{vd.month}月{vd.day}日時点で<b>{st['vix']:.2f}</b>、日経VIは{md}時点で{v:.2f}でした。
+{sp}
+日経平均は1日の値幅が米国株より大きい時期が長く、同じ「落ち着いた相場」でも日経VIのほうが高めに出ます。
+VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、いつも警戒しているように見えてしまいます。
+米国側の数字は<a href="us.html">米国市場データ</a>と<a href="risk.html">マクロリスクモニター</a>に載せています。</p>
+"""
+
+    body = f"""
+<h1>日経VI(日経平均ボラティリティー・インデックス) — 今日の値と、実測で見る読み方</h1>
+<div class="latest">
+<h2>{md}の日経VIは{v:.2f}{dl}</h2>
+<p>直近{st['n250']}営業日の中では<b>高い順に{st['rank250']}番目</b>(低い順に{st['n250'] - st['rank250'] + 1}番目)です。
+1日あたりの値動きに直すと<b>約±{daily_pct:.2f}%</b>で、{yen_line}
+データは日本経済新聞社が公表する日経VIの公式CSVを毎営業日取得しています({st['since'].year}年{st['since'].month}月以降・{len(vi):,}営業日分)。</p>
+<img src="{chart}?v={d.strftime('%Y%m%d')}" alt="日経VIの推移">
+</div>
+
+<h2>日経VIとは</h2>
+<p>日経VIは、<b>日経平均のオプション価格から逆算した「この先1か月の変動の大きさ」の市場予想</b>を、
+年率のパーセントで表した指数です。日経平均が下がる局面で上がりやすいことから「恐怖指数」とも呼ばれます。
+算出と公表は日本経済新聞社が行っています。</p>
+<p>元になっているのはオプションの値段です。値動きへの備えを求める人が増えるとオプションが高くなり、
+そこから逆算した日経VIが上がります。つまり<b>実際に荒れているかではなく、荒れることに備えて払われている保険料の水準</b>です。
+行使価格ごとの内訳(どちら方向の備えが高いか)は、トップページの<a href="./#iv">行使価格別のIV</a>で見られます。</p>
+
+<h2>数字の意味: 1日の値幅に直す</h2>
+<p>日経VIは年率なので、そのままでは実感しにくい数字です。
+<b>日経VI ÷ √250(約15.8)</b>で、1営業日あたりの値動きの目安(1標準偏差)になります。
+今日の{v:.2f}なら約±{daily_pct:.2f}%です。「3日に2日はこの幅に収まる」くらいの意味で、上限ではありません。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>日経VI</th><th>1日の値幅の目安</th><th>日経平均{spot:,.0f}円なら</th></tr></thead>
+<tbody>{conv_rows}</tbody></table></div>
+
+<h2>年ごとの水準: 「30超えは荒れ相場」は今も当てはまるか</h2>
+<p>よく「20を超えると警戒、30を超えると荒れ相場」と言われます。実際の分布を年ごとに数えました。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>年</th><th>営業日</th><th>平均</th><th>最高(日付)</th><th>最低</th><th>30以上</th><th>20未満</th></tr></thead>
+<tbody>{year_rows}</tbody></table></div>
+<p>{this_year['year']}年は{this_year['n']}営業日のうち<b>{this_year['ge30']}日が30以上</b>でした。
+直近{st['n250']}営業日でも30以上が{st['ge30_250']}日、20未満は{st['lt20_250']}日です。
+水準そのものが年によって大きく違うので、<b>30という固定の線より、直近の中での位置で見る</b>ほうが実態に合います。
+このページの冒頭で「高い順に何番目か」を出しているのはそのためです。
+公式CSVのある期間の最高値は、{top_txt}でした。</p>
+
+<h2>急に跳ねたあと、どうなったか</h2>
+<p>日経VIが1日で<b>3ポイント以上</b>上がった日は、{st['since'].year}年以降で{len(jumps)}回ありました
+(5営業日後まで追えるもの)。</p>
+<ul>
+<li>翌営業日にさらに上がったのは<b>{len(jumps)}回中{st['jump_up_next']}回</b>。多くは翌日に下がっています</li>
+<li>ただし5営業日後に<b>上がった分の半分以上を戻していたのは{len(jumps)}回中{st['jump_half_back5']}回</b>です。
+翌日に少し下がっても、跳ねた水準がしばらく残ることは珍しくありません</li>
+</ul>
+<div class="tbl-wrap"><table>
+<thead><tr><th>急騰した日</th><th>その日の値</th><th>前日比</th><th>翌日の変化</th><th>5日後の変化</th></tr></thead>
+<tbody>{jump_rows}</tbody></table></div>
+<p style="font-size:.9em;color:#666">直近8回。変化は急騰した日の終値からの差です。</p>
+"""
+    if "rv_n" in st:
+        body += f"""
+<h2>日経VIは、実際の値動きより高めに出る</h2>
+<p>日経VIは「この先の変動」の予想です。では実際はどうだったか。
+各日の日経VIと、その後20営業日に日経平均が実際に動いた大きさ(年率に換算した実現ボラティリティ)を比べました。</p>
+<p><b>{st['rv_n']}営業日のうち{st['vi_gt_rv']}日</b>で、日経VIのほうが実際の変動より高く、
+差は平均{st['vi_rv_gap']:.1f}ポイントでした。一般に、オプションの売り手が予想外の急変に備えた上乗せを価格に含めるためと説明されます。
+日経VIが高いから必ず荒れる、というわけではなく、<b>備えの値段が高い</b>と読むのが正確です。</p>
+
+<h2>日経平均との関係</h2>
+<p>{st['n_days']}営業日のうち<b>{st['opp']}日</b>は、日経VIと日経平均が逆の方向に動きました。
+大きく動いた日ほどこの傾向ははっきりしていて、</p>
+<ul>
+<li>日経平均が<b>3%以上下落</b>した{st['dn3']}日のうち、日経VIが上がったのは<b>{st['dn3_viup']}日</b></li>
+<li>日経平均が<b>3%以上上昇</b>した{st['up3']}日のうち、日経VIが下がったのは<b>{st['up3_vidn']}日</b></li>
+</ul>
+<p>上昇の日にVIが下がりやすいのは、急落への備えとして持たれていたプットが、上昇で要らなくなり手放されるためと説明されることが多いです。</p>
+
+<h2>直近10営業日</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th>日付</th><th>日経VI</th><th>前日比</th><th>日経平均</th><th>騰落率</th></tr></thead>
+<tbody>{recent_rows}</tbody></table></div>
+"""
+    body += vix_block + f"""
+<h2>読むときの注意</h2>
+<ul>
+<li><b>方向は分かりません。</b>日経VIが示すのは値動きの大きさの予想で、上がるか下がるかではありません</li>
+<li><b>上限ではありません。</b>1日の値幅の目安は1標準偏差で、それを超える日は統計的にも一定の割合で起きます</li>
+<li><b>SQをまたぐと算出の対象が切り替わります。</b>日経VIは期近と次の限月のオプションから計算されるため、
+満期の前後で水準が段差のように動くことがあります(<a href="guide-sq.html">SQとは</a>)</li>
+</ul>
+<p>関連: <a href="./">日経225オプションの建玉・Put/Callレシオ</a> ・
+<a href="guide-gex.html">ガンマエクスポージャー</a> ・
+<a href="glossary.html">用語集</a></p>
+<p style="font-size:.85em;color:#666">出典: 日本経済新聞社「日経平均ボラティリティー・インデックス」公式データ、
+日経平均株価(日本経済新聞社)、VIX(Cboe Global Markets、FRED経由)。当サイトが集計・計算したもので、投資助言ではありません。</p>
+"""
+
+    title = f"日経VI(日経平均VI)今日の値｜{md}は{v:.2f}・過去の推移と読み方"
+    desc = (f"{ymd}の日経VIは{v:.2f}{dl}。直近{st['n250']}営業日で高い順に{st['rank250']}番目、"
+            f"1日の値動きに直すと約±{daily_pct:.2f}%です。年ごとの平均と30以上の日数、"
+            f"急騰後の動き、実際の変動との比較を公式データから毎営業日更新しています。")
+    og = og_meta(title, desc)
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<meta name="description" content="{desc}">
+<title>{title} | 日経225オプション データ分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}
+  .latest {{ background: var(--panel); border: 1px solid var(--line);
+            border-left: 4px solid var(--aqua); border-radius: 0 10px 10px 0;
+            padding: 4px 16px 12px; margin: 14px 0 22px; }}
+  .tbl-wrap {{ overflow-x: auto; margin: 12px 0; }}
+  .tbl-wrap table {{ width: auto; }}
+</style>{adsense_head()}
+</head>
+<body>
+<header>
+  <p class="updated">データ基準日: {ymd} | 最終更新: {now} JST(毎営業日 自動更新)</p>
+  {site_nav("ja", "")}
+</header>
+<main>
+{body}
+{adsense_unit("ja")}
+</main>
+<footer>
+  {footer_sitemap("ja")}
+  <p>{PAGE["ja"]["footer_disclaimer"]}</p>
+</footer>
+</body>
+</html>
+"""
+    with open(os.path.join(SITE, "nikkei-vi.html"), "w", encoding="utf-8") as f:
+        f.write(html_doc)
+    print(f"nikkei-vi.html: {v:.2f}, rank {st['rank250']}/{st['n250']}, jumps {len(jumps)}")
+
+
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
@@ -2794,6 +3080,7 @@ def footer_sitemap(lang: str) -> str:
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
+            ("nikkei-vi.html", "日経VI"),
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
@@ -2889,7 +3176,7 @@ def render_seo_files() -> None:
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-brokers.html", "guide-jpx-data.html",
-             "guide-sq.html",
+             "guide-sq.html", "nikkei-vi.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
@@ -3439,6 +3726,10 @@ def main() -> None:
         print(f"nikkei VI: {base_extras['vi_last']:.2f}")
         base_extras.setdefault("ranks", {})["vi"] = {
             "values": vi_df["Close"].tail(250).tolist(), "value": base_extras["vi_last"]}
+        try:
+            render_vi_page(vi_df, n225_hist)
+        except Exception as e:
+            warn(f"nikkei-vi page failed: {e}")
     except Exception as e:
         warn(f"nikkei VI failed: {e}")
     try:
