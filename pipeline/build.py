@@ -2227,6 +2227,203 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
     print(f"nikkei-vi.html: {v:.2f}, rank {st['rank250']}/{st['n250']}, jumps {len(jumps)}")
 
 
+def sq_phantom_table(hist: pd.DataFrame, n225: pd.DataFrame) -> pd.DataFrame:
+    """SQごとに当日の日経平均OHLCと、幻のSQかどうか・何営業日後に届いたかを並べる。"""
+    rows = []
+    for _, r in hist.iterrows():
+        d = pd.Timestamp(r["sq_date"])
+        base = {"month": r["month"], "sq_date": d, "sq": float(r["sq_value"]),
+                "major": bool(r["major"]), "open": None, "high": None, "low": None,
+                "close": None, "phantom": "", "reach": None, "pending": False}
+        if d in n225.index:
+            i = n225.index.get_loc(d)
+            o = n225.iloc[i]
+            base.update(open=float(o["Open"]), high=float(o["High"]),
+                        low=float(o["Low"]), close=float(o["Close"]))
+            v = base["sq"]
+            if v > o["High"]:
+                base["phantom"] = "上"
+            elif v < o["Low"]:
+                base["phantom"] = "下"
+            if base["phantom"]:
+                fut = n225.iloc[i + 1:]
+                hit = fut[fut["High"] >= v] if base["phantom"] == "上" else fut[fut["Low"] <= v]
+                if len(hit):
+                    base["reach"] = n225.index.get_loc(hit.index[0]) - i
+                else:
+                    base["pending"] = True
+                    base["reach"] = len(fut)       # 今日までの経過営業日
+        rows.append(base)
+    return pd.DataFrame(rows)
+
+
+def render_sq_values_page(n225_hist: pd.DataFrame | None) -> None:
+    """SQ値の一覧と幻のSQ。data/sq_history.csv と日経平均の公式OHLCから作る。"""
+    import sq as sq_mod
+    hist = pd.read_csv(os.path.join(DATA, "sq_history.csv"))
+    if n225_hist is None or not len(hist):
+        return
+    t = sq_phantom_table(hist, n225_hist)
+    judged = t[t["open"].notna()]
+    ph = judged[judged["phantom"] != ""]
+    reached = ph[~ph["pending"]]
+    pending = ph[ph["pending"]]
+    within5 = int((reached["reach"] <= 5).sum())
+    med = float(reached["reach"].median()) if len(reached) else None
+    close_above = int((judged["close"] > judged["sq"]).sum())
+    since = judged["sq_date"].min()
+
+    last = t.iloc[-1]
+    ld = last["sq_date"]
+    kind = "メジャーSQ" if last["major"] else "マイナーSQ"
+    W = "月火水木金土日"
+    nxt = sq_mod.upcoming(datetime.now(JST).date(), 1)[0]
+    ns = nxt["sq"]
+    nkind = "メジャーSQ" if nxt["major"] else "マイナーSQ"
+
+    def ph_text(r):
+        if not r["phantom"]:
+            return "当日の値幅の中(幻ではない)"
+        side = "高値" if r["phantom"] == "上" else "安値"
+        gap = abs(r["sq"] - (r["high"] if r["phantom"] == "上" else r["low"]))
+        if r["pending"]:
+            tail = f"その後{int(r['reach'])}営業日たった今も、日経平均は届いていません"
+        elif r["reach"] == 1:
+            tail = "翌営業日に日経平均が届きました"
+        else:
+            tail = f"{int(r['reach'])}営業日後に日経平均が届きました"
+        return (f"<b>{r['phantom']}に幻のSQ</b>です。当日の日経平均の{side}"
+                f"({(r['high'] if r['phantom'] == '上' else r['low']):,.2f}円)から{gap:,.0f}円離れていて、{tail}")
+
+    latest_detail = ""
+    if pd.notna(last["open"]):
+        latest_detail = (f"<p>当日の日経平均は始値{last['open']:,.2f}円・高値{last['high']:,.2f}円・"
+                         f"安値{last['low']:,.2f}円・終値{last['close']:,.2f}円。{ph_text(last)}。</p>")
+
+    pending_block = ""
+    if len(pending):
+        items = "".join(
+            f"<li>{int(r['month'][:4])}年{int(r['month'][5:])}月SQ <b>{r['sq']:,.2f}円</b>"
+            f"({r['phantom']}に幻) — 算出から{int(r['reach'])}営業日、まだ届いていません</li>"
+            for _, r in pending.iterrows())
+        pending_block = f"""
+<h2>まだ届いていない幻のSQ</h2>
+<p>日経平均がまだ一度も届いていないSQ値です。毎営業日、日経平均の高値・安値で判定し直しています。</p>
+<ul>{items}</ul>
+"""
+
+    ph_rows = "".join(
+        f"<tr><td>{r['sq_date'].year}/{r['sq_date'].month}/{r['sq_date'].day}</td>"
+        f"<td>{'メジャー' if r['major'] else 'マイナー'}</td><td>{r['sq']:,.2f}</td>"
+        f"<td>{r['high']:,.2f}</td><td>{r['low']:,.2f}</td><td>{r['phantom']}</td>"
+        f"<td>{'未到達(' + str(int(r['reach'])) + '日経過)' if r['pending'] else str(int(r['reach'])) + '営業日後'}</td></tr>"
+        for _, r in ph.iloc[::-1].iterrows())
+
+    def cell(x):
+        return "-" if pd.isna(x) else f"{x:,.2f}"
+
+    all_rows = "".join(
+        f"<tr><td>{int(r['month'][:4])}年{int(r['month'][5:])}月</td>"
+        f"<td>{r['sq_date'].month}/{r['sq_date'].day}({W[r['sq_date'].weekday()]})</td>"
+        f"<td>{'メジャー' if r['major'] else 'マイナー'}</td><td><b>{r['sq']:,.2f}</b></td>"
+        f"<td>{cell(r['open'])}</td>"
+        f"<td>{'-' if pd.isna(r['open']) else format(r['sq'] - r['open'], '+,.0f')}</td>"
+        f"<td>{cell(r['close'])}</td><td>{r['phantom'] or ('-' if pd.isna(r['open']) else '')}</td></tr>"
+        for _, r in t.iloc[::-1].iterrows())
+
+    body = f"""
+<h1>日経225のSQ値一覧 — 最新のSQ値と「幻のSQ」の判定</h1>
+<div class="latest">
+<h2>最新: {ld.year}年{ld.month}月SQ({kind})は{last['sq']:,.2f}円</h2>
+<p>算出日は{ld.month}月{ld.day}日({W[ld.weekday()]})。</p>
+{latest_detail}
+<p>次回は<b>{ns.year}年{ns.month}月{ns.day}日({W[ns.weekday()]})の{nkind}</b>です。
+SQ値はJPXが当日15時45分以降に公表します。当サイトはJPXのSQ値一覧に載りしだい、毎営業日の更新でこのページに反映します。
+日程と、SQ値が何時にどう決まるかは<a href="guide-sq.html">SQはいつ？</a>にまとめています。</p>
+</div>
+
+<h2>幻のSQとは</h2>
+<p>SQ値は、日経平均を構成する225銘柄<b>それぞれの寄り付きの値段</b>から計算されます。
+銘柄ごとに寄り付く時刻が違うため、SQ値は「ある瞬間の日経平均」ではありません。
+その結果、<b>SQ値に、その日の日経平均が一度も届かない</b>ことがあります。これを「幻のSQ」と呼びます。
+日経平均の高値より上なら「上に幻」、安値より下なら「下に幻」です。</p>
+
+<h2>幻のSQは実際にどれくらい起きたか</h2>
+<p>日経平均の公式データがある{since.year}年{since.month}月以降の<b>{len(judged)}回</b>のSQで数えました。</p>
+<ul>
+<li>幻のSQになったのは<b>{len(judged)}回中{len(ph)}回</b>(上に幻{int((ph['phantom'] == '上').sum())}回・下に幻{int((ph['phantom'] == '下').sum())}回)</li>
+<li>そのうち、あとで日経平均が届いたのは{len(reached)}回。
+<b>5営業日以内に届いたのが{within5}回</b>{f"、届くまでの中央値は{med:.0f}営業日" if med is not None else ""}です</li>
+<li>まだ届いていないものが{len(pending)}回あります(下で一覧にしています)</li>
+</ul>
+<p>「幻のSQは近いうちに埋まる」とよく言われます。実測でも多くは数日で届いていますが、
+届かないまま何週間も残る例もあります。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>算出日</th><th>種類</th><th>SQ値</th><th>当日高値</th><th>当日安値</th><th>幻</th><th>日経平均が届いた日</th></tr></thead>
+<tbody>{ph_rows}</tbody></table></div>
+{pending_block}
+<h2>SQ当日の終値は、SQ値より上か下か</h2>
+<p>同じ{len(judged)}回で、その日の日経平均の終値がSQ値を上回ったのは<b>{close_above}回</b>、
+下回ったのは{len(judged) - close_above}回でした。</p>
+
+<h2>SQ値の一覧</h2>
+<p>JPXが公表している{int(t['month'].iloc[0][:4])}年{int(t['month'].iloc[0][5:])}月以降のSQ値(日経225の最終清算数値)です。
+始値・終値と幻の判定は、日経平均の公式データがある{since.year}年以降について載せています。
+「始値との差」はSQ値−その日の日経平均始値で、SQ値が寄り付きの値段から作られても始値とは一致しないことが分かります。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>限月</th><th>算出日</th><th>種類</th><th>SQ値</th><th>日経平均始値</th><th>始値との差</th><th>日経平均終値</th><th>幻</th></tr></thead>
+<tbody>{all_rows}</tbody></table></div>
+
+<p>関連: <a href="guide-sq.html">SQはいつ？(日程と仕組み)</a> ・
+<a href="./#oitable">建玉一覧</a> ・ <a href="nikkei-vi.html">日経VI</a></p>
+<p style="font-size:.85em;color:#666">出典: 日本取引所グループ「最終清算数値(SQ値)」、日経平均株価(日本経済新聞社)の公式データ。
+幻のSQの判定と到達日は当サイトの計算で、日中の高値・安値で判定しています。投資助言ではありません。</p>
+"""
+    title = f"SQ値一覧(日経225)｜最新は{ld.month}月SQ {last['sq']:,.2f}円・幻のSQも判定"
+    desc = (f"日経225の最新SQ値は{ld.year}年{ld.month}月SQの{last['sq']:,.2f}円。"
+            f"{int(t['month'].iloc[0][:4])}年以降のSQ値一覧と、{len(judged)}回中{len(ph)}回あった幻のSQ、"
+            f"日経平均が届くまでの営業日数を毎営業日更新。次回は{ns.month}月{ns.day}日です。")
+    og = og_meta(title, desc)
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<meta name="description" content="{desc}">
+<title>{title} | 日経225オプション データ分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}
+  .latest {{ background: var(--panel); border: 1px solid var(--line);
+            border-left: 4px solid var(--aqua); border-radius: 0 10px 10px 0;
+            padding: 4px 16px 12px; margin: 14px 0 22px; }}
+  .tbl-wrap {{ overflow-x: auto; margin: 12px 0; }}
+  .tbl-wrap table {{ width: auto; }}
+</style>{adsense_head()}
+</head>
+<body>
+<header>
+  <p class="updated">最終更新: {now} JST(毎営業日 自動更新)</p>
+  {site_nav("ja", "")}
+</header>
+<main>
+{body}
+{adsense_unit("ja")}
+</main>
+<footer>
+  {footer_sitemap("ja")}
+  <p>{PAGE["ja"]["footer_disclaimer"]}</p>
+</footer>
+</body>
+</html>
+"""
+    with open(os.path.join(SITE, "sq-values.html"), "w", encoding="utf-8") as f:
+        f.write(html_doc)
+    print(f"sq-values.html: {len(judged)} judged, {len(ph)} phantom, {len(pending)} pending")
+
+
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
@@ -3080,7 +3277,7 @@ def footer_sitemap(lang: str) -> str:
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
-            ("nikkei-vi.html", "日経VI"),
+            ("nikkei-vi.html", "日経VI"), ("sq-values.html", "SQ値一覧"),
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
@@ -3176,7 +3373,7 @@ def render_seo_files() -> None:
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-brokers.html", "guide-jpx-data.html",
-             "guide-sq.html", "nikkei-vi.html",
+             "guide-sq.html", "nikkei-vi.html", "sq-values.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
@@ -3691,6 +3888,10 @@ def main() -> None:
             os.path.join(DATA, "sq_history.csv"), index=False)
     except Exception as e:
         warn(f"sq history failed: {e}")
+    try:
+        render_sq_values_page(n225_hist)
+    except Exception as e:
+        warn(f"sq-values page failed: {e}")
 
     # テーブルの中心価格: 日経平均が取れなければ建玉加重平均の行使価格で代用
     center = spot if spot else float((oi["strike"] * oi["oi"]).sum() / max(oi["oi"].sum(), 1))
