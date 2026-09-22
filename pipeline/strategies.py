@@ -69,6 +69,27 @@ def bs(S, K, T, iv, kind, r=0.0):
     return {"price": price, "delta": delta, "gamma": gamma, "theta": theta, "vega": vega}
 
 
+def implied_vol(price: float, S: float, K: float, T: float, kind: str) -> float | None:
+    """清算値段から、このページの計算条件(残り日数・金利0)でのIVを逆算する。
+
+    JPXのIV列は残り日数や金利の置き方が違うため、そのまま使うと
+    ブラック・ショールズで計算した値段が清算値段と1割ほどずれる。
+    図の「今日の時点の評価」が現値でゼロから出発するよう、値段に合わせたIVを使う。"""
+    if T <= 0 or price <= 0:
+        return None
+    intr = max(S - K, 0) if kind == "C" else max(K - S, 0)
+    if price <= intr:
+        return None
+    lo, hi = 0.01, 3.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if float(bs(S, K, T, mid, kind)["price"]) > price:
+            hi = mid
+        else:
+            lo = mid
+    return (lo + hi) / 2
+
+
 # ---------------------------------------------------------------------------
 # 脚(レッグ)と戦略
 # ---------------------------------------------------------------------------
@@ -199,9 +220,9 @@ class Chain:
         r = self.row(kind, k)
         if r is None or not (r["price"] > 0):
             return None
-        iv = float(r["iv"])
-        if iv <= 0.02:                      # 深いITMの1.0%ダミー。ATM近辺では起きないはず
-            iv = 0.2
+        iv = implied_vol(float(r["price"]), self.spot, k, self.T, kind)
+        if iv is None:
+            iv = float(r["iv"]) if float(r["iv"]) > 0.02 else 0.2
         return Leg(kind, float(k), qty, float(r["price"]), iv)
 
     def call_matching(self, price: float, above: float) -> Leg | None:
@@ -211,7 +232,8 @@ class Chain:
         if not len(c):
             return None
         r = c.iloc[(c["price"] - price).abs().argsort()[:1]].iloc[0]
-        return Leg("C", float(r["strike"]), -1, float(r["price"]), float(r["iv"]))
+        iv = implied_vol(float(r["price"]), self.spot, float(r["strike"]), self.T, "C") or float(r["iv"])
+        return Leg("C", float(r["strike"]), -1, float(r["price"]), iv)
 
 
 # ---------------------------------------------------------------------------
