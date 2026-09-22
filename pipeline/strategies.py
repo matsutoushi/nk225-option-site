@@ -311,28 +311,37 @@ def example_block(name: str, legs: list[Leg], chain: Chain, img: str, note: str 
                f"<b>受け取り {net:,.0f}ポイント</b>(ラージ {net * LARGE:,.0f}円・ミニ {net * MINI:,.0f}円)"
                if net > 0 else
                f"<b>支払い {-net:,.0f}ポイント</b>(ラージ {-net * LARGE:,.0f}円・ミニ {-net * MINI:,.0f}円)")
-    mp = "限定されない" if a["max_profit"] is None else \
-        f"{a['max_profit']:,.0f}ポイント(ラージ {a['max_profit'] * LARGE:,.0f}円)"
-    ml = "<b>限定されない</b>" if a["max_loss"] is None else \
-        f"{-a['max_loss']:,.0f}ポイント(ラージ {-a['max_loss'] * LARGE:,.0f}円)"
+    def amt(pt):
+        return f"{pt:,.0f}ポイント(ラージ {pt * LARGE:,.0f}円・ミニ {pt * MINI:,.0f}円)"
+
+    mp = "限定されない" if a["max_profit"] is None else amt(a["max_profit"])
+    ml = "<b>限定されない</b>" if a["max_loss"] is None else amt(-a["max_loss"])
     be = "・".join(f"{x:,.0f}円" for x in a["breakevens"]) or "なし"
-    legs_html = "".join(f"<li>{lg.label()}</li>" for lg in legs)
+    legs_txt = " ＋ ".join(lg.label() for lg in legs)
+    md = f"{chain.date[4:6].lstrip('0')}月{chain.date[6:].lstrip('0')}日"
     return f"""
 <div class="latest">
-<h3>{name}: {chain.date[4:6].lstrip('0')}月{chain.date[6:].lstrip('0')}日の清算値段で組んだ例</h3>
-<p>{chain.label()}・現値 {chain.spot:,.0f}円。行使価格は下の決まったルールで自動的に選んでいます。</p>
-<ul>{legs_html}</ul>
+<h3>{name}の今日の例({md}の清算値段)</h3>
+<p>{legs_txt}<br><span class="latest-note">{chain.label()}・日経平均 {chain.spot:,.0f}円。行使価格は決まったルールで自動的に選んでいます。</span></p>
+<img src="{img}?v={chain.date}" alt="{name}の損益図">
 <div class="tbl-wrap"><table>
 <tbody>
 <tr><th>組んだときの受け渡し</th><td>{net_txt}</td></tr>
 <tr><th>SQでの最大利益</th><td>{mp}</td></tr>
 <tr><th>SQでの最大損失</th><td>{ml}</td></tr>
 <tr><th>損益分岐点(SQ値)</th><td>{be}</td></tr>
-<tr><th>今日のデルタ / ガンマ</th><td>{g['delta']:+.2f} / {g['gamma'] * 1000:+.3f}(1,000円動いたときのデルタの変化)</td></tr>
-<tr><th>1日(暦日)あたりの時間価値の変化(セータ)</th><td>{g['theta']:+,.1f}ポイント(ラージ {g['theta'] * LARGE:+,.0f}円)</td></tr>
-<tr><th>IVが1ポイント上がると(ベガ)</th><td>{g['vega']:+,.1f}ポイント(ラージ {g['vega'] * LARGE:+,.0f}円)</td></tr>
 </tbody></table></div>
-<img src="{img}?v={chain.date}" alt="{name}の損益図">
+<details><summary>詳しく見る(日経平均やIVが動いたときの変化)</summary>
+<div class="tbl-wrap"><table>
+<tbody>
+<tr><th>日経平均が100円上がると(デルタ)</th><td>約{g['delta'] * 100:+,.0f}ポイント(ラージ 約{g['delta'] * 100 * LARGE:+,.0f}円)</td></tr>
+<tr><th>1,000円動いたときのデルタの変化(ガンマ)</th><td>{g['gamma'] * 1000:+.3f}</td></tr>
+<tr><th>1日たつと(セータ)</th><td>約{g['theta']:+,.1f}ポイント(ラージ 約{g['theta'] * LARGE:+,.0f}円)</td></tr>
+<tr><th>IVが1ポイント上がると(ベガ)</th><td>約{g['vega']:+,.1f}ポイント(ラージ 約{g['vega'] * LARGE:+,.0f}円)</td></tr>
+</tbody></table></div>
+<p class="latest-note">今日の時点での変化の目安です。日経平均や残り日数が変わると、これらの数字自体も変わります。
+意味は<a href="strategy-gamma-trading.html">デルタヘッジのページ</a>で例を使って説明しています。</p>
+</details>
 <p class="latest-note">手数料・証拠金の金利は含みません。清算値段は取引所が算出した理論上の値段で、
 実際に約定する値段とはずれます。{note}</p>
 </div>

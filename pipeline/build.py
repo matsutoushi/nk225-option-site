@@ -2446,6 +2446,9 @@ def write_data_page(fname: str, title: str, desc: str, body: str, updated: str) 
   .tbl-wrap table {{ width: auto; }}
   .tbl-wrap th {{ text-align: left; }}
   td {{ white-space: normal; }}
+  details {{ margin: 6px 0 4px; }}
+  details summary {{ cursor: pointer; color: #1f6fd0; font-size: 0.92em; }}
+  .latest img {{ margin: 6px 0; }}
 </style>{adsense_head()}
 </head>
 <body>
