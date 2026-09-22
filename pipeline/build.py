@@ -3423,6 +3423,8 @@ def render_seo_files() -> None:
              "guide-sq.html", "nikkei-vi.html", "sq-values.html",
              "strategies.html", "strategy-vertical-spread.html", "strategy-ratio-spread.html",
              "strategy-straddle-strangle.html", "strategy-collar.html", "strategy-gamma-trading.html",
+             "strategy-iron-condor.html", "strategy-butterfly.html", "strategy-covered-call.html",
+             "strategy-calendar-spread.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",

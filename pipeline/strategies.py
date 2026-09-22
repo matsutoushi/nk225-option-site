@@ -183,20 +183,20 @@ def analyze(legs: list[Leg], spot: float) -> dict:
 class Chain:
     """1つの限月の清算値段。行使価格はルールで選ぶ。"""
 
-    def __init__(self, settle: dict, min_days: int = 10):
+    def __init__(self, settle: dict, min_days: int = 10, nth: int = 0):
+        """nth=0 で残り min_days 日以上の最初の月次限月、nth=1 でその次の限月。"""
         df = settle["data"]
         self.spot = float(settle["spot"])
         self.date = settle["date"]
         # 週次限月(YYMMDD)も同じファイルに入っている。月次限月(YYMM)だけを使う
         exps = sorted(e for e in df["expiry"].unique() if len(str(e)) == 4)
-        chosen = None
-        for e in exps:
-            g = df[df["expiry"] == e]
-            if int(g["days"].iloc[0]) >= min_days and len(g) > 40:
-                chosen = e
-                break
-        if chosen is None:
-            chosen = exps[0]
+        ok = [e for e in exps
+              if int(df[df["expiry"] == e]["days"].iloc[0]) >= min_days
+              and len(df[df["expiry"] == e]) > 40]
+        if len(ok) > nth:
+            chosen = ok[nth]
+        else:
+            chosen = ok[-1] if ok else exps[0]
         self.expiry = chosen
         self.df = df[df["expiry"] == chosen]
         self.days = int(self.df["days"].iloc[0])

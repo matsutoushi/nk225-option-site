@@ -456,6 +456,10 @@ PAGES = [
     ("strategy-straddle-strangle.html", "ストラドル/ストラングル", "動く・動かない",
      "買い:限定 / 売り:<b>限定されない</b>", "買い:限定されない / 売り:限定"),
     ("strategy-collar.html", "カラー/ゼロコストカラー", "先物の保有+下の保険", "限定", "限定"),
+    ("strategy-iron-condor.html", "アイアンコンドル", "動かない(範囲に収まる)", "限定", "限定"),
+    ("strategy-butterfly.html", "バタフライ", "特定の水準に着地", "限定", "限定"),
+    ("strategy-covered-call.html", "カバードコール", "先物の保有+横ばい", "<b>下落は限定されない</b>", "限定"),
+    ("strategy-calendar-spread.html", "カレンダースプレッド", "動かない+時間の差", "ほぼ支払い分", "限定"),
     ("strategy-gamma-trading.html", "デルタヘッジ(ガンマトレード)", "値動きの大きさ",
      "買い:支払い分+ヘッジの費用", "実際の値動き次第"),
 ]
@@ -517,5 +521,16 @@ def build_all(settle: dict, sq_hist: pd.DataFrame, n225, vi, vi_stats, img_dir: 
     r = page_gamma(ch, p, img_dir, colors, n225, vi_stats)
     if r:
         out["strategy-gamma-trading.html"] = r
+    # 第2弾
+    import strategy_pages2 as sp2
+    for fname, fn in (("strategy-iron-condor.html", sp2.page_condor),
+                      ("strategy-butterfly.html", sp2.page_butterfly),
+                      ("strategy-covered-call.html", sp2.page_covered_call)):
+        r = fn(ch, p, img_dir, colors)
+        if r:
+            out[fname] = r
+    r = sp2.page_calendar(ch, Chain(settle, nth=1), img_dir, colors)
+    if r:
+        out["strategy-calendar-spread.html"] = r
     out["strategies.html"] = page_hub(ch, out)
     return out
