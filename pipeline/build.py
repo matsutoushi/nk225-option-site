@@ -2424,6 +2424,49 @@ SQ値はJPXが当日15時45分以降に公表します。当サイトはJPXのSQ
     print(f"sq-values.html: {len(judged)} judged, {len(ph)} phantom, {len(pending)} pending")
 
 
+def write_data_page(fname: str, title: str, desc: str, body: str, updated: str) -> None:
+    """データ付きの独立ページ(戦略ページなど)を書き出す。見た目は日経VIのページと揃える。"""
+    og = og_meta(title, desc)
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<meta name="description" content="{desc}">
+<title>{title} | 日経225オプション データ分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}
+  .latest {{ background: var(--panel); border: 1px solid var(--line);
+            border-left: 4px solid var(--aqua); border-radius: 0 10px 10px 0;
+            padding: 4px 16px 12px; margin: 14px 0 22px; }}
+  .latest-note {{ font-size: 0.88em; color: var(--ink2); }}
+  .tbl-wrap {{ overflow-x: auto; margin: 12px 0; }}
+  .tbl-wrap table {{ width: auto; }}
+  .tbl-wrap th {{ text-align: left; }}
+  td {{ white-space: normal; }}
+</style>{adsense_head()}
+</head>
+<body>
+<header>
+  <p class="updated">{updated}</p>
+  {site_nav("ja", "")}
+</header>
+<main>
+{body}
+</main>
+<footer>
+  {footer_sitemap("ja")}
+  <p>{PAGE["ja"]["footer_disclaimer"]}</p>
+</footer>
+</body>
+</html>
+"""
+    with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+
 def render_fedwatch(feeds: dict, lang: str) -> None:
     import fed_watch
     P = FEDPAGE[lang]
@@ -3278,6 +3321,7 @@ def footer_sitemap(lang: str) -> str:
         items = NAV_LINKS["ja"] + [
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
             ("nikkei-vi.html", "日経VI"), ("sq-values.html", "SQ値一覧"),
+            ("strategies.html", "オプション戦略一覧"),
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
@@ -3374,6 +3418,8 @@ def render_seo_files() -> None:
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-brokers.html", "guide-jpx-data.html",
              "guide-sq.html", "nikkei-vi.html", "sq-values.html",
+             "strategies.html", "strategy-vertical-spread.html", "strategy-ratio-spread.html",
+             "strategy-straddle-strangle.html", "strategy-collar.html", "strategy-gamma-trading.html",
              "guide-gex.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
@@ -3964,6 +4010,25 @@ def main() -> None:
             print(f"iv smile: {len(sm['strikes'])} strikes, atm {sm['atm']:.1%}")
     except Exception as e:
         warn(f"iv smile failed: {e}")
+    # オプション戦略のページ群。同じ清算値段ファイルで「今日組んだら」を計算する。
+    # 売買の広告は置かない(取引への誘引と受け取られないよう、口座開設の導線と分ける)。
+    try:
+        import strategy_pages
+        vst = None
+        if vi_df is not None and n225_hist is not None:
+            vst = vi_stats(vi_df["Close"].dropna(), n225_hist["Close"])
+        sqh = pd.read_csv(os.path.join(DATA, "sq_history.csv"))
+        colors = {"accent": ACCENT, "ink": INK, "ink2": INK2, "line": "#dfe3e9", "down": UP}
+        pages_st = strategy_pages.build_all(
+            settle, sqh, n225_hist, vi_df["Close"].dropna() if vi_df is not None else None,
+            vst, IMG, colors)
+        d = settle["date"]
+        upd = f"清算値段の基準日: {d[:4]}-{d[4:6]}-{d[6:]} | 最終更新: {datetime.now(JST).strftime('%Y-%m-%d %H:%M')} JST(毎営業日 自動更新)"
+        for fname, (t_, d_, b_) in pages_st.items():
+            write_data_page(fname, t_, d_, b_, upd)
+        print(f"strategy pages: {len(pages_st)}")
+    except Exception as e:
+        warn(f"strategy pages failed: {e}")
 
     # 先物の出来高・取引代金(ラージ/mini/マイクロをラージ換算で比較)
     try:
