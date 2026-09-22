@@ -14,4 +14,4 @@ inflation,wti,WTI原油(前年比),$107 (+68%),2026-09-15,red
 stress,nfci,シカゴ連銀 金融環境指数,-0.56,2026-09-11,green
 stress,stlfsi,セントルイス連銀 金融ストレス指数,-0.85,2026-09-11,green
 stress,hy,ハイイールド債スプレッド,2.68%,2026-09-18,green
-stress,vix,VIX指数,14.8,2026-09-18,green
+stress,vix,VIX指数,14.9,2026-09-21,green
