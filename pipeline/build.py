@@ -3326,7 +3326,8 @@ def footer_sitemap(lang: str) -> str:
             ("nikkei-vi.html", "日経VI"), ("sq-values.html", "SQ値一覧"),
             ("strategies.html", "オプション戦略一覧"),
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
-            ("guide-gex.html", "ガンマエクスポージャーとは"), ("guide-cot.html", "COTの見方"),
+            ("guide-gex.html", "ガンマエクスポージャーとは"),
+            ("guide-lee-ready.html", "Lee-Readyとは"), ("guide-cot.html", "COTの見方"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             *(( ("contact.html", "お問い合わせ"), ) if CONTACT_FORM else ()),
             ("en/", "English")]
@@ -3425,7 +3426,7 @@ def render_seo_files() -> None:
              "strategy-straddle-strangle.html", "strategy-collar.html", "strategy-gamma-trading.html",
              "strategy-iron-condor.html", "strategy-butterfly.html", "strategy-covered-call.html",
              "strategy-calendar-spread.html",
-             "guide-gex.html", "guide-cot.html", "glossary.html",
+             "guide-gex.html", "guide-lee-ready.html", "guide-cot.html", "glossary.html",
              "en/guide-participants.html", "en/guide-nikkei-options.html",
              "en/guide-gamma-exposure.html", "en/guide-gamma-flip.html", "en/guide-sq.html",
              "en/guide-put-call-ratio.html", "en/guide-implied-volatility.html",
@@ -3484,6 +3485,14 @@ def latest_block(kind: str) -> str:
                 f'<a href="./#oitable">トップページの一覧表</a>で毎営業日更新しています。</p>'
                 f'<img src="img/oi_dist.png?v={d}" alt="行使価格別の建玉分布">'
                 f'<p class="latest-note">この図の読み方を、以下で説明します。</p></div>')
+    if kind == "flow":
+        v, d_oi = LATEST.get("volume"), LATEST.get("oi_change")
+        if v is None or d_oi is None:
+            return ""
+        return (f'<div class="latest"><p>{md}のデータでは、日経225オプション(ラージ)の出来高は'
+                f'<b>{v:,}枚</b>(プット{LATEST.get("put_volume", 0):,}枚・コール{LATEST.get("call_volume", 0):,}枚)、'
+                f'JPXが公開している直近3限月の建玉は前日から<b>{d_oi:+,}枚</b>変化しました'
+                f'(増加した行使価格 {LATEST.get("oi_up", 0)}本・減少した行使価格 {LATEST.get("oi_dn", 0)}本)。</p></div>')
     if kind == "gex":
         tot = LATEST.get("gex_total")
         if tot is None:
@@ -3795,6 +3804,8 @@ Googleによる取り扱いについては
             body = body.replace("{latest_oi}", latest_block("oi"))
         if "{latest_gex}" in body:
             body = body.replace("{latest_gex}", latest_block("gex"))
+        if "{latest_flow}" in body:
+            body = body.replace("{latest_flow}", latest_block("flow"))
         ad = "" if fname in NO_AD else adsense_unit("ja")
         en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
@@ -4103,6 +4114,12 @@ def main() -> None:
             LATEST["wall_call"] = w["call"]
         if w.get("put"):
             LATEST["wall_put"] = w["put"]
+        LATEST["put_volume"] = pcr.get("put_volume")
+        LATEST["call_volume"] = pcr.get("call_volume")
+        LATEST["volume"] = (pcr.get("put_volume") or 0) + (pcr.get("call_volume") or 0)
+        LATEST["oi_change"] = int(oi["change"].sum())
+        LATEST["oi_up"] = int((oi["change"] > 0).sum())
+        LATEST["oi_dn"] = int((oi["change"] < 0).sum())
         hp = base_extras.get("hedge")
         if hp is not None:
             by = hp["by_strike"]
