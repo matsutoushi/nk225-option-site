@@ -1063,6 +1063,9 @@ PAGE = {
         "src_pv": "手口 {d}",
         "src_oi": "建玉残高 {d}",
         "sec_hedge": "ガンマエクスポージャー",
+        "sec_groups": "取引参加者の3分類(外資系・国内系・ネット系)",
+        "groups_lead": "取引参加者別の建玉は社名で公表されますが、社名を知らないと読めません。そこで<b>外資系・国内系・ネット系(個人のネット取引を主に受ける会社)</b>の3つに束ねました。日経225先物とminiを<b>ラージ換算で合算</b>しています。プラスは買い越し、マイナスは売り越しです。<b>ゼロと比べても意味がありません</b>——どの層も業務の形から来る偏りを持っているため、その層自身の平常値と比べてください。",
+        "groups_more": '「日経平均との連動」は、週ごとの建玉の増減が日経平均の上下と同じ向きだった度合いです(+1で完全に同じ、−1で完全に逆)。プラスなら上がった週に買い越しを増やし、マイナスなら減らしていたことを示します。分類は当サイトによるもので、三菱UFJモルガン・スタンレー証券のような合弁は国内系に入れています。(<a href="guide-brokers.html" style="color:#1f6fd0">→ 手口に出てくる証券会社</a>)',
         "sec_iv": "行使価格別のIV(スマイル)",
         "iv_lead": "日経VIは市場全体の期待変動率を1つの数字にまとめたものですが、<b>どちら方向の保険が高く付いているかは消えてしまいます</b>。JPXは清算値段ファイルで<b>行使価格ごとのIV</b>も公表しているので、現値を境にプット側・コール側それぞれのIVを並べました。深いイン・ザ・マネーはIVが1.0%固定のダミー値になるため、<b>アウト・オブ・ザ・マネー側だけ</b>を使っています。",
         "iv_sum": "現値近辺のIVは{atm:.1f}%。現値から10%下のプットは{put:.1f}%、10%上のコールは{call:.1f}%です。",
@@ -1147,6 +1150,9 @@ PAGE = {
         "src_pv": "Participant volume {d}",
         "src_oi": "Open interest {d}",
         "sec_hedge": "Gamma Exposure",
+        "sec_groups": "Participants by Type (Foreign / Domestic / Online)",
+        "groups_lead": "JPX names each participant, which only helps if you know the firms. Here they are grouped into <b>foreign brokers, domestic brokers and online brokers (retail order flow)</b>, with Nikkei 225 futures and minis combined on a large-contract basis. Positive is net long. <b>Comparing to zero is meaningless</b> — every group carries a structural bias, so compare each to its own normal.",
+        "groups_more": 'The correlation column shows how often a group&rsquo;s weekly position change moved with the Nikkei (+1 = always the same direction). Groupings are ours; Japanese joint ventures such as Mitsubishi UFJ Morgan Stanley count as domestic.',
         "sec_iv": "Implied Volatility by Strike",
         "iv_lead": "The Nikkei VI compresses the whole surface into one number, so it cannot tell you <b>which side of the market is paying up for protection</b>. JPX publishes <b>implied volatility for every strike</b> in its daily settlement file, so we plot puts below spot and calls above it. Deep in-the-money contracts print a placeholder 1.0%, so <b>only out-of-the-money strikes</b> are used.",
         "iv_sum": "At-the-money implied volatility is {atm:.1f}%. Ten percent below spot prices at {put:.1f}%, ten percent above at {call:.1f}%.",
@@ -1329,6 +1335,16 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'<img src="{charts["hedge"]}" alt="Option hedging direction by strike">'
             f'<p>{P["hedge_more"]}</p>')
 
+    # 参加者の3分類。会社別の一覧より前に置く(全体像 → 個別の順)
+    groups_section = ""
+    if extras.get("groups") is not None and charts.get("groups"):
+        gtbl = extras.get("groups_table" if lang == "ja" else "groups_table_en", "")
+        groups_section = (
+            f'<h2 id="groups">{P["sec_groups"]}</h2>'
+            f'<p>{P["groups_lead"]}</p>{gtbl}'
+            f'<img src="{charts["groups"]}" alt="Net futures OI by participant type">'
+            f'<p>{P["groups_more"]}</p>')
+
     # 行使価格別IV(スマイル)。ガンマの直後に置く——同じ清算値段ファイルの数字なので。
     iv_section = ""
     sm = extras.get("iv")
@@ -1447,6 +1463,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   {fut_section}
 
   {pv_section}
+
+  {groups_section}
 
   {weekly_section}
 
@@ -2468,6 +2486,106 @@ def write_data_page(fname: str, title: str, desc: str, body: str, updated: str) 
 """
     with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
         f.write(html_doc)
+
+
+# 取引参加者の分類。JPXの公表名(全角)で持つ。
+FOREIGN = {"ＨＳＢＣ証券", "ゴールドマン証券", "ナティクシス証券", "ＪＰモルガン証券",
+           "フィリップ・キャ証券", "ＢＮＰパリバ証券", "ＡＢＮクリアリン証券",
+           "サスケハナ・ホンコン", "ソシエテＧ証券", "ビーオブエー証券", "ＵＢＳ証券",
+           "ドイツ証券", "シティグループ証券", "バークレイズ証券", "インタラクティブ証券",
+           "クレディ・スイス証券", "マッコーリー証券", "ジェフリーズ証券"}
+ONLINE = {"ＳＢＩ証券", "楽天証券", "松井証券", "マネックス証券", "三菱ＵＦＪｅスマート",
+          "ａｕカブコム証券", "ＧＭＯクリック証券", "岡三オンライン"}
+
+
+def participant_group(name: str) -> str:
+    """外資系 / ネット系 / 国内系 のどれか。合弁(モルガンＭＵＦＧ)は国内系に入れる。"""
+    if name in FOREIGN:
+        return "外資系"
+    if name in ONLINE:
+        return "ネット系"
+    return "国内系"
+
+
+def group_positions(ph: pd.DataFrame) -> pd.DataFrame | None:
+    """週次の参加者別建玉を3分類で集計する(日経225先物+mini のラージ換算)。"""
+    if ph is None or not len(ph):
+        return None
+    df = ph[ph["product"].isin(["日経225先物", "日経225mini"])].copy()
+    if not len(df):
+        return None
+    # miniは想定元本がラージの1/10。枚数のままでは足せない。
+    df["net_large"] = np.where(df["product"] == "日経225mini", df["net"] / 10.0, df["net"])
+    df["group"] = df["participant"].map(participant_group)
+    out = (df.groupby(["date", "group"], as_index=False)["net_large"].sum()
+             .pivot(index="date", columns="group", values="net_large")
+             .sort_index())
+    for g in ("外資系", "国内系", "ネット系"):
+        if g not in out.columns:
+            out[g] = 0.0
+    return out[["外資系", "国内系", "ネット系"]]
+
+
+def chart_groups(gp: pd.DataFrame, n225: pd.DataFrame | None, lang: str) -> str | None:
+    """3分類のネット建玉の推移。日経平均を重ねて形を比べられるようにする。"""
+    if gp is None or len(gp) < 4:
+        return None
+    suffix = L[lang]["suffix"]
+    idx = pd.to_datetime(gp.index, format="%Y%m%d")
+    fig, ax = plt.subplots(figsize=(10, 3.8))
+    labels = {"外資系": ("外資系", "Foreign"), "国内系": ("国内系", "Domestic"),
+              "ネット系": ("ネット系(個人)", "Online (retail)")}
+    colors = {"外資系": ACCENT, "国内系": "#1f6fd0", "ネット系": UP}
+    for g in ("外資系", "国内系", "ネット系"):
+        ax.plot(idx, gp[g] / 1000, color=colors[g], linewidth=1.6,
+                label=labels[g][0 if lang == "ja" else 1])
+    ax.axhline(0, color=INK2, linewidth=0.8)
+    ax.set_ylabel("ネット建玉(千枚・ラージ換算)" if lang == "ja"
+                  else "Net OI (thousand, large-equivalent)", fontsize=9)
+    if n225 is not None and len(n225):
+        ax2 = ax.twinx()
+        nk = n225["Close"].reindex(idx, method="ffill")
+        ax2.plot(idx, nk.values, color=INK2, linewidth=1.0, alpha=0.45)
+        ax2.set_yticks([])
+    ax.set_title("取引参加者の3分類別 ネット建玉(日経225先物+mini・灰色は日経平均)" if lang == "ja"
+                 else "Net futures OI by participant type (grey = Nikkei 225)", fontsize=10)
+    ax.grid(alpha=0.25)
+    ax.legend(fontsize=8, loc="best")
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    os.makedirs(IMG, exist_ok=True)
+    name = f"groups{suffix}.png"
+    fig.savefig(os.path.join(IMG, name), dpi=120)
+    plt.close(fig)
+    return f"img/{name}"
+
+
+def group_table(gp: pd.DataFrame, n225: pd.DataFrame | None, lang: str) -> str:
+    """3分類の現在値・前週比・52週平均と、日経平均との連動の度合い。"""
+    if gp is None or len(gp) < 4:
+        return ""
+    last, prev = gp.iloc[-1], gp.iloc[-2]
+    idx = pd.to_datetime(gp.index, format="%Y%m%d")
+    corr = {}
+    if n225 is not None and len(n225):
+        nk = n225["Close"].reindex(idx, method="ffill")
+        dn = pd.Series(nk.values, index=gp.index).diff()
+        for g in gp.columns:
+            corr[g] = gp[g].diff().corr(dn)
+    head = (["分類", "ネット建玉", "前週比", "52週平均", "日経平均との連動"] if lang == "ja"
+            else ["Type", "Net OI", "WoW", "52w avg", "Correlation"])
+    names = {"外資系": "Foreign", "国内系": "Domestic", "ネット系": "Online (retail)"}
+    unit = "枚" if lang == "ja" else ""
+    rows = ""
+    for g in ("外資系", "国内系", "ネット系"):
+        c = corr.get(g)
+        ctxt = f"{c:+.2f}" if c is not None and c == c else "-"
+        rows += (f"<tr><td>{g if lang == 'ja' else names[g]}</td>"
+                 f"<td>{last[g]:+,.0f}{unit}</td><td>{last[g] - prev[g]:+,.0f}{unit}</td>"
+                 f"<td>{gp[g].mean():+,.0f}{unit}</td><td>{ctxt}</td></tr>")
+    return ('<div class="tbl-wrap"><table><thead><tr>'
+            + "".join(f"<th>{h}</th>" for h in head)
+            + f"</tr></thead><tbody>{rows}</tbody></table></div>")
 
 
 def render_fedwatch(feeds: dict, lang: str) -> None:
@@ -3933,6 +4051,8 @@ def main() -> None:
 
     # 参加者別建玉の履歴を蓄積してトレンドチャートを生成
     part_charts = {}
+    group_charts = {}
+    gp_df = None
     try:
         ph_path = os.path.join(DATA, "participants_history.csv")
         ph_cache = pd.read_csv(ph_path, dtype={"date": str}) if os.path.exists(ph_path) else None
@@ -3940,6 +4060,12 @@ def main() -> None:
         ph.to_csv(ph_path, index=False)
         for lg in ("ja", "en"):
             part_charts[lg] = chart_participants(ph, n225_hist, lg)
+        gp_df = group_positions(ph)
+        if gp_df is not None and len(gp_df) >= 4:
+            for lg in ("ja", "en"):
+                group_charts[lg] = chart_groups(gp_df, n225_hist, lg)
+            last = gp_df.iloc[-1]
+            print("groups: " + " / ".join(f"{g} {last[g]:+,.0f}" for g in gp_df.columns))
     except Exception as e:
         warn(f"participant history failed: {e}")
     # SQ値の履歴を更新(JPXのPDF)。落ちても日本側のビルドは止めない。
@@ -3961,6 +4087,10 @@ def main() -> None:
     # 冒頭サマリー用の材料。X経由の訪問者は数秒で離脱するため、
     # 最初の画面で「今日何が起きたか」を1〜2行で伝えられるようにする。
     base_extras = {"src_volume": date, "src_oi": oi_date, "spot": spot}
+    if gp_df is not None and len(gp_df) >= 4:
+        base_extras["groups"] = gp_df
+        base_extras["groups_table"] = group_table(gp_df, n225_hist, "ja")
+        base_extras["groups_table_en"] = group_table(gp_df, n225_hist, "en")
     try:
         if n225_hist is not None and len(n225_hist) >= 2:
             base_extras["chg"] = float(n225_hist["Close"].iloc[-1] - n225_hist["Close"].iloc[-2])
@@ -4074,6 +4204,7 @@ def main() -> None:
             "pcr": chart_pcr(hist, lang),
             "market": market_chart,
             "participants": part_charts.get(lang),
+            "groups": group_charts.get(lang),
         }
         if vi_df is not None:
             charts["vi"] = chart_vi(vi_df, lang)
