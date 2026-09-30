@@ -24,8 +24,28 @@ BASE = "https://www.jpx.co.jp"
 NAME_RE = re.compile(r"NIKKEI 225 ([PC])(\d{4})-(\d+)")
 
 
+# 日通しの市況ファイルは、2026-09-30にページ直書きからJSON配信へ変わった。
+# ページ側のリンクは建玉ファイルだけになったため、両方を見る。
+VOLUME_JSON = (BASE + "/automation/markets/derivatives/trading-volume/json/"
+               "derivatives_market_data_eve.json")
+
+
+def _whole_day_from_json() -> str | None:
+    """JSON配信から「デリバティブ取引市況(日通し)」のxlsxのURLを返す。"""
+    try:
+        r = requests.get(VOLUME_JSON, headers=UA, timeout=30)
+        r.raise_for_status()
+        for row in r.json().get("TableDatas", []):
+            f = row.get("File", "")
+            if "whole_day" in f:
+                return BASE + f
+    except Exception:
+        return None
+    return None
+
+
 def discover_files() -> dict:
-    """当日取引高ページから各データファイルのURLを見つける。"""
+    """当日取引高ページ(とJSON配信)から各データファイルのURLを見つける。"""
     r = requests.get(INDEX_URL, headers=UA, timeout=30)
     r.raise_for_status()
     links = re.findall(r'href="([^"]+\.(?:xlsx|csv))"', r.text)
@@ -35,6 +55,10 @@ def discover_files() -> dict:
             out["whole_day"] = BASE + l
         elif "open_interest" in l:
             out["open_interest"] = BASE + l
+    if "whole_day" not in out:
+        u = _whole_day_from_json()
+        if u:
+            out["whole_day"] = u
     missing = {"whole_day", "open_interest"} - set(out)
     if missing:
         raise RuntimeError(f"JPX page layout changed? missing: {missing}")
