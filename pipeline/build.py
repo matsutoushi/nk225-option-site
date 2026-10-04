@@ -3344,7 +3344,12 @@ SUB_CSS = """
 """
 
 
-SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
+# 独自ドメイン。2026-10-04にmatsutoushi.github.io/nk225-option-site/から移行。
+# 旧URLはGitHub Pagesが自動で転送する。
+SITE_URL = "https://nk225-option.com/"
+# GitHub Pagesのカスタムドメイン設定(site/CNAME)と、AdSenseのads.txt
+CUSTOM_DOMAIN = "nk225-option.com"
+ADS_TXT = "google.com, pub-7288831116031954, DIRECT, f08c47fec0942fa0"
 GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymCE5AgMGsKG0uu4BI5QdwWz24">\n'
             '<script async src="https://www.googletagmanager.com/gtag/js?id=G-B0F8KB2KW7"></script>\n'
             '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
@@ -3556,6 +3561,12 @@ def render_seo_files() -> None:
         f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod></url>" for p in pages)
     sitemap = (f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                f"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{urls}\n</urlset>\n")
+    # カスタムドメイン(これが無いとデプロイのたびに設定が外れる)
+    with open(os.path.join(SITE, "CNAME"), "w", encoding="utf-8") as f:
+        f.write(CUSTOM_DOMAIN + "\n")
+    # AdSenseの広告配信に必要。ドメイン直下に置く。
+    with open(os.path.join(SITE, "ads.txt"), "w", encoding="utf-8") as f:
+        f.write(ADS_TXT + "\n")
     with open(os.path.join(SITE, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write(sitemap)
     with open(os.path.join(SITE, "robots.txt"), "w", encoding="utf-8") as f:

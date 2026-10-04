@@ -35,7 +35,7 @@ import sys
 import urllib.request
 from email.message import EmailMessage
 
-SITE_URL = "https://matsutoushi.github.io/nk225-option-site/"
+SITE_URL = "https://nk225-option.com/"
 JPX_INDEX = "https://www.jpx.co.jp/markets/derivatives/trading-volume/index.html"
 ACTIONS_URL = "https://github.com/matsutoushi/nk225-option-site/actions/workflows/daily-update.yml"
 UA = {"User-Agent": "Mozilla/5.0 (compatible; nk225-options-site freshness check)"}
