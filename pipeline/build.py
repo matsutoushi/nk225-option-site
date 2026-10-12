@@ -3540,6 +3540,43 @@ def render_favicon() -> None:
     img.save(os.path.join(SITE, "favicon.png"))
 
 
+def inject_canonical() -> None:
+    """全ページに、自分自身を指すcanonicalを入れる。
+
+    中身が同じでもURLが違えば検索エンジンは別ページとして扱う。
+    このサイトには実際に次の重複がある:
+      http://nk225-option.com/x.html と https://nk225-option.com/x.html
+      https://nk225-option.com/ と https://nk225-option.com/index.html
+    どれが正規かを自分で宣言しないとGoogleが勝手に選ぶため、
+    「重複しています。ユーザーにより、正規ページとして選択されていません」として
+    インデックスから外れる。ページの書き出しは十数か所に散っているので、
+    生成し終わったHTMLをまとめて走査して入れる。
+    """
+    n = 0
+    for root, _dirs, files in os.walk(SITE):
+        for fn in sorted(files):
+            if not fn.endswith(".html"):
+                continue
+            path = os.path.join(root, fn)
+            rel = os.path.relpath(path, SITE).replace(os.sep, "/")
+            # index.htmlはディレクトリ形式(/ と /en/)を正規にする。
+            # サイトマップもリンクもそちらを使っているため。
+            if rel == "index.html":
+                rel = ""
+            elif rel.endswith("/index.html"):
+                rel = rel[: -len("index.html")]
+            with open(path, encoding="utf-8") as f:
+                html = f.read()
+            if 'rel="canonical"' in html or "<head>" not in html:
+                continue
+            html = html.replace(
+                "<head>", f'<head>\n<link rel="canonical" href="{SITE_URL}{rel}">', 1)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(html)
+            n += 1
+    print(f"canonical: {n} pages")
+
+
 def render_seo_files() -> None:
     """sitemap.xml と robots.txt(検索エンジン向け)。"""
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
@@ -4459,6 +4496,12 @@ def main() -> None:
         print("tools page generated")
     except Exception as e:
         warn(f"tools page failed: {e!r}")
+
+    # 全ページの書き出しが終わってから、まとめてcanonicalを入れる
+    try:
+        inject_canonical()
+    except Exception as e:
+        warn(f"canonical injection failed: {e!r}")
 
     # 部分失敗の診断用(data/はCIがコミットするので後から確認できる)
     with open(os.path.join(DATA, "build_warnings.txt"), "w", encoding="utf-8") as f:
