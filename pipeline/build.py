@@ -1089,7 +1089,8 @@ PAGE = {
         "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
                      ' ・ <a href="guide-oi.html">建玉の「壁」の見方</a>'
                      ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>'
-                     ' ・ <a href="nikkei-vi.html">日経VIの実測</a>',
+                     ' ・ <a href="nikkei-vi.html">日経VIの実測</a>'
+                     ' ・ <a href="option-brokers.html">取引できる証券会社は11社</a>',
         "sec_guides": "データの読み方ガイド",
         "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
         "guides": [
@@ -1113,6 +1114,12 @@ PAGE = {
              "SQ・限月・デルタなど、オプションの基本用語"),
             ("guide-start.html", "日経225オプションを始めるには",
              "口座開設から取引開始までの一般的な流れ"),
+            ("option-brokers.html", "取引できる証券会社は11社",
+             "JPXの公式一覧を出発点に、各社の取扱状況を1社ずつ確認した"),
+            ("mini-option-brokers.html", "ミニオプションを扱うのは6社",
+             "ラージの11社から5社減る。1万円以下から試せる条件はここ"),
+            ("option-fees.html", "オプション手数料を10社で比較",
+             "料率0.11%〜4.4%。安い社が入れ替わる分岐点まで計算した"),
         ],
         "footer_links": '<a href="about.html" style="color:#1f6fd0">運営者情報</a> ｜ <a href="privacy.html" style="color:#1f6fd0">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#1f6fd0">用語集</a>',
         "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
@@ -3454,6 +3461,9 @@ def footer_sitemap(lang: str) -> str:
             ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"),
             ("guide-lee-ready.html", "Lee-Readyとは"), ("guide-cot.html", "COTの見方"),
+            ("option-brokers.html", "取引できる証券会社"),
+            ("mini-option-brokers.html", "ミニオプションの取扱社"),
+            ("option-fees.html", "オプション手数料の比較"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             *(( ("contact.html", "お問い合わせ"), ) if CONTACT_FORM else ()),
             ("en/", "English")]
@@ -3584,6 +3594,7 @@ def render_seo_files() -> None:
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-brokers.html", "guide-jpx-data.html",
+             "option-brokers.html", "mini-option-brokers.html", "option-fees.html",
              "guide-sq.html", "nikkei-vi.html", "sq-values.html",
              "strategies.html", "strategy-vertical-spread.html", "strategy-ratio-spread.html",
              "strategy-straddle-strangle.html", "strategy-collar.html", "strategy-gamma-trading.html",
