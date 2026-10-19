@@ -1103,7 +1103,7 @@ PAGE = {
                      ' ・ <a href="guide-oi.html">建玉の「壁」の見方</a>'
                      ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>'
                      ' ・ <a href="nikkei-vi.html">日経VIの実測</a>'
-                     ' ・ <a href="option-brokers.html">取引できる証券会社は11社</a>',
+                     ' ・ <a href="option-strikes.html">行使価格はなぜ125円刻みなのか</a> ・ <a href="option-brokers.html">取引できる証券会社は11社</a>',
         "sec_guides": "データの読み方ガイド",
         "guides_lead": "各指標の意味と実践的な使い方を、図解付きで解説しています。",
         "guides": [
@@ -1133,6 +1133,12 @@ PAGE = {
              "ラージの11社から5社減る。1万円以下から試せる条件はここ"),
             ("option-fees.html", "オプション手数料を10社で比較",
              "料率0.11%〜4.4%。安い社が入れ替わる分岐点まで計算した"),
+            ("option-strikes.html", "行使価格の刻みと限月の仕組み",
+             "直近3限月は125円刻み。実際に並んでいる本数を毎営業日数えている"),
+            ("option-margin.html", "証拠金はいくら必要か",
+             "買いは0円、売りは建玉ごとに毎日変わる。JSCCの公表値で確認した"),
+            ("option-tax.html", "税金と確定申告",
+             "20.315%の内訳は2027年分から変わる。繰越控除3年の条件も"),
         ],
         "footer_links": '<a href="about.html" style="color:#1f6fd0">運営者情報</a> ｜ <a href="privacy.html" style="color:#1f6fd0">プライバシーポリシー</a> ｜ <a href="glossary.html" style="color:#1f6fd0">用語集</a>',
         "footer_src": "データ出典: 日本取引所グループ(JPX)公表データより当サイト作成。日経平均株価は日本経済新聞社の公表データ(著作権は日本経済新聞社に帰属)。",
@@ -2223,6 +2229,8 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 </ul>
 <p>関連: <a href="./">日経225オプションの建玉・Put/Callレシオ</a> ・
 <a href="guide-gex.html">ガンマエクスポージャー</a> ・
+<a href="option-strikes.html">行使価格の刻みと限月</a> ・
+<a href="option-margin.html">証拠金はいくら必要か</a> ・
 <a href="glossary.html">用語集</a></p>
 <p style="font-size:.85em;color:#666">出典: 日本経済新聞社「日経平均ボラティリティー・インデックス」公式データ、
 日経平均株価(日本経済新聞社)、VIX(Cboe Global Markets、FRED経由)。当サイトが集計・計算したもので、投資助言ではありません。</p>
@@ -2421,6 +2429,7 @@ SQ値はJPXが当日15時45分以降に公表します。当サイトはJPXのSQ
 <tbody>{all_rows}</tbody></table></div>
 
 <p>関連: <a href="guide-sq.html">SQはいつ？(日程と仕組み)</a> ・
+<a href="option-strikes.html">限月の種類と権利行使の仕組み</a> ・
 <a href="./#oitable">建玉一覧</a> ・ <a href="nikkei-vi.html">日経VI</a></p>
 <p style="font-size:.85em;color:#666">出典: 日本取引所グループ「最終清算数値(SQ値)」、日経平均株価(日本経済新聞社)の公式データ。
 幻のSQの判定と到達日は当サイトの計算で、日中の高値・安値で判定しています。投資助言ではありません。</p>
@@ -3496,6 +3505,9 @@ def footer_sitemap(lang: str, prefix: str = "") -> str:
             ("option-brokers.html", "取引できる証券会社"),
             ("mini-option-brokers.html", "ミニオプションの取扱社"),
             ("option-fees.html", "オプション手数料の比較"),
+            ("option-margin.html", "証拠金はいくら必要か"),
+            ("option-tax.html", "税金と確定申告"),
+            ("option-strikes.html", "行使価格の刻みと限月"),
             ("about.html", "運営者情報"), ("privacy.html", "プライバシーポリシー"),
             *(( ("contact.html", "お問い合わせ"), ) if CONTACT_FORM else ()),
             ("en/", "English")]
@@ -3798,6 +3810,7 @@ def render_seo_files() -> None:
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
              "guide-brokers.html", "guide-jpx-data.html",
              "option-brokers.html", "mini-option-brokers.html", "option-fees.html",
+             "option-margin.html", "option-tax.html", "option-strikes.html",
              "guide-sq.html", "nikkei-vi.html", "sq-values.html",
              "strategies.html", "strategy-vertical-spread.html", "strategy-ratio-spread.html",
              "strategy-straddle-strangle.html", "strategy-collar.html", "strategy-gamma-trading.html",
@@ -3848,11 +3861,71 @@ def _fmt_md(d: str) -> str:
     return f"{int(d[4:6])}月{int(d[6:8])}日"
 
 
+# ---------------------------------------------------------------------------
+# 行使価格の刻みを実データで数える(option-strikes.html 用)
+#
+# JPXの商品仕様は「直近3限月は125円刻み・上下24種類、それ以外は250円刻み・
+# 上下16種類」と書いてあるだけで、実際に何本並んでいるかは書いていない。
+# 清算値段ファイル(rbYYYYMMDD.csv)には上場している全銘柄が入っているので、
+# ここから限月ごとに刻みを数えて、仕様の説明を実データで裏打ちする。
+#
+# 建玉残高ファイル(data/oi_*.csv)ではなく清算値段ファイルを使うのは、
+# 建玉残高には建玉が残っている行使価格しか出てこないため。
+# 建玉ゼロの行使価格も上場はしているので、刻みを数える用途には向かない。
+# expiry は jpx.fetch_option_settlement() が 202611→"2611"(ラージの月限)、
+# 20261021→"261021"(ミニの週次限月)に整形している。桁数で振り分ける。
+# ---------------------------------------------------------------------------
+
+def _gap_runs(strikes: list[int]) -> list[tuple[int, int, int]]:
+    """昇順の行使価格から、同じ刻みが続く区間を (刻み, 下端, 上端) で返す。"""
+    runs, i = [], 0
+    while i < len(strikes) - 1:
+        g, j = strikes[i + 1] - strikes[i], i
+        while j < len(strikes) - 1 and strikes[j + 1] - strikes[j] == g:
+            j += 1
+        runs.append((g, strikes[i], strikes[j]))
+        i = j
+    return runs
+
+
+def strike_grid(settle: dict) -> dict:
+    """清算値段ファイルから、限月ごとの行使価格の本数と刻みを集計する。"""
+    sd = settle["data"]
+    large, mini = [], []
+    for ex, g in sd.groupby("expiry"):
+        ks = sorted(set(int(k) for k in g["strike"]))
+        if len(ks) < 2:
+            continue
+        runs = _gap_runs(ks)
+        fine = [r for r in runs if r[0] == 125]
+        rec = {"expiry": str(ex), "n": len(ks), "lo": ks[0], "hi": ks[-1],
+               "gaps": sorted({r[0] for r in runs}),
+               # 125円刻みがいちばん長く続く区間(無ければ None)
+               "fine": max(fine, key=lambda r: r[2] - r[1]) if fine else None,
+               "fine_n": sum(r[2] - r[1] for r in fine) // 125 + len(fine)}
+        (large if len(str(ex)) == 4 else mini).append(rec)
+    large.sort(key=lambda r: r["expiry"])
+    mini.sort(key=lambda r: r["expiry"])
+    return {"date": settle["date"], "spot": settle["spot"],
+            "large": large, "mini": mini}
+
+
+def _ex_label(ex: str) -> str:
+    """2611 → 26年11月限 / 261021 → 26年10月21日。"""
+    if len(ex) == 4:
+        return f"{ex[:2]}年{int(ex[2:])}月限"
+    return f"{ex[:2]}年{int(ex[2:4])}月{int(ex[4:])}日"
+
+
 def latest_block(kind: str) -> str:
     """解説ページの冒頭に置く「今日の数字」。データが無ければ空文字。
 
     タイトルで毎日更新をうたう以上、ページにも当日の数字が無いと釣りになる。
     トップと同じ図を使い、詳細はトップへ誘導する。"""
+    # 行使価格の刻みは清算値段ファイル側に日付を持っているので、
+    # 建玉データの日付(LATEST["date"])が無くても出せる。
+    if kind == "strikes":
+        return _strike_grid_block()
     d = LATEST.get("date")
     if not d:
         return ""
@@ -3893,6 +3966,47 @@ def latest_block(kind: str) -> str:
                 f'<img src="img/hedge.png?v={d}" alt="行使価格別のヘッジ圧力">'
                 f'<p class="latest-note">なぜこの向きになるのかを、以下で説明します。</p></div>')
     return ""
+
+
+def _strike_grid_block() -> str:
+    """option-strikes.html に差し込む「今日実際に並んでいる行使価格」。"""
+    sg = LATEST.get("strike_grid")
+    if not sg or not sg["large"]:
+        return ""
+    sgd = _fmt_md(sg["date"])
+    rows = []
+    for r in sg["large"][:5]:
+        if r["fine"]:
+            _, lo, hi = r["fine"]
+            fine = (f'{lo:,}円〜{hi:,}円<br>'
+                    f'<span style="font-size:.9em">({r["fine_n"]}本が連続)</span>')
+        else:
+            fine = "<b>なし</b>"
+        gaps = "・".join(f"{g:,}" for g in r["gaps"])
+        rows.append(
+            f'<tr><td>{_ex_label(r["expiry"])}</td><td>{r["n"]}本</td>'
+            f'<td>{r["lo"]:,}円〜<br>{r["hi"]:,}円</td><td>{fine}</td>'
+            f'<td style="font-size:.9em">{gaps}円</td></tr>')
+    mini = sg["mini"]
+    mini_only125 = [r for r in mini if r["gaps"] == [125]]
+    mini_txt = ""
+    if mini:
+        days = "・".join(_ex_label(r["expiry"]) for r in mini)
+        same = "すべて" if len(mini_only125) == len(mini) else f"{len(mini_only125)}限月が"
+        mini_txt = (
+            f'<p>同じ日のミニオプションは<b>{len(mini)}限月</b>が上場していて、'
+            f'{same}<b>125円刻みだけ</b>で並んでいます。満期は{days}です。</p>')
+    return (f'<div class="latest"><h2>{sgd}時点で実際に並んでいる行使価格</h2>'
+            f'<p>JPXの清算値段ファイルに入っている日経225オプション(ラージ)の'
+            f'全銘柄を、限月ごとに数えました(原資産価格 {sg["spot"]:,.2f}円)。</p>'
+            f'<div class="tbl-wrap"><table>'
+            f'<thead><tr><th>限月</th><th>行使価格<br>の本数</th><th>下限〜上限</th>'
+            f'<th>125円刻みが<br>続く範囲</th><th>現れる刻み</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table></div>'
+            f'{mini_txt}'
+            f'<p class="latest-note">毎営業日、JPXの清算値段ファイル'
+            f'(rb{sg["date"]}.csv)から集計しています。'
+            f'なぜこの形になるのかを、以下で説明します。</p></div>')
 
 
 def render_static_pages() -> None:
@@ -4195,6 +4309,8 @@ Googleによる取り扱いについては
             body = body.replace("{latest_gex}", latest_block("gex"))
         if "{latest_flow}" in body:
             body = body.replace("{latest_flow}", latest_block("flow"))
+        if "{strike_grid}" in body:
+            body = body.replace("{strike_grid}", latest_block("strikes"))
         ad = "" if fname in NO_AD else adsense_unit("ja")
         en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
@@ -4536,6 +4652,10 @@ def main() -> None:
         LATEST["oi_change"] = int(oi["change"].sum())
         LATEST["oi_up"] = int((oi["change"] > 0).sum())
         LATEST["oi_dn"] = int((oi["change"] < 0).sum())
+        try:
+            LATEST["strike_grid"] = strike_grid(settle)
+        except Exception as e:
+            warn(f"strike grid failed: {e}")
         hp = base_extras.get("hedge")
         if hp is not None:
             by = hp["by_strike"]
