@@ -3996,7 +3996,7 @@ def _strike_grid_block() -> str:
         mini_txt = (
             f'<p>同じ日のミニオプションは<b>{len(mini)}限月</b>が上場していて、'
             f'{same}<b>125円刻みだけ</b>で並んでいます。満期は{days}です。</p>')
-    return (f'<div class="latest"><h2>{sgd}時点で実際に並んでいる行使価格</h2>'
+    return (f'<div class="latest"><h2>{sgd}時点の行使価格(毎営業日更新)</h2>'
             f'<p>JPXの清算値段ファイルに入っている日経225オプション(ラージ)の'
             f'全銘柄を、限月ごとに数えました(原資産価格 {sg["spot"]:,.2f}円)。</p>'
             f'<div class="tbl-wrap"><table>'
@@ -4004,8 +4004,8 @@ def _strike_grid_block() -> str:
             f'<th>125円刻みが<br>続く範囲</th><th>現れる刻み</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>'
             f'{mini_txt}'
-            f'<p class="latest-note">毎営業日、JPXの清算値段ファイル'
-            f'(rb{sg["date"]}.csv)から集計しています。'
+            f'<p class="latest-note">JPXの清算値段ファイル'
+            f'(rb{sg["date"]}.csv)から当サイトが集計しました。'
             f'なぜこの形になるのかを、以下で説明します。</p></div>')
 
 
