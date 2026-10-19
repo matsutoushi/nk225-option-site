@@ -10,6 +10,7 @@
 """
 
 import html
+import json
 import os
 import re
 from datetime import datetime, timezone, timedelta
@@ -25,6 +26,7 @@ from matplotlib import font_manager
 
 import jpx
 import pages
+import posts
 
 _available = {f.name for f in font_manager.fontManager.ttflist}
 plt.rcParams["font.family"] = [f for f in ("Yu Gothic", "Meiryo", "IPAexGothic")
@@ -34,6 +36,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = os.path.join(ROOT, "site")
 IMG = os.path.join(SITE, "img")
 DATA = os.path.join(ROOT, "data")
+# 人が書いた解説記事の原稿(1記事1ファイル・YYYY-MM-DD.md)。
+# 自動生成されるデータページとは別の層なので、site/ ではなくリポジトリに置く。
+POSTS_DIR = os.path.join(ROOT, "content", "posts")
 JST = timezone(timedelta(hours=9))
 
 # --- ライトテーマ配色 ---
@@ -948,6 +953,14 @@ CSS_MAIN = """
                      border-top: 1px solid var(--line); margin-top: 6px; }
   .menu-panel a.lang { border-top: 1px solid var(--line); margin-top: 6px; border-radius: 0 0 6px 6px; }
   .sitemap { line-height: 2; }
+  /* 日付つき解説記事のカード(記事一覧と、トップの「最新の解説」で共用) */
+  .post-list { list-style: none; padding: 0; margin: 18px 0 0; }
+  .post-list li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+                  padding: 14px 18px; margin: 0 0 12px; }
+  .post-list time { color: var(--ink2); font-size: 0.85em; font-variant-numeric: tabular-nums; }
+  .post-list a { color: #1f6fd0; text-decoration: none; font-weight: 700; font-size: 1.02em;
+                 display: block; margin: 2px 0 4px; }
+  .post-list p { margin: 0; font-size: 0.9em; color: var(--ink2); }
   a.dl { display: inline-block; font-size: 0.78em; color: var(--ink2); text-decoration: none;
          border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; margin-left: 8px;
          vertical-align: middle; }
@@ -1422,6 +1435,9 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             for href, title, desc in P["guides"])
         + '  </div>'
     )
+    # 日付つき解説記事への導線。自動更新のデータと、人が書いた記事を行き来させる。
+    posts_section = posts_latest_block() if lang == "ja" else ""
+
     nav_ids = ["#market", "#oitable", "#oi", "#iv", "#weekly", "#pcr"]
     nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
     html_doc = f"""<!DOCTYPE html>
@@ -1483,6 +1499,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <h2 id="pcr">{P['sec_pcr']}</h2>
   <p>{P['pcr_lead']}</p>
   <img src="{charts['pcr']}" alt="Put/Call ratio trend">
+
+  {posts_section}
 
   {guide_section}
 </main>
@@ -3425,7 +3443,7 @@ def og_meta(title: str, desc: str = "", pair: tuple[str, str] | None = None) -> 
 NAV_LINKS = {
     "ja": [("./", "日経ダッシュボード"), ("us.html", "米国市場"),
            ("risk.html", "リスクモニター"), ("fedwatch.html", "要人発言"),
-           ("tools.html", "データ分析ツール"),
+           ("tools.html", "データ分析ツール"), ("posts/", "解説記事"),
            ("guide-start.html", "始め方ガイド"), ("glossary.html", "用語集")],
     "en": [("./", "Dashboard"), ("us.html", "US Markets"),
            ("risk.html", "Risk Monitor"), ("fedwatch.html", "Fed Watch"),
@@ -3435,9 +3453,23 @@ NAV_LINKS = {
 }
 
 
-def site_nav(lang: str, lang_switch: str = "", anchors: list | None = None) -> str:
+def rel_href(href: str, prefix: str = "") -> str:
+    """ナビ・フッターのリンクを、1階層下のページ(site/posts/)からでも通る形に直す。
+
+    NAV_LINKS はサイト直下のページを基準にした相対パスで持っているため、
+    site/posts/ 以下から出すときは prefix="../" を渡して前に足す。
+    """
+    if not prefix or href.startswith(("http://", "https://", "#")):
+        return href
+    if href == "./":
+        return prefix
+    return prefix + href
+
+
+def site_nav(lang: str, lang_switch: str = "", anchors: list | None = None,
+             prefix: str = "") -> str:
     """共通ナビ: PC=ピル型 / スマホ=ハンバーガー(details要素・JS不要)。"""
-    links = NAV_LINKS[lang]
+    links = [(rel_href(h, prefix), t) for h, t in NAV_LINKS[lang]]
     pills = "".join(f'<a href="{h}">{t}</a>' for h, t in links) + lang_switch
     menu_items = "".join(f'<a href="{h}">{t}</a>' for h, t in links)
     if anchors:
@@ -3451,7 +3483,7 @@ def site_nav(lang: str, lang_switch: str = "", anchors: list | None = None) -> s
             f'<div class="menu-panel">{menu_items}</div></details>')
 
 
-def footer_sitemap(lang: str) -> str:
+def footer_sitemap(lang: str, prefix: str = "") -> str:
     """フッターのサイトマップ(全コンテンツへの回遊リンク)。"""
     if lang == "ja":
         items = NAV_LINKS["ja"] + [
@@ -3479,7 +3511,8 @@ def footer_sitemap(lang: str) -> str:
             ("guide-contract-specs.html", "Contract Specs"),
             ("../about.html", "About"), ("../privacy.html", "Privacy"),
             ("../", "日本語")]
-    links = " ｜ ".join(f'<a href="{h}" style="color:#1f6fd0">{t}</a>' for h, t in items)
+    links = " ｜ ".join(f'<a href="{rel_href(h, prefix)}" style="color:#1f6fd0">{t}</a>'
+                       for h, t in items)
     return f'<p class="sitemap">{links}</p>'
 
 
@@ -3587,6 +3620,176 @@ def inject_canonical() -> None:
     print(f"canonical: {n} pages")
 
 
+# --- 日付つき解説記事(content/posts/*.md → site/posts/) -------------------
+# データページは毎営業日まるごと作り直す自動生成物で、日付のついた記事が1本も無い。
+# そのため、サイト全体が「媒体」ではなく「ツール」として読まれてしまう。
+# 自動更新とは別の層として、人が書いた記事を1本ずつ積めるようにする。
+
+POST_AUTHOR = "matsutoushi"
+
+POST_CSS = """
+  main.post { max-width: 760px; }
+  .post h1 { font-size: 1.5em; line-height: 1.55; margin: 24px 0 8px; }
+  .post h1::before { content: none; }
+  .post h2 { font-size: 1.15em; margin: 36px 0 12px; }
+  .post h3 { font-size: 1.02em; margin: 24px 0 6px; font-weight: 700; }
+  .post h4 { font-size: 0.98em; margin: 18px 0 4px; font-weight: 700; color: var(--ink); }
+  .post p { color: var(--ink); font-size: 1em; }
+  .post li { color: var(--ink); font-size: 0.97em; margin: 3px 0; }
+  .post ul, .post ol { padding-left: 1.5em; }
+  .post blockquote { margin: 14px 0; padding: 2px 16px; border-left: 3px solid var(--line);
+                     background: var(--panel); border-radius: 0 8px 8px 0; }
+  .post blockquote p { color: var(--ink2); font-size: 0.92em; }
+  .post code { background: var(--panel2); border-radius: 4px; padding: 1px 5px; font-size: 0.92em; }
+  .post-meta { color: var(--ink2); font-size: 0.9em; margin: 0 0 4px;
+               border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .post-meta a { color: #1f6fd0; }
+  .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+  .tbl-wrap table { width: auto; }
+  .tbl-wrap td { white-space: normal; }
+  .tbl-wrap th:first-child, .tbl-wrap td:first-child { text-align: left; }
+  .post-foot { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line);
+               font-size: 0.92em; }
+  .post-foot a { color: #1f6fd0; }
+"""
+
+_POSTS_CACHE: list | None = None
+
+
+def all_posts() -> list:
+    """content/posts/ の記事を新しい順に返す(1ビルドで1回だけ読む)。"""
+    global _POSTS_CACHE
+    if _POSTS_CACHE is None:
+        try:
+            _POSTS_CACHE = posts.load_posts(POSTS_DIR)
+        except Exception as e:
+            warn(f"posts load failed: {e!r}")
+            _POSTS_CACHE = []
+    return _POSTS_CACHE
+
+
+def _post_shell(title: str, desc: str, body: str, head_extra: str = "") -> str:
+    """記事ページ・記事一覧の外枠(site/posts/ 以下に置くのでナビは ../ 起点)。
+
+    データページと違い、ヘッダーに「毎営業日 自動更新」は出さない。
+    記事は自動更新されないので、そう書くと嘘になる。
+    """
+    og = og_meta(title, desc).replace('og:type" content="website"',
+                                      'og:type" content="article"')
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{GSV_META}
+{og}
+<meta name="description" content="{html.escape(desc)}">
+<title>{html.escape(title)} | 日経225オプション データ分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>{CSS_MAIN}{POST_CSS}</style>{adsense_head()}{head_extra}
+</head>
+<body>
+<header>
+  <p class="updated"><a href="../" style="color:var(--ink2); text-decoration:none">日経225オプション データ分析</a> ｜ 解説記事</p>
+  {site_nav("ja", "", prefix="../")}
+</header>
+<main class="post">
+{body}
+</main>
+<footer>
+  {footer_sitemap("ja", prefix="../")}
+  <p>{PAGE["ja"]["footer_disclaimer"]}</p>
+</footer>
+</body>
+</html>
+"""
+
+
+def _post_jsonld(post: dict) -> str:
+    """記事の構造化データ。公開日と書き手を機械にも読める形で出す。"""
+    url = f"{SITE_URL}posts/{post['slug']}.html"
+    j = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": post["title"],
+        "description": post["desc"],
+        "datePublished": post["slug"],
+        "dateModified": post["slug"],
+        "author": {"@type": "Person", "name": POST_AUTHOR,
+                   "url": f"{SITE_URL}about.html"},
+        "publisher": {"@type": "Organization", "name": "日経225オプション データ分析",
+                      "url": SITE_URL},
+        "mainEntityOfPage": {"@type": "WebPage", "@id": url},
+        "inLanguage": "ja",
+    }, ensure_ascii=False)
+    return f'\n<script type="application/ld+json">{j}</script>'
+
+
+def _post_list_html(items: list, prefix: str = "") -> str:
+    """記事カードの一覧。prefixはトップから参照するときの "posts/"。"""
+    lis = "".join(
+        f'<li><time datetime="{p["slug"]}">{posts.date_ja(p["slug"])}</time>'
+        f'<a href="{prefix}{p["slug"]}.html">{html.escape(p["title"])}</a>'
+        f'<p>{html.escape(p["desc"])}</p></li>' for p in items)
+    return f'<ul class="post-list">{lis}</ul>'
+
+
+def render_posts() -> list:
+    """site/posts/ に記事ページと一覧を書き出す。Returns: 記事一覧(新しい順)。"""
+    items = all_posts()
+    out_dir = os.path.join(SITE, "posts")
+    os.makedirs(out_dir, exist_ok=True)
+    for i, post in enumerate(items):
+        day = posts.date_ja(post["slug"])
+        # 前後の記事。itemsは新しい順なので、次の要素が1本前の記事になる。
+        links = []
+        if i + 1 < len(items):
+            prev = items[i + 1]
+            links.append(f'<p>前の記事: <a href="{prev["slug"]}.html">'
+                         f'{html.escape(prev["title"])}</a></p>')
+        if i > 0:
+            nxt = items[i - 1]
+            links.append(f'<p>次の記事: <a href="{nxt["slug"]}.html">'
+                         f'{html.escape(nxt["title"])}</a></p>')
+        body = (
+            f'<h1>{html.escape(post["title"])}</h1>\n'
+            f'<p class="post-meta">公開日 <time datetime="{post["slug"]}">{day}</time>'
+            f' ｜ 筆者 <a href="../about.html">{POST_AUTHOR}</a></p>\n'
+            f'{post["html"]}\n'
+            f'{adsense_unit("ja")}\n'
+            f'<div class="post-foot">{"".join(links)}'
+            f'<p><a href="./">解説記事の一覧へ</a> ｜ '
+            f'<a href="../">毎営業日更新のデータページへ</a></p></div>'
+        )
+        html_doc = _post_shell(post["title"], post["desc"], body, _post_jsonld(post))
+        with open(os.path.join(out_dir, f"{post['slug']}.html"), "w", encoding="utf-8") as f:
+            f.write(html_doc)
+
+    listing = _post_list_html(items) if items else "<p>記事はまだありません。</p>"
+    title = "解説記事"
+    desc = ("日経225オプションの建玉・出来高・日経VIを、その日の数字に即して読み解いた解説記事。"
+            "毎営業日の自動集計とは別に、書き手が目を通したうえで公開しています。")
+    body = (f'<h1>{title}</h1>\n'
+            f'<p>自動集計のページとは別に、その日の数字をどう読んだかを記事にしています。'
+            f'筆者は<a href="../about.html">{POST_AUTHOR}</a>。'
+            f'使った数字の出どころは、各記事の末尾に書いています。</p>\n{listing}')
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(_post_shell(title, desc, body))
+    print(f"posts: {len(items)} article(s)")
+    return items
+
+
+def posts_latest_block(n: int = 3) -> str:
+    """トップページに置く「最新の解説」。記事が無ければ空文字。"""
+    items = all_posts()[:n]
+    if not items:
+        return ""
+    return ('<h2 id="posts">最新の解説</h2>\n'
+            '  <p>このページの数字をどう読んだかを、日付つきの記事にしています。</p>\n'
+            f'  {_post_list_html(items, prefix="posts/")}\n'
+            '  <p><a href="posts/" style="color:#1f6fd0">解説記事の一覧へ</a></p>')
+
+
 def render_seo_files() -> None:
     """sitemap.xml と robots.txt(検索エンジン向け)。"""
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
@@ -3607,6 +3810,8 @@ def render_seo_files() -> None:
              "en/guide-data-sources.html", "en/guide-contract-specs.html",
              "en/glossary.html",
              "about.html", "privacy.html"] + (["contact.html"] if CONTACT_FORM else [])
+    # 日付つき解説記事(content/posts/ に置いたぶんだけ自動で増える)
+    pages += ["posts/"] + [f"posts/{p['slug']}.html" for p in all_posts()]
     today = datetime.now(JST).strftime("%Y-%m-%d")
     urls = "\n".join(
         f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod></url>" for p in pages)
@@ -3759,7 +3964,10 @@ JPXは建玉・出来高・清算値段・取引参加者別建玉を別々の�
 取引参加者別建玉は52週分、SQ値は2021年以降、日次の建玉は公開以降を蓄積しています</li>
 <li><b>読み方を書く</b> — データだけでは誤読されます。
 「最大建玉=壁ではない」「PCRは1.0が中立ではない」といった、
-実測にもとづく注意点を<a href="index.html#guides">解説記事</a>にまとめています</li>
+実測にもとづく注意点を<a href="index.html#guides">読み方ガイド</a>にまとめています</li>
+<li><b>その日の数字を読む</b> — 自動集計とは別に、日付つきの
+<a href="posts/">解説記事</a>を書いています。
+その日の建玉や売買高のどこが普通でないのかを、運営者が目を通したうえで公開しています</li>
 </ul>
 
 <h2>掲載データの出典</h2>
@@ -3802,7 +4010,8 @@ JPXは建玉・出来高・清算値段・取引参加者別建玉を別々の�
 </ul>
 
 <h2>更新の体制</h2>
-<p>毎営業日、自動で取得・生成しています。JPXの公表時刻はデータの種類ごとに違い、
+<p>データのページは毎営業日、自動で取得・生成しています。
+<a href="posts/">解説記事</a>は自動生成ではなく、運営者が書いて公開するつど増えます。JPXの公表時刻はデータの種類ごとに違い、
 出来高は16時台、取引参加者別取引高は17時台、建玉残高は20時頃です。
 そのため<b>ページ上部に種類ごとの基準日を表示</b>しています。</p>
 <p>取得や解析に失敗した日は、<b>壊れた数字を出すより前日の内容をそのまま残す</b>作りにしています。
@@ -4337,6 +4546,10 @@ def main() -> None:
         warn(f"latest for guides failed: {e}")
 
     render_static_pages()
+    try:
+        render_posts()
+    except Exception as e:
+        warn(f"posts render failed: {e!r}")
     render_seo_files()
 
     # 米国市場データ(取得失敗しても日本側のビルドは止めない)
