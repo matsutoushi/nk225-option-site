@@ -74,12 +74,25 @@ jobs:
         # 取得のタイムアウトを効かせたうえで、ステップ単位でも打ち切る。
         timeout-minutes: 6
         run: |
+          APT_OPTS="-o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
           for i in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update && break
+            sudo apt-get $APT_OPTS update && break
             echo "apt-get update failed (attempt $i)"
             sleep 5
           done
-          sudo apt-get install -y --no-install-recommends fonts-ipaexfont
+          # install 側にもリトライを置く。update が通っても install がミラー不調で
+          # 落ちる回があり(2026-10-26・10-27)、1回の失敗でビルド全体が止まっていた。
+          for i in 1 2 3; do
+            sudo apt-get $APT_OPTS install -y --no-install-recommends fonts-ipaexfont && break
+            echo "apt-get install failed (attempt $i)"
+            sleep $((i * 10))
+          done
+          # グラフの日本語が豆腐(□)になったまま公開するのが最悪なので、
+          # 入ったことを確認してから次へ進む。入っていなければここで止める。
+          fc-list | grep -qi ipaex || {
+            echo "::error::fonts-ipaexfont のインストールに失敗しました"
+            exit 1
+          }
 
       - name: Install dependencies
         run: pip install -r pipeline/requirements.txt
