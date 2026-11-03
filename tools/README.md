@@ -94,3 +94,73 @@ Register-ScheduledTask -TaskName "nk225-freshness-1800" -Action $action -Trigger
 本文に手動実行のURLと、Claudeへの依頼文がそのまま書いてある。
 
 > 「サイトが2026-08-28のままなので手動実行して、本日の投稿文を作成してください」
+
+## public_direction.py — 向きを公開データだけで推定する(検証用・非公開)
+
+サイトのガンマ推定は「ディーラーはコールを買い持ち・プットを売り持ち」という
+**一律の仮定**で符号を付けている。別手法(建玉×約定の向き)と突き合わせたところ、
+裏付けが取れたのは**合計の符号まで**で、現値の上下の内訳は一致しなかった。
+そこでトップページは合計を主役にし、内訳は参考値に落とした。
+
+その先として「向きも公開データから推定できないか」を検証するためのスクリプト。
+**結果はサイトに出さない**(まだ信号と雑音の区別がついていない)。
+
+### 何をしているか
+
+行使価格ごとに、前営業日からの建玉の増減(ΔOI)と、IVの増減(ΔIV)を取る。
+ΔIVはその日の全銘柄のΔIVの**中央値を引いた残差**を使う(市場全体のIV変動を除くため)。
+
+| その日の動き | 読み | ディーラー側 |
+|---|---|---|
+| ΔOI > 0 かつ 残差ΔIV > 0 | 需要主導(買いたい人が値を押し上げた) | 売り手 = ショートガンマ |
+| ΔOI > 0 かつ 残差ΔIV < 0 | 供給主導(売りたい人が値を下げた) | 買い手 = ロングガンマ |
+| ΔOI < 0 | 既存建玉の解消 | 積み上げた向きを按分して減らす |
+
+1日の判定は雑音が多いので、**限月ごと・銘柄ごとに累積した状態量**として持つ。
+最新日の建玉にサイトと同じブラック・ショールズのガンマを掛け、
+**符号だけ**をこの累積方向で置き換えて合計・上側・下側を出す。
+
+**不明分**は必ず見る。清算値段(`data/settle_*.csv`)は2026-10-05以降しか無いので、
+それ以前に作られた建玉には向きを割り当てられない。不明分は寄与0にしてあるため、
+この割合が高いうちは金額が小さく出る(履歴の `unknown_frac` 列)。
+
+### 入力と出力
+
+入力は `data/settle_YYYYMMDD.csv` と `data/oi_YYYYMMDD.csv` だけ。
+出力は `private/public_direction_history.csv`(1行=1営業日)。
+
+`private/dealer_gamma_history.csv` があれば日付で突き合わせ、
+符号の一致と相関を表示する。**重なる日数が少ないうちは数字を並べるだけで、結論は出さない。**
+
+### 動作確認
+
+```
+python tools\public_direction.py           全期間を再計算して履歴を更新(日別明細つき)
+python tools\public_direction.py --quiet   履歴の更新だけ(定期実行用)
+```
+
+毎回全期間を頭から積み上げ直すので、何度走らせても結果は同じ(日付で上書き)。
+
+### タスクスケジューラへの登録(※GitHub Actionsでは動かせない)
+
+出力先が `private/` で、`private/` は `.gitignore` 済み=**コミットされない**。
+GitHub Actions で走らせても結果がどこにも残らないため、**手元の定期タスクから動かす**。
+
+`public_direction.bat` を呼ぶ。`data/` はGitHub Actionsがコミットする生成物なので、
+バットの中で先に `git pull --ff-only` している。実行ログは
+`tools\public_direction.log` に上書きで残る。
+
+時刻は**建玉の公表(20:00頃)より後**にする。建玉が当日分になっていないと、
+その日のΔOIが取れない。21:30にしてあるのは、デプロイ後のコミットを
+`git pull` で取り込めるのを待つため。
+
+```powershell
+$bat = "C:\Users\tomo0\Projects\nk225-options-site\tools\public_direction.bat"
+$action  = New-ScheduledTaskAction -Execute $bat -WorkingDirectory (Split-Path $bat -Parent)
+$trigger = New-ScheduledTaskTrigger -Daily -At "21:30"
+$set     = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName "nk225-public-direction-2130" -Action $action -Trigger $trigger -Settings $set
+```
+
+`check_freshness` と同じく「ユーザーがログオンしているときのみ実行する」(Interactive)にする。
+土日祝も動くが、新しいファイルが無い日は前日と同じ結果を上書きするだけなので放置してよい。

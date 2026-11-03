@@ -4,6 +4,7 @@ __pycache__/
 site/
 tools/.freshness_state.json
 tools/check_freshness.log
+tools/public_direction.log
 
 # Bloomberg由来のデータと、その加工結果(契約上、公開不可)
 private/

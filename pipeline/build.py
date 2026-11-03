@@ -975,6 +975,10 @@ CSS_MAIN = """
              border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 18px 0 0; line-height: 1.9; }
   .summary b { font-variant-numeric: tabular-nums; }
   .kpi-guide { font-size: 0.88em; color: var(--ink2); margin: 0 0 6px; }
+  /* 本文の主役から外した参考値(ガンマの上下の内訳など)。既定で畳んでおく。 */
+  details.aside { margin: 8px 0 0; }
+  details.aside summary { cursor: pointer; color: var(--ink2); font-size: 0.86em; }
+  details.aside p { font-size: 0.86em; color: var(--ink2); margin: 6px 0 2px; }
   .src-dates { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
   .kpi div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
               padding: 14px 20px; flex: 1 1 150px; font-size: 0.9em; color: var(--ink2); }
@@ -1084,8 +1088,12 @@ PAGE = {
         "iv_sum": "現値近辺のIVは{atm:.1f}%。現値から10%下のプットは{put:.1f}%、10%上のコールは{call:.1f}%です。",
         "iv_more": '下側が高いほど、下落に備える需要が強いことを示します。IVは<a href="guide-gex.html" style="color:#1f6fd0">ガンマの推定</a>にも使っている数字です。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
         "hedge_lead": "オプションを売った側(証券会社)は、リスクを打ち消すために先物を売り買いしてヘッジします。この売買は、相場の位置によって値動きを<b>抑える向き</b>にも<b>増幅する向き</b>にも働きます。下の図は、建玉と清算値段のボラティリティから、その強さを行使価格ごとに推定したものです。",
-        "hedge_caveat": "<b>注意: これは前提を置いた推定で、符号(抑える/増幅する)が実際と逆になることがあります。</b>証券会社が実際にどちら向きに持っているかは公表されていません。ここでは「コールは買い持ち・プットは売り持ち」という広く使われる前提を置いていますが、たとえば<b>上昇局面で投資家が上方向のコールを買い進めると、その相手をする証券会社はコールの売り手</b>になり、前提とは逆になります。そのとき実際のヘッジは、ここでの表示とは反対の向きに働きます。<a href=\"guide-lee-ready.html\" style=\"color:#1f6fd0\">→ 向きをどう推定するか(Lee-Ready)</a>",
-        "hedge_sum": "現値より上は{up:+,.0f}億円、現値より下は{dn:+,.0f}億円。合計では<b>{word}</b>({total:+,.0f}億円 / 指数1%あたり)。",
+        "hedge_caveat": "<b>注意: これは前提を置いた推定で、符号(抑える/増幅する)が実際と逆になることがあります。</b>証券会社が実際にどちら向きに持っているかは公表されていません。ここでは「コールは買い持ち・プットは売り持ち」という広く使われる前提を置いていますが、たとえば<b>上昇局面で投資家が上方向のコールを買い進めると、その相手をする証券会社はコールの売り手</b>になり、前提とは逆になります。そのとき実際のヘッジは、ここでの表示とは反対の向きに働きます。"
+                         "<br><b>どこまであてになるか。</b>当サイトが比較的あてになると考えているのは<b>合計の符号(抑える向きか増幅する向きか)</b>までです。<b>現値の上下の内訳は合計よりもさらに不確かで</b>、向きの推定方法を変えると上と下の大小関係が入れ替わったり、内訳の符号そのものが変わったりします。内訳を本文の主役から外して参考値としているのはこのためです。また<b>金額は一律の前提から機械的に出した相対的な目安</b>なので、絶対量としては幅を持って見てください(水準そのものより、日々どちらへ動いたかのほうが読み取れます)。"
+                         "<a href=\"guide-lee-ready.html\" style=\"color:#1f6fd0\">→ 向きをどう推定するか(Lee-Ready)</a>",
+        "hedge_sum": "合計では<b>{word}</b>(<b>{total:+,.0f}億円 / 指数1%あたり</b>)。",
+        "hedge_split_label": "現値の上下の内訳(参考値)",
+        "hedge_split": "現値より上は{up:+,.0f}億円、現値より下は{dn:+,.0f}億円。この内訳は合計の符号よりも不確かなので、参考値として扱ってください(下の注意を参照)。",
         "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
         "hedge_more": '見方の詳しい解説は <a href="guide-gex.html">ガンマエクスポージャーとは</a> をどうぞ。',
         "sec_pv": "手口上位一覧(取引参加者別 取引高)",
@@ -1185,8 +1193,11 @@ PAGE = {
         "iv_sum": "At-the-money implied volatility is {atm:.1f}%. Ten percent below spot prices at {put:.1f}%, ten percent above at {call:.1f}%.",
         "iv_more": 'A steeper left side means downside protection is more expensive. This is the same volatility that feeds our <a href="guide-gamma-exposure.html" style="color:#1f6fd0">gamma estimates</a>. (<a href="guide-implied-volatility.html" style="color:#1f6fd0">&rarr; how to read it</a>)',
         "hedge_lead": "Dealers who sold options hedge by trading futures. Depending on where the index sits, that hedging can either <b>dampen</b> or <b>amplify</b> moves. The chart below estimates that force by strike, using open interest and the implied volatility in JPX settlement prices.",
-        "hedge_caveat": "<b>Caveat: this is an assumption-based estimate, and the sign can be the opposite of reality.</b> Dealer positions are not disclosed. We assume dealers are long calls and short puts, as is common practice. But when investors buy upside calls into a rally, the dealers on the other side are <b>short</b> those calls — the reverse of the assumption — and the real hedging flow works the other way.",
-        "hedge_sum": "Above spot {up:+,.0f}, below spot {dn:+,.0f} (100M yen). Net: <b>{word}</b> ({total:+,.0f} per 1% move).",
+        "hedge_caveat": "<b>Caveat: this is an assumption-based estimate, and the sign can be the opposite of reality.</b> Dealer positions are not disclosed. We assume dealers are long calls and short puts, as is common practice. But when investors buy upside calls into a rally, the dealers on the other side are <b>short</b> those calls &mdash; the reverse of the assumption &mdash; and the real hedging flow works the other way."
+                         "<br><b>How far to trust it.</b> The part we consider reasonably robust is the <b>sign of the net figure</b> (dampening or amplifying). The <b>split above and below spot is less reliable than the net</b>: estimate the dealer side a different way and the larger of the two can swap, or a leg can change sign outright. That is why the split is shown as a reference figure rather than in the body text. The <b>yen amounts are a relative yardstick produced mechanically from a uniform assumption</b>, so treat the absolute size as a wide range (the direction of the day-to-day change reads better than the level itself).",
+        "hedge_sum": "Net: <b>{word}</b> (<b>{total:+,.0f}</b>, 100M yen per 1% move).",
+        "hedge_split_label": "Split above / below spot (reference)",
+        "hedge_split": "Above spot {up:+,.0f}, below spot {dn:+,.0f} (100M yen). This split is less reliable than the sign of the net figure &mdash; treat it as a reference (see the caveat below).",
         "hedge_damp": "dampening moves", "hedge_amp": "amplifying moves",
         "hedge_more": '',
         "sec_pv": "Trading Volume by Participant (daily ranking)",
@@ -1355,11 +1366,17 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         dn = by[by["strike"] < hp["spot"]]["force"].sum() / 1e8
         tot = hp["total"] / 1e8
         word = P["hedge_damp"] if tot >= 0 else P["hedge_amp"]
-        summary_line = P["hedge_sum"].format(up=up, dn=dn, total=tot, word=word)
+        # 合計を主役にする。独立した手法で向きを推定して突き合わせると、
+        # 裏付けが取れるのは合計の符号までで、上下の内訳は大小関係が入れ替わる。
+        # そのため内訳は details に畳んで参考値として残す(消すと検算ができない)。
+        summary_line = P["hedge_sum"].format(total=tot, word=word)
+        split_line = P["hedge_split"].format(up=up, dn=dn)
         hedge_section = (
             f'<h2 id="hedge">{P["sec_hedge"]}</h2>'
             f'<p>{P["hedge_lead"]}</p>'
-            f'<p><b>{summary_line}</b></p>'
+            f'<p class="summary">{summary_line}</p>'
+            f'<details class="aside"><summary>{P["hedge_split_label"]}</summary>'
+            f'<p>{split_line}</p></details>'
             f'<p>{P.get("hedge_caveat", "")}</p>'
             f'<img src="{charts["hedge"]}" alt="Option hedging direction by strike">'
             f'<p>{P["hedge_more"]}</p>')
@@ -3958,11 +3975,13 @@ def latest_block(kind: str) -> str:
         word = "値動きを抑える向き" if tot >= 0 else "値動きを増幅する向き"
         return (f'<div class="latest"><h2>{md}時点のガンマエクスポージャー(推定)</h2>'
                 f'<p>合計は<b>{tot:+,.0f}億円(指数1%あたり)で、{word}</b>です。'
-                f'内訳は現値より上が{LATEST.get("gex_up", 0):+,.0f}億円、'
-                f'下が{LATEST.get("gex_dn", 0):+,.0f}億円。'
                 f'ディーラーの実際の持ち高は公表されていないため、'
                 f'一般的な前提を置いた当サイトの推定値です。'
                 f'毎営業日の値は<a href="./#hedge">トップページ</a>に掲載しています。</p>'
+                f'<p class="latest-note">参考値として内訳も挙げておくと、現値より上が'
+                f'{LATEST.get("gex_up", 0):+,.0f}億円、下が{LATEST.get("gex_dn", 0):+,.0f}億円です。'
+                f'ただし<b>上下の内訳は合計の符号よりも不確かで</b>、向きの推定方法を変えると'
+                f'大小関係が入れ替わることがあります。</p>'
                 f'<img src="img/hedge.png?v={d}" alt="行使価格別のヘッジ圧力">'
                 f'<p class="latest-note">なぜこの向きになるのかを、以下で説明します。</p></div>')
     return ""

@@ -466,8 +466,9 @@ The same asymmetry exists in Japan through structured notes.</p>
 amplifying or dampening? Where does it flip relative to spot? Those survive the assumptions.
 The absolute yen figure does not.</p>
 
-<h2>The shape matters more than the total</h2>
-<p>The aggregate hides the useful part. Our Nikkei readings for 21 August 2026:</p>
+<h2>The shape is informative, but the net sign is what holds up</h2>
+<p>The split across strikes says something the aggregate does not.
+Our Nikkei readings for 21 August 2026:</p>
 <table>
 <thead><tr><th>Region</th><th>Gamma per 1% move</th><th>Effect</th></tr></thead>
 <tbody>
@@ -484,6 +485,14 @@ which is why we chart the profile across strikes rather than publishing one numb
 yet the downside figure changed by less than ¥1bn. Net gamma has been on the amplifying
 side since 19 August (−¥44.0bn, then −¥15.4bn, then −¥18.8bn) even as the Nikkei
 Volatility Index drifted down from 29.7 to 28.4.</p>
+<p><b>A correction to the emphasis above (November 2026).</b> We have since estimated
+the dealer side a second way, independently of the uniform long-call/short-put convention,
+and compared the two day by day. The <b>sign of the net figure agreed</b>. The <b>split
+above and below spot did not</b>: the larger of the two legs swapped, and on one day a leg
+came out with the opposite sign. The split is therefore <b>less reliable than the net</b>,
+not more. The front page now leads with the net figure and keeps the split as a folded
+reference, and the profile chart stays because it shows where the exposure sits — not
+because the two legs are separately trustworthy.</p>
 
 <h2>Mistake 1: expired contracts</h2>
 <p>Options chains from most sources include contracts that have already expired. If you filter
@@ -812,7 +821,7 @@ GUIDE_DESC = {
         "ディーラーのガンマ推定に必要なデータ(約定・気配のティック)。"
         "JPXの無料公開データだけでは実行できない理由と、当サイトが一律の仮定を使っている理由を説明します。",
     "guide-gex.html":
-        "日経225のガンマエクスポージャー(推定)を毎営業日更新しています。合計値と現値の上下の内訳つき。"
+        "日経225のガンマエクスポージャー(推定)を毎営業日更新しています。合計値(指数1%あたり)を毎日掲載。"
         "ガンマエクスポージャーは、証券会社のヘッジ売買が値動きを増幅するか抑制するかの推定値です。"
         "JPXが公表する行使価格別のボラティリティから計算する方法と、"
         "「ディーラーの持ち高は公表されていない」という前提の限界まで説明します。",
@@ -1252,6 +1261,11 @@ JPXが平日17:45頃に公表します。<b>買いか売りかは含まれませ
 ディーラーはそのコールを<b>売って</b>いることになり、仮定とは逆になります。
 そのときガンマの符号は反転します。<b>符号が反対になれば、相場を抑える/増幅するの結論も反対</b>です。
 ここは、公開データだけでは検証できない部分として残ります。</p>
+<p>影響の出方は一様ではありません。向きの推定方法を変えても
+<b>合計の符号</b>は比較的動きませんが、<b>現値より上・下の内訳</b>は
+大小関係が入れ替わったり片側の符号が変わったりします。
+そのため当サイトは<a href="guide-gex.html">トップページのガンマの節</a>で
+合計を主役に出し、内訳は畳んだ参考値として置いています。</p>
 
 <h2>もし向きを測るなら: 量は建玉、向きは約定</h2>
 <p>符号付きの出来高をそのまま積み上げるやり方には、弱点があります。
@@ -1358,6 +1372,22 @@ JPXが平日17:45頃に公表します。<b>買いか売りかは含まれませ
 つまり<b>市場構造として、ディーラーがコールの買い持ちに傾きやすい</b>状況が生まれています。
 これが「コール買い持ち」仮定の現実的な裏付けです。</p>
 
+<h2>合計の符号と、上下の内訳は、確かさが違います</h2>
+<p>当サイトは合計と、現値より上・下の内訳を出していますが、
+<b>この2つは同じ確かさではありません</b>。</p>
+<ul>
+<li><b>合計の符号</b>(値動きを抑える向きか増幅する向きか)は、
+向きの推定方法を変えても結論が変わりにくい部分です。
+トップページで合計を先に大きく出しているのはこのためです</li>
+<li><b>現値の上下の内訳</b>は、合計よりも不確かです。
+向きの推定方法を変えると<b>上と下の大小関係が入れ替わったり、片側の符号そのものが変わったり</b>します。
+どちら側に効くかは、どの行使価格の建玉をディーラーのどちら向きと見なすかで動いてしまうためです。
+トップページでは内訳を本文の主役から外し、畳んだ参考値として置いています</li>
+<li><b>金額(億円)</b>は一律の前提から機械的に出した<b>相対的な目安</b>です。
+絶対量としては幅を持って見てください。水準そのものより、
+日々どちらへ動いたかのほうが読み取れます</li>
+</ul>
+
 <h2>【限界】仮定が崩れることもある</h2>
 <p>ただし、この仮定は万能ではありません。少なくとも次の限界があります。</p>
 <ul>
@@ -1389,6 +1419,7 @@ JPXが平日17:45頃に公表します。<b>買いか売りかは含まれませ
 <h2>使い方のまとめ</h2>
 <ul>
 <li>絶対値ではなく<b>符号</b>を見る</li>
+<li>見るのは<b>合計の符号</b>から。<b>現値の上下の内訳はそれより不確かな参考値</b>として扱う</li>
 <li><b>符号が変わる価格</b>と現値の位置関係を見る(上か下かで相場の性格が変わる)</li>
 <li><a href="guide-oi.html">建玉分布</a>の「壁」と重ねて見る(壁の近くで影響が強まる)</li>
 <li>SQが近づくほど反応が鋭くなる(残存期間が短いとガンマが大きくなるため)</li>

@@ -96,6 +96,7 @@ Optional environment variables: `FRED_API_KEY` (falls back to a local cache if a
 | `pipeline/build.py` | Calculations, charts, HTML rendering |
 | `pipeline/pages.py` | Guide article content (JA/EN) |
 | `pipeline/tools_page.py` | Interactive Plotly page |
+| `tools/` | Local operational scripts, run from Windows Task Scheduler (see `tools/README.md`) |
 | `data/` | Accumulated daily history, committed by CI |
 | `site/` | Generated output (not tracked) |
 | `docs/` | Internal planning notes |
