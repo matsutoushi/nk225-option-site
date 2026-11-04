@@ -147,7 +147,7 @@ def page_condor(ch: Chain, p: pd.DataFrame, img, C):
 <h2>どのデータを見るか</h2>
 <ul>
 <li><a href="nikkei-vi.html">日経VI</a> — 受け取れる額はIVの水準で決まります。IVが高いほど受け取りは大きく、そのぶん大きく動く見込みも高い</li>
-<li><a href="./#iv">行使価格別のIV</a> — 下側のプットは上側より高いので、同じ距離でもプット側の受け取りが大きくなります</li>
+<li><a href="guide-gex.html#iv">行使価格別のIV</a> — 下側のプットは上側より高いので、同じ距離でもプット側の受け取りが大きくなります</li>
 <li><a href="sq-values.html">SQ値一覧</a> — SQ値は寄り付きで決まるため、前日の終値から離れることがあります</li>
 </ul>
 <p>関連: <a href="strategies.html">戦略一覧</a> ・ <a href="strategy-straddle-strangle.html">ストラドル・ストラングル</a> ・

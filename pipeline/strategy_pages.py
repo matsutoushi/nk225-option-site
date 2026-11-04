@@ -97,8 +97,8 @@ def page_vertical(ch: Chain, p: pd.DataFrame, img, C):
 
 <h2>どのデータを見るか</h2>
 <ul>
-<li><a href="./#iv">行使価格別のIV</a> — 売る側と買う側のIVの差。下側のプットは上側のコールより高いのが普通です</li>
-<li><a href="./#oitable">建玉一覧</a> — 行使価格ごとの建玉。取引が少ない行使価格は約定しにくくなります</li>
+<li><a href="guide-gex.html#iv">行使価格別のIV</a> — 売る側と買う側のIVの差。下側のプットは上側のコールより高いのが普通です</li>
+<li><a href="guide-oi.html#oitable">建玉一覧</a> — 行使価格ごとの建玉。取引が少ない行使価格は約定しにくくなります</li>
 <li><a href="nikkei-vi.html">日経VI</a> — 全体のIVの水準</li>
 </ul>
 <p>関連: <a href="strategies.html">戦略一覧</a> ・ <a href="strategy-ratio-spread.html">レシオ・スプレッド</a></p>
@@ -142,7 +142,7 @@ def page_ratio(ch: Chain, p: pd.DataFrame, img, C):
 <p>今日のIVは、買ったプット({put_r[0].strike:,.0f}円)が{put_r[0].iv * 100:.1f}%、
 売ったプット({put_r[1].strike:,.0f}円)が{put_r[1].iv * 100:.1f}%です。
 日経225は下側のIVが高い形が普通で、遠いプットを売るこの形は、その高いIVの側を売ることになります。
-<a href="./#iv">行使価格別のIV</a>で毎日確認できます。</p>
+<a href="guide-gex.html#iv">行使価格別のIV</a>で毎日確認できます。</p>
 
 <h2>コール・レシオ・スプレッド</h2>
 <p>現値近くのコールを1枚買い、上のコールを2枚売ります。
@@ -486,7 +486,7 @@ def page_hub(ch: Chain, built: dict):
 <li><b>方向(デルタ)</b> — 上がれば得か、下がれば得か。スプレッドやレシオはここを狙います</li>
 <li><b>値動きの大きさ(ガンマ)</b> — 大きく動けば得か、動かなければ得か。ストラドル・ストラングル、ガンマトレード</li>
 <li><b>時間(セータ)</b> — 買いは時間とともに価値が減り、売りは時間が味方になります</li>
-<li><b>IV(ベガ)</b> — 組んだ後にIVが上がるか下がるか。<a href="nikkei-vi.html">日経VI</a>と<a href="./#iv">行使価格別のIV</a>で確認できます</li>
+<li><b>IV(ベガ)</b> — 組んだ後にIVが上がるか下がるか。<a href="nikkei-vi.html">日経VI</a>と<a href="guide-gex.html#iv">行使価格別のIV</a>で確認できます</li>
 </ul>
 <p>買いと売りは表裏です。オプションを売る側は、買う側が払った保険料を受け取る代わりに、
 大きく動いたときの損失を引き受けます。<b>損失が限定されない形があること</b>を、各ページで必ず示しています。</p>

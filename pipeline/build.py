@@ -1039,6 +1039,11 @@ CSS_MAIN = """
   td.basis { text-align: left; color: var(--ink2); font-size: 11px; white-space: normal; min-width: 200px; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
             font-size: 0.78em; color: var(--ink2); }
+  /* 読み方ガイドの一覧。カード型だとスマホで3画面使うため1行ずつに畳む */
+  ul.guide-list { margin: 8px 0 4px; padding-left: 1.1em; }
+  ul.guide-list li { margin-bottom: 5px; font-size: 0.92em; color: var(--ink2);
+                     line-height: 1.55; }
+  ul.guide-list a { color: #1f6fd0; font-weight: 500; }
   @media (max-width: 600px) {
     body { padding: 0 10px 24px; }
     h1 { font-size: 1.05em; }
@@ -1074,7 +1079,7 @@ def seealso(*links) -> str:
 PAGE = {
     "ja": {
         "title": "日経225オプション データ分析 | 建玉分布・Put/Callレシオ 毎日更新",
-        "desc": "日経225オプションの行使価格別建玉・増減、Put/Callレシオ、先物の参加者別建玉を毎営業日自動更新。データ出典はJPX公式。",
+        "desc": "日経225オプションの行使価格別建玉・増減、Put/Callレシオ、ガンマエクスポージャー、先物の取引参加者別建玉を毎営業日自動更新。今日の数字と、その読み方の解説をまとめています。データ出典はJPX公式。",
         "h1": "日経225オプション データ分析",
         "updated": "データ基準日: {d} | 最終更新: {now} JST(毎営業日 自動更新)",
         "nav": ["マーケット", "建玉一覧", "建玉分布", "IVスマイル", "参加者別建玉", "Put/Callレシオ"],
@@ -1174,6 +1179,8 @@ PAGE = {
              "証券会社のヘッジ売買が、なぜ相場を増幅・抑制するのか"),
             ("guide-teguchi.html", "先物の手口の見方",
              "ABNクリアリンやソシエテGは何者か。どこまで読めるか"),
+            ("futures-positions.html", "参加者別建玉と海外投資家(週次)",
+             "方向が分かるのは週次のほう。ゼロと比べても意味がない理由"),
             ("guide-brokers.html", "手口に出てくる証券会社",
              "直近52週の実測。ラージでは8社が52週すべて同じ方向だった"),
             ("guide-jpx-data.html", "公式データはどこにあるか",
@@ -1541,8 +1548,111 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     # 日付つき解説記事への導線。自動更新のデータと、人が書いた記事を行き来させる。
     posts_section = posts_latest_block() if lang == "ja" else ""
 
-    nav_ids = ["#market", "#oitable", "#oi", "#iv", "#weekly", "#pcr"]
-    nav = site_nav(lang, P["lang_switch"], anchors=list(zip(nav_ids, P["nav"])))
+    # 以下3節はもともとテンプレートに直書きしていたが、大分類ページへ移すために
+    # 変数に出した(トップに残すかどうかを言語ごとに切り替えられるようにする)。
+    oitable_section = (f'<h2 id="oitable">{P["sec_oitable"]}</h2>\n'
+                       f'  <p>{P["oitable_lead"]}</p>\n  {tables["oi"]}\n'
+                       f'  {P["oitable_more"]}')
+    oi_section = (f'<h2 id="oi">{P["sec_oi"]}</h2>\n'
+                  f'  <p>{P["oi_lead"]}{mini_note}</p>\n'
+                  f'  <img src="{charts["oi"]}" alt="Open interest by strike">\n'
+                  f'  {P["oi_more"]}')
+    pcr_section = (f'<h2 id="pcr">{P["sec_pcr"]}</h2>\n'
+                   f'  <p>{P["pcr_lead"]}</p>\n'
+                   f'  <img src="{charts["pcr"]}" alt="Put/Call ratio trend">\n'
+                   f'  {P["pcr_more"]}')
+
+    # トップページの大分類ハブ。
+    #
+    # 2026-11-04時点、トップはスマホ(375px幅)で18,077px=22画面あり、下のほうの節は
+    # ほぼ読まれていなかった(GA4で1人3.44ページ)。そこでデータ本体を分類ごとの
+    # ページへ移し、トップには「今日の数字1行＋入口」だけを置く。
+    # 移転先は既存の解説ページにした。guide-oi/guide-gex はタイトルで既に
+    # 「毎営業日更新」「今日の値」と名乗っており、新URLを作ると同じ検索語で
+    # 自サイト内のページ同士がぶつかるため。週次だけは受け皿が無いので新設した。
+    hub_section = ""
+    rest_sections = ""
+    if lang == "ja":
+        hub = []
+        w = extras.get("walls") or {}
+        if w.get("call") and w.get("put"):
+            hub.append(("guide-oi.html", "建玉分布",
+                        f'現値近辺で厚いのはコール<b>{w["call"][0]:,.0f}円</b>・'
+                        f'プット<b>{w["put"][0]:,.0f}円</b>',
+                        "限月別の一覧表、行使価格ごとの建玉と前日比、ミニオプションの分布"))
+        hp_hub = extras.get("hedge")
+        if hp_hub:
+            t_hub = hp_hub["total"] / 1e8
+            hub.append(("guide-gex.html", "ガンマ・IV",
+                        f'合計<b>{t_hub:+,.0f}億円</b>(指数1%あたり)で'
+                        f'{"値動きを抑える" if t_hub >= 0 else "値動きを増幅する"}向き',
+                        "行使価格ごとのヘッジ圧力と、プット側・コール側のIV(スマイル)"))
+        if extras.get("pv") or extras.get("fut_vol"):
+            hub.append(("guide-teguchi.html", "手口(日次)",
+                        "どの証券会社が主戦場にいるか",
+                        "取引参加者別の売買高、外資系・国内系・ネット系の3分類、先物の出来高"))
+        if extras.get("flows_net") is not None:
+            hub.append(("futures-positions.html", "ポジション(週次)",
+                        f'海外投資家は直近週<b>{extras["flows_net"]:+.2f}兆円</b>',
+                        "取引参加者別の先物建玉(週次)と、投資部門別売買状況の累積"))
+        if pcr.get("pcr"):
+            hub.append(("guide-pcr.html", "Put/Callレシオ", f'<b>{pcr["pcr"]}</b>',
+                        "推移のグラフと、1.0が中立ではない理由(実測平均1.57)"))
+        if extras.get("vi_last") is not None:
+            hub.append(("nikkei-vi.html", "日経VI", f'<b>{extras["vi_last"]:.2f}</b>',
+                        "過去の推移と、急騰・急落のあと何が起きたかの実測"))
+        if extras.get("sq"):
+            sq_h = extras["sq"]
+            hub.append(("sq-values.html", "SQ",
+                        f'次回は<b>{sq_h["date"].month}月{sq_h["date"].day}日</b>'
+                        f'({sq_h["type_ja"]})',
+                        "過去24か月のSQ値、同じ日の始値との差、幻のSQの判定"))
+        if hub:
+            hub_section = (
+                '<h2 id="data">データを見る</h2>\n'
+                '  <p>毎営業日の数字は、分類ごとのページに載せています。'
+                'どのページも、その数字の読み方の解説と同じページにあります。</p>\n'
+                '  <div style="display:grid; gap:10px; '
+                'grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); '
+                'margin-bottom:8px;">\n'
+                + "".join(
+                    f'    <a href="{href}" style="display:block; padding:12px 14px; '
+                    'border:1px solid var(--line); border-radius:10px; '
+                    'background:var(--panel); text-decoration:none;">'
+                    f'<b style="color:#1f6fd0">{name}</b>'
+                    f'<br><span style="font-size:0.95em; color:var(--ink)">{num}</span>'
+                    f'<br><span style="font-size:0.85em; color:var(--ink2)">{desc}</span>'
+                    '</a>\n' for href, name, num, desc in hub)
+                + '  </div>')
+        # 読み方ガイドの一覧。カード型(17枚で3画面)からリストに畳む。
+        # リンク文と説明文は検索の入口として効いているので、文言は落とさない。
+        guide_section = (
+            f'<h2 id="guides">{P["sec_guides"]}</h2>\n'
+            f'  <p>{P["guides_lead"]}</p>\n  <ul class="guide-list">\n'
+            + "".join(f'    <li><a href="{href}">{title}</a> — {desc}</li>\n'
+                      for href, title, desc in P["guides"])
+            + '  </ul>')
+        BLOCKS.update({
+            "oitable": oitable_section, "oi": oi_section, "mini": mini_section,
+            "hedge": hedge_section, "iv": iv_section, "pv": pv_section,
+            "groups": groups_section, "fut": fut_section,
+            "weekly": weekly_section, "flows": flows_section, "pcr": pcr_section,
+        })
+    else:
+        # 英語ページは構成を変えない(ガイドの枚数が少なく、縦に長くないため)
+        rest_sections = "\n\n  ".join(x for x in (
+            oitable_section, oi_section, mini_section, hedge_section, iv_section,
+            fut_section, pv_section, groups_section, weekly_section, flows_section,
+            pcr_section) if x)
+
+    if lang == "ja":
+        # データ本体を大分類ページへ移したので、ページ内リンクも残った節だけにする
+        nav_pairs = [("#market", "マーケット"), ("#data", "データを見る"),
+                     ("#posts", "最新の解説"), ("#guides", "読み方ガイド")]
+    else:
+        nav_ids = ["#market", "#oitable", "#oi", "#iv", "#weekly", "#pcr"]
+        nav_pairs = list(zip(nav_ids, P["nav"]))
+    nav = site_nav(lang, P["lang_switch"], anchors=nav_pairs)
     html_doc = f"""<!DOCTYPE html>
 <html lang="{P['html_lang']}">
 <head>
@@ -1577,36 +1687,11 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {market_section}
 
+  {hub_section}
+
   {posts_section}
 
-  <h2 id="oitable">{P['sec_oitable']}</h2>
-  <p>{P['oitable_lead']}</p>
-  {tables['oi']}
-  {P['oitable_more']}
-
-  <h2 id="oi">{P['sec_oi']}</h2>
-  <p>{P['oi_lead']}{mini_note}</p>
-  <img src="{charts['oi']}" alt="Open interest by strike">
-  {P['oi_more']}
-
-  {mini_section}
-
-  {hedge_section}{iv_section}
-
-  {fut_section}
-
-  {pv_section}
-
-  {groups_section}
-
-  {weekly_section}
-
-  {flows_section}
-
-  <h2 id="pcr">{P['sec_pcr']}</h2>
-  <p>{P['pcr_lead']}</p>
-  <img src="{charts['pcr']}" alt="Put/Call ratio trend">
-  {P['pcr_more']}
+  {rest_sections}
 
   {guide_section}
 </main>
@@ -2262,7 +2347,7 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 算出と公表は日本経済新聞社が行っています。</p>
 <p>元になっているのはオプションの値段です。値動きへの備えを求める人が増えるとオプションが高くなり、
 そこから逆算した日経VIが上がります。つまり<b>実際に荒れているかではなく、荒れることに備えて払われている保険料の水準</b>です。
-行使価格ごとの内訳(どちら方向の備えが高いか)は、トップページの<a href="./#iv">行使価格別のIV</a>で見られます。</p>
+行使価格ごとの内訳(どちら方向の備えが高いか)は、<a href="guide-gex.html#iv">行使価格別のIV</a>で見られます。</p>
 
 <h2>数字の意味: 1日の値幅に直す</h2>
 <p>日経VIは年率なので、そのままでは実感しにくい数字です。
@@ -2530,7 +2615,7 @@ SQ値はJPXが当日15時45分以降に公表します。当サイトはJPXのSQ
 
 <p>関連: <a href="guide-sq.html">SQはいつ？(日程と仕組み)</a> ・
 <a href="option-strikes.html">限月の種類と権利行使の仕組み</a> ・
-<a href="./#oitable">建玉一覧</a> ・ <a href="nikkei-vi.html">日経VI</a></p>
+<a href="guide-oi.html#oitable">建玉一覧</a> ・ <a href="nikkei-vi.html">日経VI</a></p>
 <p style="font-size:.85em;color:#666">出典: 日本取引所グループ「最終清算数値(SQ値)」、日経平均株価(日本経済新聞社)の公式データ。
 幻のSQの判定と到達日は当サイトの計算で、日中の高値・安値で判定しています。投資助言ではありません。</p>
 """
@@ -3467,6 +3552,19 @@ SUB_CSS = """
      1列目だけ左寄せ・折り返しあり、数値列は右寄せにする。
      スマホでは表だけを横スクロールさせ、ページ本体を横に振らせない。 */
   .tbl-wrap { overflow-x: auto; margin: 12px 0; }
+  /* トップから移してきたデータ表のレイアウト(CSS_MAINと同じ規則)。
+     こちらは読み物のページなので、縦に長い表はスクロール枠に入れて
+     本文の流れを切らないようにする。 */
+  .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .tbl-box { flex: 1 1 420px; min-width: 300px; }
+  .tbl-scroll { max-height: 520px; overflow: auto; border: 1px solid var(--line);
+                border-radius: 10px; }
+  .tbl-duo { display: flex; gap: 20px; overflow-x: auto; overflow-y: visible;
+             border: 1px solid var(--line); border-radius: 10px; align-items: flex-start; }
+  .tbl-duo table { width: auto; white-space: nowrap; font-size: 0.82em; }
+  .tbl-duo thead th { position: static; }
+  .tbl-duo .k, .duo-cap { display: none; }
+  .tbl-box h3 { font-size: 0.92em; margin: 10px 10px 6px; }
   table { border-collapse: collapse; width: 100%; font-size: 0.88em;
           font-variant-numeric: tabular-nums; background: var(--panel); }
   th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: right; }
@@ -3478,6 +3576,19 @@ SUB_CSS = """
   /* 広告枠。本文と地続きに見えると誤解を招くので、区切り線と「広告」表記を必ず出す。 */
   .ad-slot { margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
   .ad-label { display: block; font-size: 0.72em; color: var(--ink2); margin-bottom: 6px; }
+  @media (max-width: 600px) {
+    /* 建玉一覧は2表を縦に積む。全限月を一覧できるようにスマホでは
+       高さを切ってスクロールさせる(切らないと表だけで6画面になる)。 */
+    .tbl-duo { flex-direction: column; gap: 0; max-height: 70vh; overflow: auto; }
+    .duo-one { width: 100%; overflow-x: auto; }
+    .duo-cap { display: block; margin: 8px 10px 6px; font-size: 0.85em;
+               color: var(--ink); font-weight: 700; }
+    .duo-h { display: none; }
+    .tbl-duo .k { display: table-cell; }
+    .tbl-duo th, .tbl-duo td { padding: 4px 6px; }
+    .tbl-duo table { font-size: 11px; }
+    .tbl-scroll { max-height: 420px; }
+  }
 """
 
 
@@ -3501,6 +3612,11 @@ GSV_META = ('<meta name="google-site-verification" content="2JN1JwTzW_V10lr6LymC
 # 解説ページ(guide-oi/guide-gex)の冒頭に出す最新値。main()で詰めて
 # render_static_pages()で読む。空なら解説ページは従来どおり解説だけになる。
 LATEST: dict = {}
+
+# トップから大分類ページへ移したセクションのHTML。render_index()が日本語ページを
+# 組むときに詰め、render_static_pages() がプレースホルダに差し込む。
+# 空のままなら、移転先のページは従来どおり解説だけになる(ビルドは止めない)。
+BLOCKS: dict = {}
 
 ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "").strip()
 ADSENSE_SLOT = os.environ.get("ADSENSE_SLOT", "").strip()
@@ -3599,7 +3715,9 @@ def footer_sitemap(lang: str, prefix: str = "") -> str:
             ("guide-oi.html", "建玉分布の見方"), ("guide-pcr.html", "PCRとは"),
             ("nikkei-vi.html", "日経VI"), ("sq-values.html", "SQ値一覧"),
             ("strategies.html", "オプション戦略一覧"),
-            ("guide-teguchi.html", "手口の見方"), ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
+            ("guide-teguchi.html", "手口の見方"),
+            ("futures-positions.html", "参加者別建玉(週次)"),
+            ("guide-brokers.html", "手口の証券会社"), ("guide-jpx-data.html", "公式データの入手先"), ("guide-sq.html", "SQとは"),
             ("guide-gex.html", "ガンマエクスポージャーとは"),
             ("guide-lee-ready.html", "Lee-Readyとは"), ("guide-cot.html", "COTの見方"),
             ("option-brokers.html", "取引できる証券会社"),
@@ -3910,12 +4028,103 @@ def posts_latest_block(n: int = 3) -> str:
             f'  {seealso(("posts/", "解説記事の一覧(すべて)"))}')
 
 
+
+FUTURES_POSITIONS_TITLE = "日経225先物の取引参加者別建玉(週次更新)｜海外投資家の売買動向"
+FUTURES_POSITIONS_DESC = (
+    "日経225先物の建玉を、どの取引参加者が買い越し・売り越しで持っているかを週次で更新。"
+    "JPXの取引参加者別建玉残高(週の第1営業日公表)と、投資部門別売買状況から見る"
+    "海外投資家の売買動向を、読み方と限界つきで並べています。")
+
+FUTURES_POSITIONS_BODY = """
+<h1>日経225先物の建玉を、どの参加者が持っているか(週次)</h1>
+
+<p>日次で公表される<a href="guide-teguchi.html">手口(取引参加者別取引高)</a>からは、
+その日にどれだけ売買されたかは分かりますが、<b>買ったのか売ったのかは分かりません</b>。
+方向が分かるのは、週次で公表される<b>取引参加者別建玉残高</b>のほうです。
+このページでは、その週次データを毎週更新で載せています。</p>
+
+{block_weekly}
+
+<h2>このデータは何で、いつ出るか</h2>
+<p>元になっているのはJPXが無料公開している <code>indexfut_oi_by_tp.xlsx</code> で、
+<b>週の第1営業日(原則月曜の午後)</b>に、前週末時点の残高が公表されます。
+会社ごとに買い建玉と売り建玉が並んでいて、その差し引きがネットの持ち高です。</p>
+<p>日次の手口と混同しやすいので、違いを並べておきます。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>データ</th><th>対象</th><th>分かること</th><th>公表</th></tr></thead>
+<tbody>
+<tr><td>取引参加者別取引高(手口)</td><td>その日の売買高</td><td>量だけ。<b>方向は分からない</b></td><td>毎営業日17:45ごろ</td></tr>
+<tr><td><b>取引参加者別建玉残高</b></td><td>未決済の残高</td><td>会社ごとの<b>買い越し / 売り越し</b></td><td>週次(週の第1営業日)</td></tr>
+<tr><td>投資部門別売買状況</td><td>現物(東証プライム)の売買代金</td><td>海外投資家・個人などの<b>主体別</b>の買い越し / 売り越し</td><td>週次(木曜頃)</td></tr>
+</tbody>
+</table></div>
+<p>ファイル名と公表時刻は<a href="guide-jpx-data.html">公式データはどこにあるか</a>に一覧があります。</p>
+
+<h2>ゼロと比べても意味がない</h2>
+<p>このデータでいちばんやりがちな誤読は、<b>「売り越しだから弱気」と読むこと</b>です。</p>
+<p>証券会社は顧客の注文の相手方になったり、現物と先物を組み合わせた取引の片側を持ったりします。
+その業務の形から、<b>どの会社にも定位置があります</b>。
+常に売り越し側にいる会社もあれば、常に買い越し側にいる会社もあります。
+<a href="guide-brokers.html">直近52週の実測</a>では、1年間ずっと同じ側にいた会社が複数ありました。</p>
+<p>ですから、見るべきは符号そのものではなく<b>その会社自身の平常値からのズレ</b>です。
+いつも2万枚の売り越しで持っている会社が5千枚に縮めたなら、
+符号は売り越しのままでも、起きていることは買い戻しです。</p>
+
+<h2>もうひとつの週次データ — 投資部門別売買状況</h2>
+<p>先物の建玉とは別に、JPXは<b>投資部門別売買状況</b>という週次の統計も出しています。
+こちらは現物(東証プライム)の売買代金を、海外投資家・個人・事業法人などの主体別に分けたものです。
+先物の建玉残高が「どの証券会社経由か」しか分からないのに対して、
+こちらは<b>主体そのもの</b>で分かれているのが違いです。</p>
+
+{block_flows}
+
+<h2>どこまで読めて、どこから読めないか</h2>
+<ul>
+<li><b>建玉残高は「誰の注文か」を示しません。</b>分かるのは経由した証券会社までです。
+外資系の建玉が海外のヘッジファンドの注文なのか、その会社自身の在庫なのかは区別できません。</li>
+<li><b>週1回のスナップショットです。</b>週の途中で建てて週の途中で閉じた持ち高は、残高には現れません。</li>
+<li><b>売り越しが弱気とは限りません。</b>現物を買って先物を売る裁定取引や、
+保有株のヘッジでも先物の売り越しは積み上がります。</li>
+<li><b>現物と先物は別のデータです。</b>投資部門別売買状況(現物)と取引参加者別建玉(先物)は、
+主体のくくりも対象市場も違うので、足し合わせたり差を取ったりはできません。</li>
+</ul>
+
+<h2>あわせて見るもの</h2>
+<ul>
+<li><a href="guide-teguchi.html">先物の手口の見方</a> — 日次のデータでどこまで読めるか</li>
+<li><a href="guide-brokers.html">手口に出てくる証券会社</a> — 各社が何をしている会社か</li>
+<li><a href="guide-cot.html">COT(投機筋ポジション)の見方</a> — 米国先物の持ち高を週次で追う</li>
+<li><a href="guide-oi.html">建玉分布の見方</a> — オプション側の建玉はどう読むか</li>
+<li><a href="guide-jpx-data.html">公式データはどこにあるか</a> — 自分で同じものを作るためのファイル一覧</li>
+</ul>
+"""
+
+
+def render_futures_positions(date: str) -> None:
+    """週次のポジション(取引参加者別建玉・投資部門別売買状況)の専用ページ。
+
+    トップに置いていた週次2節(スマホで4.3画面)を移した先。週次データの
+    受け皿になる既存ページが無かったのでここだけ新設している。
+    BLOCKSが空ならデータ節は空になるが、解説だけで成り立つ本文にしてある。
+    """
+    body = FUTURES_POSITIONS_BODY
+    for key in re.findall(r"\{block_([a-z]+)\}", body):
+        body = body.replace("{block_%s}" % key, BLOCKS.get(key, ""))
+    body = re.sub(r'<a href="futures-positions\.html"[^>]*>(.*?)</a>', r"\1",
+                  body, flags=re.S)
+    updated = (f"データ基準日: {date[:4]}-{date[4:6]}-{date[6:]} | 最終更新: "
+               f"{datetime.now(JST).strftime('%Y-%m-%d %H:%M')} JST(毎営業日 自動更新)")
+    write_data_page("futures-positions.html", FUTURES_POSITIONS_TITLE,
+                    FUTURES_POSITIONS_DESC, body, updated)
+
+
 def render_seo_files() -> None:
     """sitemap.xml と robots.txt(検索エンジン向け)。"""
     pages = ["", "en/", "us.html", "en/us.html", "risk.html", "en/risk.html",
              "fedwatch.html", "en/fedwatch.html",
              "tools.html", "en/tools.html",
              "guide-start.html", "guide-oi.html", "guide-pcr.html", "guide-teguchi.html",
+             "futures-positions.html",
              "guide-brokers.html", "guide-jpx-data.html",
              "option-brokers.html", "mini-option-brokers.html", "option-fees.html",
              "option-margin.html", "option-tax.html", "option-strikes.html",
@@ -4029,7 +4238,7 @@ def latest_block(kind: str) -> str:
     """解説ページの冒頭に置く「今日の数字」。データが無ければ空文字。
 
     タイトルで毎日更新をうたう以上、ページにも当日の数字が無いと釣りになる。
-    トップと同じ図を使い、詳細はトップへ誘導する。"""
+    図のあとに、トップから移したデータ節(BLOCKS)が続く。"""
     # 行使価格の刻みは清算値段ファイル側に日付を持っているので、
     # 建玉データの日付(LATEST["date"])が無くても出せる。
     if kind == "strikes":
@@ -4048,7 +4257,7 @@ def latest_block(kind: str) -> str:
                 f'<p>現値近辺で建玉がいちばん厚いのは、'
                 f'<b>コール{c[0]:,.0f}円({c[1]:,}枚)・プット{p[0]:,.0f}円({p[1]:,}枚)</b>です{sp}。'
                 f'行使価格ごとの建玉と前日からの増減は、'
-                f'<a href="./#oitable">トップページの一覧表</a>で毎営業日更新しています。</p>'
+                f'<a href="#oitable">このページ下の限月別一覧</a>で毎営業日更新しています。</p>'
                 f'<img src="img/oi_dist.png?v={d}" alt="行使価格別の建玉分布">'
                 f'<p class="latest-note">この図の読み方を、以下で説明します。</p></div>')
     if kind == "flow":
@@ -4068,7 +4277,7 @@ def latest_block(kind: str) -> str:
                 f'<p>合計は<b>{tot:+,.0f}億円(指数1%あたり)で、{word}</b>です。'
                 f'ディーラーの実際の持ち高は公表されていないため、'
                 f'一般的な前提を置いた当サイトの推定値です。'
-                f'毎営業日の値は<a href="./#hedge">トップページ</a>に掲載しています。</p>'
+                f'行使価格ごとの内訳は下の図にあります。</p>'
                 f'<p class="latest-note">参考値として内訳も挙げておくと、現値より上が'
                 f'{LATEST.get("gex_up", 0):+,.0f}億円、下が{LATEST.get("gex_dn", 0):+,.0f}億円です。'
                 f'ただし<b>上下の内訳は合計の符号よりも不確かで</b>、向きの推定方法を変えると'
@@ -4421,6 +4630,15 @@ Googleによる取り扱いについては
             body = body.replace("{latest_flow}", latest_block("flow"))
         if "{strike_grid}" in body:
             body = body.replace("{strike_grid}", latest_block("strikes"))
+        # トップから移したデータ節を差し込む。BLOCKSが空(データ取得失敗)なら
+        # プレースホルダを空文字に置き換えるだけなので、解説部分はそのまま残る。
+        for key in re.findall(r"\{block_([a-z]+)\}", body):
+            body = body.replace("{block_%s}" % key, BLOCKS.get(key, ""))
+        # 移した節に付いている導線が、そのページ自身を指すことがある。
+        # 自己リンクはアンカーを外して文字だけ残す(読者が迷うし、検索側にも
+        # 無意味なリンクになるため)。
+        body = re.sub(rf'<a href="{re.escape(fname)}"[^>]*>(.*?)</a>',
+                      r"\1", body, flags=re.S)
         ad = "" if fname in NO_AD else adsense_unit("ja")
         en = GUIDE_PAIRS.get(fname)
         with open(os.path.join(SITE, fname), "w", encoding="utf-8") as f:
@@ -4736,6 +4954,7 @@ def main() -> None:
             first_yy = str(flows.iloc[0]["week"]).zfill(6)[:2]
             net_tn = last["net_kyen"] / 1e9
             cum_tn = flows["net_kyen"].sum() / 1e9
+            extras["flows_net"] = net_tn
             extras["flows_latest"] = (
                 f"直近週(20{lw[:2]}年{int(lw[2:4])}月第{int(lw[4:])}週): {net_tn:+.2f}兆円 / "
                 f"20{first_yy}年以降の累積: {cum_tn:+.2f}兆円"
@@ -4776,6 +4995,10 @@ def main() -> None:
         warn(f"latest for guides failed: {e}")
 
     render_static_pages()
+    try:
+        render_futures_positions(date)
+    except Exception as e:
+        warn(f"futures positions page failed: {e!r}")
     try:
         render_posts()
     except Exception as e:
