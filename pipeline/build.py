@@ -965,6 +965,18 @@ CSS_MAIN = """
          border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; margin-left: 8px;
          vertical-align: middle; }
   a.dl:hover { color: var(--aqua); border-color: var(--aqua); }
+  /* 各セクションから解説ページへの導線。
+     GA4(2026-11-04)では1,058人がトップに来て1人3.50ページで、解説ページまで
+     回遊していなかった。本文中の「(→ 建玉分布の見方)」という括弧書きでは
+     リンクだと気づかれないため、輪郭を付けて並べる。
+     枠線と字の大きさは a.dl(CSVのダウンロードボタン)と揃え、
+     色や背景で目立たせることはしない。 */
+  p.seealso { margin: 8px 0 0; font-size: 0.86em; color: var(--ink2);
+              display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  p.seealso a { display: inline-block; color: #1f6fd0; text-decoration: none;
+                border: 1px solid var(--line); border-radius: 6px;
+                padding: 4px 11px; background: var(--panel); }
+  p.seealso a:hover { border-color: var(--aqua); }
   @media (max-width: 600px) {
     nav.pills { display: none; }
     .menu { display: block; }
@@ -1046,6 +1058,18 @@ CSS_MAIN = """
   }
 """
 
+
+def seealso(*links) -> str:
+    """セクションの下に置く「解説ページへの導線」。(href, 文言) を並べる。
+
+    文中の括弧書きのリンクを置き換えるためのもの。引数が無ければ空文字。
+    """
+    if not links:
+        return ""
+    body = "".join(f'<a href="{href}">{text}</a>' for href, text in links)
+    return f'<p class="seealso">{body}</p>'
+
+
 # ページ本文の文言(日英)
 PAGE = {
     "ja": {
@@ -1058,17 +1082,26 @@ PAGE = {
         "lang_switch": '<a href="en/" lang="en">English</a>',
         "kpi": ["Put/Call レシオ", "プット出来高", "コール出来高"], "unit": " 枚",
         "sec_market": "マーケット概況",
+        "market_more": seealso(("nikkei-vi.html", "日経VIの実測"),
+                               ("sq-values.html", "SQ値一覧と幻のSQ")),
         "tagline": "日経225オプションの建玉・米国市場のポジション・マクロリスク指標を、JPX・CFTC・CBOE・FREDなどの公式データから毎営業日自動更新するデータサイトです。",
         "kpi_vi": "日経VI(前日差)",
         "kpi_vol": "日経売買高(株数・前日比)",
         "vol_unit": " 億株",
         "kpi_sq": "次回SQ",
         "sec_mini": "ミニオプション建玉分布(ウィークリー: {exp}限)",
-        "mini_lead": '日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
+        "mini_lead": "日経225ミニオプション(週次限月)の行使価格別建玉。短期の攻防ラインの目安になります。",
+        "mini_more": seealso(("guide-oi.html", "建玉分布の見方"),
+                             ("option-strikes.html", "ミニは全限月が125円刻み"),
+                             ("guide-sq.html", "ミニは毎週SQがある")),
         "sec_flows": "海外投資家の売買動向(週次)",
         "flows_lead": "JPX投資部門別売買状況(東証プライム・現物金額)より。上段=累積ネット売買(日経平均を重ね描き)、下段=直近1年の週次。プラス=買い越し、マイナス=売り越し。{latest}",
+        "flows_more": seealso(("guide-cot.html", "海外勢の持ち高をもう一段見る(COT)"),
+                              ("guide-jpx-data.html", "このデータの出どころ")),
         "sec_oitable": "オプション建玉一覧(限月別)",
-        "oitable_lead": 'JPXが日次公開する直近3限月分。手前の限月より先の限月の方が厚いことがあります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a> ・ <a href="guide-sq.html" style="color:#1f6fd0">→ SQとは</a>)',
+        "oitable_lead": "JPXが日次公開する直近3限月分。手前の限月より先の限月の方が厚いことがあります。",
+        "oitable_more": seealso(("guide-oi.html", "建玉分布の見方"),
+                                ("guide-sq.html", "SQはいつ？日程とSQ値")),
         "sec_oi": "行使価格別 建玉分布",
         "mini_note": "※ミニオプション({n:,}枚)を1/10のラージ換算で合算しています。",
         "sm_price": "日経平均は<b>{spot:,.0f}円</b>({chg:+,.0f}円)。",
@@ -1080,13 +1113,19 @@ PAGE = {
         "src_pv": "手口 {d}",
         "src_oi": "建玉残高 {d}",
         "sec_hedge": "ガンマエクスポージャー",
+        "hedge_more": seealso(("guide-gex.html", "ガンマエクスポージャーとは"),
+                              ("guide-lee-ready.html", "向きをどう推定するか")),
         "sec_groups": "取引参加者の3分類(外資系・国内系・ネット系)",
         "groups_lead": "取引参加者別の建玉は社名で公表されますが、社名を知らないと読めません。そこで<b>外資系・国内系・ネット系(個人のネット取引を主に受ける会社)</b>の3つに束ねました。日経225先物とminiを<b>ラージ換算で合算</b>しています。プラスは買い越し、マイナスは売り越しです。<b>ゼロと比べても意味がありません</b>——どの層も業務の形から来る偏りを持っているため、その層自身の平常値と比べてください。",
-        "groups_more": '「日経平均との連動」は、週ごとの建玉の増減が日経平均の上下と同じ向きだった度合いです(+1で完全に同じ、−1で完全に逆)。プラスなら上がった週に買い越しを増やし、マイナスなら減らしていたことを示します。分類は当サイトによるもので、三菱UFJモルガン・スタンレー証券のような合弁は国内系に入れています。(<a href="guide-brokers.html" style="color:#1f6fd0">→ 手口に出てくる証券会社</a>)',
+        "groups_more": "「日経平均との連動」は、週ごとの建玉の増減が日経平均の上下と同じ向きだった度合いです(+1で完全に同じ、−1で完全に逆)。プラスなら上がった週に買い越しを増やし、マイナスなら減らしていたことを示します。分類は当サイトによるもので、三菱UFJモルガン・スタンレー証券のような合弁は国内系に入れています。",
+        "groups_see": seealso(("guide-brokers.html", "手口に出てくる証券会社"),
+                              ("guide-teguchi.html", "手口の見方")),
         "sec_iv": "行使価格別のIV(スマイル)",
         "iv_lead": "日経VIは市場全体の期待変動率を1つの数字にまとめたものですが、<b>どちら方向の保険が高く付いているかは消えてしまいます</b>。JPXは清算値段ファイルで<b>行使価格ごとのIV</b>も公表しているので、現値を境にプット側・コール側それぞれのIVを並べました。深いイン・ザ・マネーはIVが1.0%固定のダミー値になるため、<b>アウト・オブ・ザ・マネー側だけ</b>を使っています。",
         "iv_sum": "現値近辺のIVは{atm:.1f}%。現値から10%下のプットは{put:.1f}%、10%上のコールは{call:.1f}%です。",
-        "iv_more": '下側が高いほど、下落に備える需要が強いことを示します。IVは<a href="guide-gex.html" style="color:#1f6fd0">ガンマの推定</a>にも使っている数字です。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
+        "iv_more": '下側が高いほど、下落に備える需要が強いことを示します。IVは<a href="guide-gex.html" style="color:#1f6fd0">ガンマの推定</a>にも使っている数字です。',
+        "iv_see": seealso(("nikkei-vi.html", "日経VIの実測"),
+                          ("glossary.html", "用語集")),
         "hedge_lead": "オプションを売った側(証券会社)は、リスクを打ち消すために先物を売り買いしてヘッジします。この売買は、相場の位置によって値動きを<b>抑える向き</b>にも<b>増幅する向き</b>にも働きます。下の図は、建玉と清算値段のボラティリティから、その強さを行使価格ごとに推定したものです。",
         "hedge_caveat": "<b>注意: これは前提を置いた推定で、符号(抑える/増幅する)が実際と逆になることがあります。</b>証券会社が実際にどちら向きに持っているかは公表されていません。ここでは「コールは買い持ち・プットは売り持ち」という広く使われる前提を置いていますが、たとえば<b>上昇局面で投資家が上方向のコールを買い進めると、その相手をする証券会社はコールの売り手</b>になり、前提とは逆になります。そのとき実際のヘッジは、ここでの表示とは反対の向きに働きます。"
                          "<br><b>どこまであてになるか。</b>当サイトが比較的あてになると考えているのは<b>合計の符号(抑える向きか増幅する向きか)</b>までです。<b>現値の上下の内訳は合計よりもさらに不確かで</b>、向きの推定方法を変えると上と下の大小関係が入れ替わったり、内訳の符号そのものが変わったりします。内訳を本文の主役から外して参考値としているのはこのためです。また<b>金額は一律の前提から機械的に出した相対的な目安</b>なので、絶対量としては幅を持って見てください(水準そのものより、日々どちらへ動いたかのほうが読み取れます)。"
@@ -1095,18 +1134,30 @@ PAGE = {
         "hedge_split_label": "現値の上下の内訳(参考値)",
         "hedge_split": "現値より上は{up:+,.0f}億円、現値より下は{dn:+,.0f}億円。この内訳は合計の符号よりも不確かなので、参考値として扱ってください(下の注意を参照)。",
         "hedge_damp": "値動きを抑える向き", "hedge_amp": "値動きを増幅する向き",
-        "hedge_more": '見方の詳しい解説は <a href="guide-gex.html">ガンマエクスポージャーとは</a> をどうぞ。',
         "sec_pv": "手口上位一覧(取引参加者別 取引高)",
-        "pv_lead": '売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a> ・ <a href="guide-brokers.html" style="color:#1f6fd0">→ 各社が何をしているのか</a> ・ <a href="guide-jpx-data.html" style="color:#1f6fd0">→ 公式データの入手先</a>)',
+        "pv_lead": "売買の方向までは分かりませんが、どの参加者が主戦場にいるかの目安になります。",
+        "pv_more": seealso(("guide-teguchi.html", "手口の見方"),
+                           ("guide-brokers.html", "各社が何をしているのか"),
+                           ("guide-jpx-data.html", "公式データの入手先")),
         "sec_fut": "先物の出来高(ラージ換算での比較)",
-        "fut_lead": 'miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。(<a href="glossary.html" style="color:#1f6fd0">→ 用語集</a>)',
+        "fut_lead": "miniは想定元本がラージの1/10、マイクロは1/100です。枚数のままでは規模を比較できないため、ラージ換算した列を併記しています。",
+        "fut_more": seealso(("guide-jpx-data.html", "この出来高はどのファイルか"),
+                            ("guide-teguchi.html", "誰が売買しているのか"),
+                            ("glossary.html", "用語集")),
         "fut_cols": ["商品", "出来高(枚)", "ラージ換算", "取引代金"],
         "fut_total": "合計",
-        "oi_lead": '建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。(<a href="guide-oi.html" style="color:#1f6fd0">→ 建玉分布の見方</a>)',
+        "oi_lead": "建玉が積み上がった行使価格は、市場参加者が意識する「壁」の目安になります。",
+        "oi_more": seealso(("guide-oi.html", "「最大建玉=壁」ではない理由"),
+                           ("guide-gex.html", "ヘッジが値動きを増幅する仕組み")),
         "sec_weekly": "先物 取引参加者別建玉(週次)",
-        "wk_chart_lead": '棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。<b>ゼロと比べても意味がありません</b>。その会社自身の平常値と比べてください。(<a href="guide-teguchi.html" style="color:#1f6fd0">→ 手口の見方</a> ・ <a href="guide-brokers.html" style="color:#1f6fd0">→ 各社が何をしているのか</a> ・ <a href="guide-jpx-data.html" style="color:#1f6fd0">→ 公式データの入手先</a>)',
+        "wk_chart_lead": "棒グラフ: 各社の週次ネット建玉(緑=買い越し / 赤=売り越し)。灰色の線は日経平均の推移(形状比較用・目盛りなし)。最新週の建玉規模上位12社を表示。<b>ゼロと比べても意味がありません</b>。その会社自身の平常値と比べてください。",
+        "weekly_more": seealso(("guide-teguchi.html", "手口の見方"),
+                               ("guide-brokers.html", "各社が何をしているのか"),
+                               ("guide-jpx-data.html", "公式データの入手先")),
         "sec_pcr": "Put/Call レシオの推移",
-        "pcr_lead": '1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。(<a href="guide-pcr.html" style="color:#1f6fd0">→ Put/Callレシオの見方</a>)',
+        "pcr_lead": "1.0超はプット優勢(警戒・ヘッジ需要)、1.0未満はコール優勢の目安です。",
+        "pcr_more": seealso(("guide-pcr.html", "1.0は中立ではない(実測平均1.57)"),
+                            ("nikkei-vi.html", "日経VIの実測")),
         "kpi_guide": 'この数字の意味は? → <a href="guide-pcr.html">Put/Callレシオとは</a>'
                      ' ・ <a href="guide-oi.html">建玉の「壁」の見方</a>'
                      ' ・ <a href="guide-gex.html">急落を増幅するディーラーのヘッジ</a>'
@@ -1163,17 +1214,26 @@ PAGE = {
         "lang_switch": '<a href="../" lang="ja">日本語</a>',
         "kpi": ["Put/Call Ratio", "Put Volume", "Call Volume"], "unit": "",
         "sec_market": "Market Overview",
+        "market_more": seealso(("guide-nikkei-options.html", "Field guide"),
+                               ("guide-sq.html", "How SQ settlement works")),
         "tagline": "Nikkei 225 options open interest, US positioning and macro risk gauges — auto-updated every business day from official JPX, CFTC, CBOE and FRED data.",
         "kpi_vi": "Nikkei VI (DoD)",
         "kpi_vol": "Nikkei Volume (shares, DoD)",
         "vol_unit": " M sh",
         "kpi_sq": "Next SQ",
         "sec_mini": "Mini Options OI (Weekly: {exp} expiry)",
-        "mini_lead": 'Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Field guide</a>)',
+        "mini_lead": "Open interest by strike for Nikkei 225 mini options (weekly expiries) — a gauge of short-term battle lines.",
+        "mini_more": seealso(("guide-nikkei-options.html", "Field guide"),
+                             ("guide-contract-specs.html", "Mini contract specs"),
+                             ("guide-sq.html", "Minis expire every week")),
         "sec_flows": "Foreign Investor Flows (Weekly)",
         "flows_lead": "Weekly net buying by foreign investors in TSE Prime cash equities, shown as a cumulative line (top) and weekly bars (bottom), from JPX trading-by-investor-type data. Positive = net buying. {latest}",
+        "flows_more": seealso(("guide-participants.html", "Positioning by named firm"),
+                              ("guide-data-sources.html", "Where this data comes from")),
         "sec_oitable": "Options Open Interest by Expiry",
-        "oitable_lead": 'The nearest three expiries, as published daily by JPX. The back month is sometimes larger than the front. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Field guide</a> ・ <a href="guide-sq.html" style="color:#1f6fd0">→ SQ explained</a>)',
+        "oitable_lead": "The nearest three expiries, as published daily by JPX. The back month is sometimes larger than the front.",
+        "oitable_more": seealso(("guide-nikkei-options.html", "Field guide"),
+                                ("guide-sq.html", "SQ explained")),
         "sec_oi": "Open Interest Distribution by Strike",
         "mini_note": "Includes mini options ({n:,} contracts) converted to large-equivalent (1/10).",
         "sm_price": "Nikkei 225 closed at <b>{spot:,.0f}</b> ({chg:+,.0f}). ",
@@ -1185,13 +1245,19 @@ PAGE = {
         "src_pv": "Participant volume {d}",
         "src_oi": "Open interest {d}",
         "sec_hedge": "Gamma Exposure",
+        "hedge_more": seealso(("guide-gamma-exposure.html", "Gamma exposure, honestly"),
+                              ("guide-gamma-flip.html", "The gamma flip level")),
         "sec_groups": "Participants by Type (Foreign / Domestic / Online)",
         "groups_lead": "JPX names each participant, which only helps if you know the firms. Here they are grouped into <b>foreign brokers, domestic brokers and online brokers (retail order flow)</b>, with Nikkei 225 futures and minis combined on a large-contract basis. Positive is net long. <b>Comparing to zero is meaningless</b> — every group carries a structural bias, so compare each to its own normal.",
-        "groups_more": 'The correlation column shows how often a group&rsquo;s weekly position change moved with the Nikkei (+1 = always the same direction). Groupings are ours; Japanese joint ventures such as Mitsubishi UFJ Morgan Stanley count as domestic.',
+        "groups_more": "The correlation column shows how often a group&rsquo;s weekly position change moved with the Nikkei (+1 = always the same direction). Groupings are ours; Japanese joint ventures such as Mitsubishi UFJ Morgan Stanley count as domestic.",
+        "groups_see": seealso(("guide-participants.html", "How to read participant data"),
+                              ("guide-data-sources.html", "Where this data comes from")),
         "sec_iv": "Implied Volatility by Strike",
         "iv_lead": "The Nikkei VI compresses the whole surface into one number, so it cannot tell you <b>which side of the market is paying up for protection</b>. JPX publishes <b>implied volatility for every strike</b> in its daily settlement file, so we plot puts below spot and calls above it. Deep in-the-money contracts print a placeholder 1.0%, so <b>only out-of-the-money strikes</b> are used.",
         "iv_sum": "At-the-money implied volatility is {atm:.1f}%. Ten percent below spot prices at {put:.1f}%, ten percent above at {call:.1f}%.",
-        "iv_more": 'A steeper left side means downside protection is more expensive. This is the same volatility that feeds our <a href="guide-gamma-exposure.html" style="color:#1f6fd0">gamma estimates</a>. (<a href="guide-implied-volatility.html" style="color:#1f6fd0">&rarr; how to read it</a>)',
+        "iv_more": 'A steeper left side means downside protection is more expensive. This is the same volatility that feeds our <a href="guide-gamma-exposure.html" style="color:#1f6fd0">gamma estimates</a>.',
+        "iv_see": seealso(("guide-implied-volatility.html", "How to read the smile"),
+                          ("glossary.html", "Glossary")),
         "hedge_lead": "Dealers who sold options hedge by trading futures. Depending on where the index sits, that hedging can either <b>dampen</b> or <b>amplify</b> moves. The chart below estimates that force by strike, using open interest and the implied volatility in JPX settlement prices.",
         "hedge_caveat": "<b>Caveat: this is an assumption-based estimate, and the sign can be the opposite of reality.</b> Dealer positions are not disclosed. We assume dealers are long calls and short puts, as is common practice. But when investors buy upside calls into a rally, the dealers on the other side are <b>short</b> those calls &mdash; the reverse of the assumption &mdash; and the real hedging flow works the other way."
                          "<br><b>How far to trust it.</b> The part we consider reasonably robust is the <b>sign of the net figure</b> (dampening or amplifying). The <b>split above and below spot is less reliable than the net</b>: estimate the dealer side a different way and the larger of the two can swap, or a leg can change sign outright. That is why the split is shown as a reference figure rather than in the body text. The <b>yen amounts are a relative yardstick produced mechanically from a uniform assumption</b>, so treat the absolute size as a wide range (the direction of the day-to-day change reads better than the level itself).",
@@ -1199,18 +1265,28 @@ PAGE = {
         "hedge_split_label": "Split above / below spot (reference)",
         "hedge_split": "Above spot {up:+,.0f}, below spot {dn:+,.0f} (100M yen). This split is less reliable than the sign of the net figure &mdash; treat it as a reference (see the caveat below).",
         "hedge_damp": "dampening moves", "hedge_amp": "amplifying moves",
-        "hedge_more": '',
         "sec_pv": "Trading Volume by Participant (daily ranking)",
-        "pv_lead": 'Volume only — this says nothing about direction. It shows which firms are active. (<a href="guide-participants.html" style="color:#1f6fd0">→ How to read it</a>)',
+        "pv_lead": "Volume only — this says nothing about direction. It shows which firms are active.",
+        "pv_more": seealso(("guide-participants.html", "How to read it"),
+                           ("guide-data-sources.html", "Where this data comes from")),
         "sec_fut": "Futures Volume (large-equivalent comparison)",
-        "fut_lead": 'Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown. (<a href="glossary.html" style="color:#1f6fd0">→ Glossary</a>)',
+        "fut_lead": "Mini is 1/10 the notional of the large contract; micro is 1/100. Raw contract counts are not comparable, so a large-equivalent column is shown.",
+        "fut_more": seealso(("guide-contract-specs.html", "Contract specifications"),
+                            ("guide-data-sources.html", "Which file this comes from"),
+                            ("glossary.html", "Glossary")),
         "fut_cols": ["Product", "Volume (contracts)", "Large-equiv", "Turnover"],
         "fut_total": "Total",
-        "oi_lead": 'Strikes with heavy open interest often act as reference levels ("walls"). The largest open interest in the chain is usually a far out-of-the-money legacy position, so look near spot. (<a href="guide-nikkei-options.html" style="color:#1f6fd0">→ Why</a>)',
+        "oi_lead": 'Strikes with heavy open interest often act as reference levels ("walls"). The largest open interest in the chain is usually a far out-of-the-money legacy position, so look near spot.',
+        "oi_more": seealso(("guide-nikkei-options.html", "Why the largest strike is not the wall"),
+                           ("guide-gamma-exposure.html", "How hedging amplifies moves")),
         "sec_weekly": "Futures Open Interest by Trading Participant (Weekly)",
-        "wk_chart_lead": 'Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size. <b>Comparing against zero is useless</b> — compare each firm against its own baseline. (<a href="guide-participants.html" style="color:#1f6fd0">→ How to read it</a>)',
+        "wk_chart_lead": "Bars: weekly net open interest per participant (green = net long, red = net short). Gray line: Nikkei 225 (shape only, no scale). Top 12 participants by latest position size. <b>Comparing against zero is useless</b> — compare each firm against its own baseline.",
+        "weekly_more": seealso(("guide-participants.html", "How to read it"),
+                               ("guide-data-sources.html", "Where this data comes from")),
         "sec_pcr": "Put/Call Ratio Trend",
-        "pcr_lead": 'Above 1.0 = puts dominant; below 1.0 = calls dominant. <b>1.0 is not the neutral line</b> — the measured average is 1.57 for large contracts. (<a href="guide-put-call-ratio.html" style="color:#1f6fd0">→ Full explanation</a>)',
+        "pcr_lead": "Above 1.0 = puts dominant; below 1.0 = calls dominant. <b>1.0 is not the neutral line</b> — the measured average is 1.57 for large contracts.",
+        "pcr_more": seealso(("guide-put-call-ratio.html", "Why 1.0 is not neutral"),
+                            ("guide-nikkei-options.html", "Field guide")),
         "kpi_guide": 'What do these numbers mean? → '
                      '<a href="guide-put-call-ratio.html">Put/call ratio</a>'
                      ' ・ <a href="guide-gamma-exposure.html">Gamma exposure</a>'
@@ -1264,6 +1340,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     )
     if charts.get("vi"):
         market_section += f'\n  <img src="{charts["vi"]}" alt="Nikkei VI">'
+    if market_section:
+        market_section += f'\n  {P["market_more"]}'
 
     ranks = extras.get("ranks") or {}
 
@@ -1300,13 +1378,15 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
     if charts.get("mini"):
         mini_section = (f'<h2 id="mini">{P["sec_mini"].format(exp=extras.get("mini_label", ""))}</h2>\n'
                         f'  <p>{P["mini_lead"]}</p>\n'
-                        f'  <img src="{charts["mini"]}" alt="Mini options OI">')
+                        f'  <img src="{charts["mini"]}" alt="Mini options OI">\n'
+                        f'  {P["mini_more"]}')
 
     flows_section = ""
     if charts.get("investor"):
         flows_section = (f'<h2 id="flows">{P["sec_flows"]}</h2>\n'
                          f'  <p>{P["flows_lead"].format(latest=extras.get("flows_latest", ""))}</p>\n'
-                         f'  <img src="{charts["investor"]}" alt="Foreign investor flows">')
+                         f'  <img src="{charts["investor"]}" alt="Foreign investor flows">\n'
+                         f'  {P["flows_more"]}')
 
     weekly_section = ""
     if tables.get("weekly"):
@@ -1316,7 +1396,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             if charts.get("participants") else ""
         )
         weekly_section = (f'<h2 id="weekly">{P["sec_weekly"]}</h2>\n  '
-                          f'{chart_part}{tables["weekly"]}')
+                          f'{chart_part}{tables["weekly"]}\n  {P["weekly_more"]}')
     # 冒頭サマリー。数秒しか見ない訪問者に「今日の要点」だけ先に届ける。
     summary_section = ""
     try:
@@ -1379,7 +1459,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'<p>{split_line}</p></details>'
             f'<p>{P.get("hedge_caveat", "")}</p>'
             f'<img src="{charts["hedge"]}" alt="Option hedging direction by strike">'
-            f'<p>{P["hedge_more"]}</p>')
+            f'{P["hedge_more"]}')
 
     # 参加者の3分類。会社別の一覧より前に置く(全体像 → 個別の順)
     groups_section = ""
@@ -1389,7 +1469,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'<h2 id="groups">{P["sec_groups"]}</h2>'
             f'<p>{P["groups_lead"]}</p>{gtbl}'
             f'<img src="{charts["groups"]}" alt="Net futures OI by participant type">'
-            f'<p>{P["groups_more"]}</p>')
+            f'<p>{P["groups_more"]}</p>{P["groups_see"]}')
 
     # 行使価格別IV(スマイル)。ガンマの直後に置く——同じ清算値段ファイルの数字なので。
     iv_section = ""
@@ -1404,7 +1484,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
             f'<h2 id="iv">{P["sec_iv"]}</h2>'
             f'<p>{P["iv_lead"]}</p>{line}'
             f'<img src="{charts["iv"]}" alt="Implied volatility by strike">'
-            f'<p>{P["iv_more"]}</p>')
+            f'<p>{P["iv_more"]}</p>{P["iv_see"]}')
 
     # 手口上位一覧(日次)。建玉より早く公表されるので独立セクションにする。
     pv_section = ""
@@ -1412,7 +1492,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         inner = participant_volume_html(extras["pv"], lang)
         if inner:
             pv_section = (f'<h2 id="pv">{P["sec_pv"]}</h2>'
-                          f'<p>{P["pv_lead"]}</p>{inner}')
+                          f'<p>{P["pv_lead"]}</p>{inner}{P["pv_more"]}')
 
     # 建玉分布にミニを合算した場合の注記
     mini_note = ""
@@ -1440,7 +1520,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
         head = "".join(f"<th>{c}</th>" for c in P["fut_cols"])
         fut_section = (f"<h2 id=\"fut\">{P['sec_fut']}</h2>\n  <p>{P['fut_lead']}</p>\n"
                        f"  <div class='tbl-scroll'><table><tr>{head}</tr>"
-                       f"{''.join(rows)}</table></div>")
+                       f"{''.join(rows)}</table></div>\n  {P['fut_more']}")
 
     # データの読み方ガイドへの導線。GA4(2026-07-27)ではトップに64%のビューが集中し
     # 解説記事まで回遊していなかったため、本文中の小さなリンクとは別にカード型で明示する。
@@ -1497,13 +1577,17 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
   {market_section}
 
+  {posts_section}
+
   <h2 id="oitable">{P['sec_oitable']}</h2>
   <p>{P['oitable_lead']}</p>
   {tables['oi']}
+  {P['oitable_more']}
 
   <h2 id="oi">{P['sec_oi']}</h2>
   <p>{P['oi_lead']}{mini_note}</p>
   <img src="{charts['oi']}" alt="Open interest by strike">
+  {P['oi_more']}
 
   {mini_section}
 
@@ -1522,8 +1606,7 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <h2 id="pcr">{P['sec_pcr']}</h2>
   <p>{P['pcr_lead']}</p>
   <img src="{charts['pcr']}" alt="Put/Call ratio trend">
-
-  {posts_section}
+  {P['pcr_more']}
 
   {guide_section}
 </main>
@@ -3809,14 +3892,22 @@ def render_posts() -> list:
 
 
 def posts_latest_block(n: int = 3) -> str:
-    """トップページに置く「最新の解説」。記事が無ければ空文字。"""
+    """トップページに置く「最新の解説」。記事が無ければ空文字。
+
+    置き場所はマーケット概況の直後(ページ上部)。
+    GA4(2026-11-04)では記事がトップ14セクションの13番目にあり、
+    記事一覧は25PV・滞在20秒だった。一方で読まれた記事の滞在は3分23秒で、
+    サイト平均2分20秒を上回っている。中身ではなく、たどり着かれていない
+    ほうの問題なので上部に出す。
+    """
     items = all_posts()[:n]
     if not items:
         return ""
     return ('<h2 id="posts">最新の解説</h2>\n'
-            '  <p>このページの数字をどう読んだかを、日付つきの記事にしています。</p>\n'
+            '  <p>下に並んでいる数字をその日どう読んだかを、実数を挙げて書いています。'
+            '自動更新のページとは別に、書き手が目を通して公開しているものです。</p>\n'
             f'  {_post_list_html(items, prefix="posts/")}\n'
-            '  <p><a href="posts/" style="color:#1f6fd0">解説記事の一覧へ</a></p>')
+            f'  {seealso(("posts/", "解説記事の一覧(すべて)"))}')
 
 
 def render_seo_files() -> None:
