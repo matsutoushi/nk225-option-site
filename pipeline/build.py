@@ -1090,7 +1090,7 @@ PAGE = {
         "market_more": seealso(("nikkei-vi.html", "日経VIの実測"),
                                ("sq-values.html", "SQ値一覧と幻のSQ")),
         "tagline": "日経225オプションの建玉・米国市場のポジション・マクロリスク指標を、JPX・CFTC・CBOE・FREDなどの公式データから毎営業日自動更新するデータサイトです。",
-        "kpi_vi": "日経VI(前日差)",
+        "kpi_vi": "日経VI",
         "kpi_vol": "日経売買高(株数・前日比)",
         "vol_unit": " 億株",
         "kpi_sq": "次回SQ",
@@ -1224,7 +1224,7 @@ PAGE = {
         "market_more": seealso(("guide-nikkei-options.html", "Field guide"),
                                ("guide-sq.html", "How SQ settlement works")),
         "tagline": "Nikkei 225 options open interest, US positioning and macro risk gauges — auto-updated every business day from official JPX, CFTC, CBOE and FRED data.",
-        "kpi_vi": "Nikkei VI (DoD)",
+        "kpi_vi": "Nikkei VI",
         "kpi_vol": "Nikkei Volume (shares, DoD)",
         "vol_unit": " M sh",
         "kpi_sq": "Next SQ",
@@ -1358,9 +1358,11 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
 
     extra_kpi = ""
     if extras.get("vi_last") is not None:
-        delta = extras.get("vi_delta")
-        dtxt = f" ({delta:+.1f})" if delta is not None else ""
-        extra_kpi += (f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>{dtxt}"
+        # 前日差は出さない。日経VIの終値はザラ場の水準から離れて引けることがあり
+        # (安値ちょうどで引ける日が16%台)、前日差をそのまま「動いた量」として
+        # 見せると誤りになる。詳しくは nikkei-vi.html の「終値には引けの飛びが
+        # 混じる」を参照。水準と順位だけを出す。
+        extra_kpi += (f"<div>{P['kpi_vi']}<br><b>{extras['vi_last']:.1f}</b>"
                       f"{_rank('vi')}</div>")
     if extras.get("n225_vol"):
         v = extras["n225_vol"]
@@ -2272,17 +2274,69 @@ def vi_stats(vi: pd.Series, n225: pd.Series | None) -> dict:
     return st
 
 
+def vi_close_check(vi_df: pd.DataFrame) -> dict:
+    """日経VIの終値が「引けで飛ぶ」頻度を数える。
+
+    日経VIの終値は、その日のザラ場の水準から大きく外れることがある。
+    例: 2026-11-04は始値36.20・高値40.30で推移したあと、終値24.98(=当日安値)。
+    終値どうしの前日比をそのまま「市場が動いた量」として扱うと、この引けの
+    飛びとその反動を拾ってしまう。どれくらい混じるのかをページに明記するため、
+    ここで数えて render_vi_page() に渡す。
+    """
+    o, h, lo, c = (vi_df[k].astype(float) for k in ("Open", "High", "Low", "Close"))
+    at_low = pd.Series(np.isclose(c, lo), index=c.index)
+    at_high = pd.Series(np.isclose(c, h), index=c.index)
+    r = {
+        "n": len(vi_df),
+        "at_low": int(at_low.sum()), "at_high": int(at_high.sum()),
+        "at_low_pct": float(at_low.mean() * 100),
+        "at_high_pct": float(at_high.mean() * 100),
+        "drop_med": float((o - c)[at_low].median()),
+        "drop_max": float((o - c)[at_low].max()),
+        "at_low_today": bool(at_low.iloc[-1]),
+        "o": float(o.iloc[-1]), "h": float(h.iloc[-1]), "l": float(lo.iloc[-1]),
+        "at_low_series": at_low,
+    }
+    chg, nxt = c.diff(), c.diff().shift(-1)
+    for key, mask in (("flag", at_low), ("plain", ~at_low)):
+        m = (chg <= -3) & mask & nxt.notna()
+        r[key + "_n"] = int(m.sum())
+        r[key + "_up"] = int((m & (nxt > 0)).sum())
+        r[key + "_med"] = float(nxt[m].median()) if int(m.sum()) else 0.0
+    r["series"] = []
+    for name, ser in (("終値", c), ("始値", o), ("日中中値", (h + lo) / 2),
+                      ("四本値の平均", (o + h + lo + c) / 4)):
+        ch = ser.diff().dropna()
+        r["series"].append({"name": name, "sd": float(ch.std()),
+                            "ac1": float(ch.autocorr(1)),
+                            "big": int((ch.abs() >= 8).sum())})
+    return r
+
+
 def render_vi_page(vi_df: pd.DataFrame, n225_hist: pd.DataFrame | None) -> None:
     """日経VIのページ。数字はすべて vi_stats() の結果から書く。"""
     vi = vi_df["Close"].dropna()
     n225 = n225_hist["Close"] if n225_hist is not None else None
     st = vi_stats(vi, n225)
+    cc = vi_close_check(vi_df.dropna())
     chart = chart_vi_long(vi)
     d = st["date"]
     md = f"{d.month}月{d.day}日"
     ymd = f"{d.year}年{d.month}月{d.day}日"
     v = st["last"]
-    dl = f"(前営業日比{st['delta']:+.1f})" if st["delta"] is not None else ""
+    # 前日比は見出しから外す。終値が引けで飛ぶ日があり、そのまま「市場が動いた量」
+    # として読ませると誤りになる(下の「終値には引けの飛びが混じる」を参照)。
+    dl = ""
+    ohlc_line = (f"この日の値動きは<b>始値{cc['o']:.2f} / 高値{cc['h']:.2f} / "
+                 f"安値{cc['l']:.2f} / 終値{v:.2f}</b>でした。")
+    if cc["at_low_today"]:
+        ohlc_line += ('<b>終値は当日の安値ちょうど</b>です。日経VIの終値は'
+                      'ザラ場の水準から離れた値で引けることがあるため、'
+                      '前営業日比は参考値として扱ってください'
+                      '(<a href="#close">実測はこちら</a>)。')
+    elif st["delta"] is not None:
+        ohlc_line += (f"前営業日比は{st['delta']:+.2f}ですが、"
+                      f'終値には<a href="#close">引けの飛び</a>が混じる日があります。')
 
     # 1日の値幅に直す
     daily_pct = v / np.sqrt(250)
@@ -2306,14 +2360,29 @@ def render_vi_page(vi_df: pd.DataFrame, n225_hist: pd.DataFrame | None) -> None:
         for dt, r in st["recent"].iterrows():
             vd = "" if pd.isna(r["vi_d"]) else f"{r['vi_d']:+.1f}"
             nr = "" if pd.isna(r["n_r"]) else f"{r['n_r']:+.2f}%"
+            # 終値が当日の安値ちょうどだった日は印を付ける。その日の前日比は
+            # 引けの飛びを含んでいる可能性が高く、そのまま読めないため。
+            fl = "引けが安値" if bool(cc["at_low_series"].get(dt, False)) else ""
             recent_rows += (f"<tr><td>{dt.month}/{dt.day}</td><td>{r['vi']:.2f}</td><td>{vd}</td>"
-                            f"<td>{r['n']:,.0f}</td><td>{nr}</td></tr>")
+                            f"<td>{fl}</td><td>{r['n']:,.0f}</td><td>{nr}</td></tr>")
 
     jumps = st["jumps"]
+    # 「急騰」の正体が前日の引けの飛びの反動でないかを、1件ずつ判定する。
+    # 前営業日の終値がその日の安値ちょうどなら、翌日の上げはその戻りでありうる。
+    al = cc["at_low_series"]
+    idx = list(al.index)
+    for j in jumps:
+        i = idx.index(j["date"]) if j["date"] in al.index else 0
+        j["after_drop"] = bool(i > 0 and al.iloc[i - 1])
+    n_after_drop = sum(1 for j in jumps if j["after_drop"])
     jump_rows = "".join(
         f"<tr><td>{j['date'].year}/{j['date'].month}/{j['date'].day}</td><td>{j['level']:.1f}</td>"
-        f"<td>+{j['jump']:.1f}</td><td>{j['next1']:+.1f}</td><td>{j['next5']:+.1f}</td></tr>"
+        f"<td>+{j['jump']:.1f}</td><td>{j['next1']:+.1f}</td><td>{j['next5']:+.1f}</td>"
+        f"<td>{'前日の引けが安値' if j['after_drop'] else '-'}</td></tr>"
         for j in reversed(jumps[-8:]))
+    cc_rows = "".join(
+        f"<tr><td>{x['name']}</td><td>{x['sd']:.2f}</td><td>{x['ac1']:+.3f}</td>"
+        f"<td>{x['big']}日</td></tr>" for x in cc["series"])
     top_txt = "、".join(f"{t.year}年{t.month}月{t.day}日の{x:.1f}" for t, x in st["top"][:3])
 
     vix_block = ""
@@ -2335,6 +2404,7 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 <h1>日経VI(日経平均ボラティリティー・インデックス) — 今日の値と、実測で見る読み方</h1>
 <div class="latest">
 <h2>{md}の日経VIは{v:.2f}{dl}</h2>
+<p>{ohlc_line}</p>
 <p>直近{st['n250']}営業日の中では<b>高い順に{st['rank250']}番目</b>(低い順に{st['n250'] - st['rank250'] + 1}番目)です。
 1日あたりの値動きに直すと<b>約±{daily_pct:.2f}%</b>で、{yen_line}
 データは日本経済新聞社が公表する日経VIの公式CSVを毎営業日取得しています({st['since'].year}年{st['since'].month}月以降・{len(vi):,}営業日分)。</p>
@@ -2377,9 +2447,67 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 翌日に少し下がっても、跳ねた水準がしばらく残ることは珍しくありません</li>
 </ul>
 <div class="tbl-wrap"><table>
-<thead><tr><th>急騰した日</th><th>その日の値</th><th>前日比</th><th>翌日の変化</th><th>5日後の変化</th></tr></thead>
+<thead><tr><th>急騰した日</th><th>その日の値</th><th>前日比</th><th>翌日の変化</th><th>5日後の変化</th><th>前日の引け</th></tr></thead>
 <tbody>{jump_rows}</tbody></table></div>
 <p style="font-size:.9em;color:#666">直近8回。変化は急騰した日の終値からの差です。</p>
+<p><b>この{len(jumps)}回には、急騰ではないものが混じっています。</b>
+前営業日の終値が「その日の安値ちょうど」だったものが<b>{n_after_drop}回({n_after_drop / max(len(jumps), 1) * 100:.0f}%)</b>あります。
+前日の引けが下に飛んだぶん、翌日が跳ね上がって見えているケースです。
+上の回数はそのまま「VIが急騰した回数」としては読めません。理由は次の節に実測で書きます。</p>
+"""
+    body += f"""
+<h2 id="close">終値には「引けの飛び」が混じる — {cc['n']:,}営業日の実測</h2>
+<p>日経VIの終値は、<b>その日ザラ場で推移していた水準から大きく離れた値で出ることがあります。</b>
+当サイトは以前、終値どうしの前日比をそのまま「その日VIがどれだけ動いたか」として書いていましたが、
+これは正確ではありませんでした。公式CSVに入っている四本値で数え直した結果を置きます。</p>
+
+<h3>まず実例</h3>
+<p>2026年11月4日の日経VIは、始値36.20・高値40.30で一日を通して36〜40の範囲にいました。
+ところが<b>終値は24.98</b>で、これはその日の安値でもあります。
+終値だけを見ると「1日で10.74ポイント下げた」ことになりますが、
+<b>ザラ場にそんな水準は一度も付いていません。</b></p>
+
+<h3>どのくらいの頻度で起きるか</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>{cc['n']:,}営業日のうち</th><th>日数</th><th>割合</th></tr></thead>
+<tbody>
+<tr><td>終値がその日の<b>安値ちょうど</b></td><td>{cc['at_low']}日</td><td><b>{cc['at_low_pct']:.1f}%</b></td></tr>
+<tr><td>終値がその日の<b>高値ちょうど</b></td><td>{cc['at_high']}日</td><td>{cc['at_high_pct']:.1f}%</td></tr>
+</tbody></table></div>
+<p>連続して動く指数なら、終値がちょうど当日の極値に一致すること自体が珍しいはずです。
+さらに<b>下側に{cc['at_low'] / max(cc['at_high'], 1):.0f}倍偏っています。</b>
+終値が安値と一致した日の「始値→終値」の落差は、中央値{cc['drop_med']:.2f}ポイント、最大{cc['drop_max']:.2f}ポイントでした。</p>
+
+<h3>前日比の系列として見ると</h3>
+<p>同じ日経VIでも、どの値を使って前日比を取るかで性質が変わります。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>使う値</th><th>前日比の標準偏差</th><th>1日前との相関</th><th>8ポイント以上動いた日</th></tr></thead>
+<tbody>{cc_rows}</tbody></table></div>
+<p>「1日前との相関」が大きくマイナスなのは、<b>翌日に打ち消される動きが多い</b>ということです。
+終値だけが突出しています。「8ポイント以上動いた日」も、終値で数えると始値基準のおよそ2倍に膨らみます。</p>
+
+<h3>決定的なのはこれです</h3>
+<p>終値ベースで3ポイント以上下げた日を、「終値が当日の安値だったか」で二つに分けて、翌日どうなったかを数えました。</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>3ポイント以上下げた日</th><th>日数</th><th>翌日が上昇</th><th>翌日の変化の中央値</th></tr></thead>
+<tbody>
+<tr><td>終値が<b>当日の安値ちょうど</b></td><td>{cc['flag_n']}日</td><td><b>{cc['flag_up'] / max(cc['flag_n'], 1) * 100:.0f}%</b></td><td>{cc['flag_med']:+.2f}</td></tr>
+<tr><td>そうでない</td><td>{cc['plain_n']}日</td><td>{cc['plain_up'] / max(cc['plain_n'], 1) * 100:.0f}%</td><td>{cc['plain_med']:+.2f}</td></tr>
+</tbody></table></div>
+<p>同じ「3ポイント以上の下落」でも、引けが飛んだ日だけ翌日ほぼ機械的に戻っています。
+<b>市場が戻したのではなく、前日の終値が外れ値だった</b>と考えるのが自然です。</p>
+
+<h3>当サイトはこう扱います</h3>
+<ul>
+<li><b>水準は公式の終値をそのまま出します。</b>独自の指数は作りません。日経VIとして公表されているのはこの値です</li>
+<li><b>前日比は主役にしません。</b>冒頭には四本値を並べ、終値が当日の安値ちょうどだった日にはその旨を書きます</li>
+<li><b>「急騰」「急落」の回数を数える場面では、引けが飛んだ日を別に示します</b>(上の表の右端の列)</li>
+</ul>
+<p>なお、この現象が<b>なぜ起きるのか</b>は当サイトでは検証できていません。
+算出時刻や使用する気配値に原因があるという指摘を外部で見かけますが、
+当サイトが確認したのは<b>「終値が当日のザラ場の水準から離れることが、下方向に偏って頻繁に起きている」という事実だけ</b>です。
+この問題は<a href="https://note.com/proptrader88/n/n4989ef6a2cee" rel="nofollow">ぷろっぷ氏のnote記事</a>で指摘されており、
+当サイトが四本値を確認するきっかけになりました。</p>
 """
     if "rv_n" in st:
         body += f"""
@@ -2401,8 +2529,10 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 
 <h2>直近10営業日</h2>
 <div class="tbl-wrap"><table>
-<thead><tr><th>日付</th><th>日経VI</th><th>前日比</th><th>日経平均</th><th>騰落率</th></tr></thead>
+<thead><tr><th>日付</th><th>日経VI</th><th>前日比</th><th>終値の位置</th><th>日経平均</th><th>騰落率</th></tr></thead>
 <tbody>{recent_rows}</tbody></table></div>
+<p style="font-size:.9em;color:#666">「引けが安値」と付いた日は、終値がその日の安値ちょうどでした。
+その日の前日比は<a href="#close">引けの飛び</a>を含んでいる可能性があります。</p>
 """
     body += vix_block + f"""
 <h2>読むときの注意</h2>
