@@ -192,9 +192,9 @@ GitHubのスケジューラ自体が遅いので、GitHubの中で対策して�
 Google Apps Script (1時間ごとのトリガー)
         │  JSTの16/18/20/21/22時に
         ▼
-GitHub API  POST /repos/.../dispatches  {"event_type":"build"}
+GitHub API  POST /repos/.../actions/workflows/daily-update.yml/dispatches
         ▼
-daily-update.yml の repository_dispatch が発火 → ビルド → デプロイ
+daily-update.yml の workflow_dispatch が発火 → ビルド → デプロイ
 ```
 
 Google のサーバーで動くので、**PCの電源が入っていなくても実行される**。
@@ -211,9 +211,15 @@ Google のサーバーで動くので、**PCの電源が入っていなくても
 |---|---|
 | Repository access | Only select repositories → `nk225-option-site` |
 | Permissions | Repository permissions → **Actions: Read and write** のみ |
+| | ※ Contents の権限は要らない |
 | Expiration | 任意(切れると下の失敗メールが届く) |
 
 他の権限は付けない。表示されたトークンはこの画面でしか見られない。
+
+`repository_dispatch`(`/repos/{owner}/{repo}/dispatches`)でも同じことができるが、
+ファイングレインドトークンでは **Contents の書き込み**(= リポジトリに push できる権限)を
+要求してくる。2026-11-09に403で確認した。`workflow_dispatch` のほうは
+Actions の書き込みだけで通るので、こちらを使って権限を狭く保っている。
 
 **2. Apps Script プロジェクトを作る**
 
@@ -233,7 +239,7 @@ Google のサーバーで動くので、**PCの電源が入っていなくても
 **4. 動作確認**
 
 関数 `testDispatch` を選んで実行。初回は Google の認可画面が出るので許可する。
-成功すると GitHub の Actions に `repository_dispatch` の実行が現れる。
+成功すると GitHub の Actions に `workflow_dispatch` の実行が現れる。
 
 <https://github.com/matsutoushi/nk225-option-site/actions>
 

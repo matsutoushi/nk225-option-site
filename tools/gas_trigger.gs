@@ -15,7 +15,7 @@
  * 必要なもの
  *   GitHub のファイングレインド個人アクセストークン(このリポジトリのみ・
  *   Actions の Read and write だけ)。値はスクリプトプロパティに入れる。
- *   コードには書かない。
+ *   コードには書かない。Contents の権限は要らない。
  *
  * 権限について
  *   使うのは「外部サービスへの接続」と「トリガーの管理」だけで、
@@ -27,12 +27,18 @@
  *   それを通知の代わりに使う。
  *
  * 置き換える必要はない定数
- *   OWNER / REPO / EVENT_TYPE は daily-update.yml の repository_dispatch に対応する。
+ *   OWNER / REPO / WORKFLOW_FILE / REF は叩く先のワークフローを指している。
  */
 
 var OWNER = 'matsutoushi';
 var REPO = 'nk225-option-site';
-var EVENT_TYPE = 'build';     // daily-update.yml の repository_dispatch.types と合わせる
+// 叩くのは workflow_dispatch のエンドポイント。
+// repository_dispatch(/repos/{o}/{r}/dispatches)も同じことができるが、
+// ファイングレインドトークンでは Contents の書き込み権限を要求する
+// (= リポジトリに push できる権限)。2026-11-09に403で確認した。
+// workflow_dispatch は Actions の書き込みだけで通るので、権限を狭く保てる。
+var WORKFLOW_FILE = 'daily-update.yml';
+var REF = 'main';
 var SITE_URL = 'https://nk225-option.com/';
 
 // JSTで叩く時刻(時)。JPXの公表に合わせる。
@@ -70,7 +76,8 @@ function dispatchBuild() {
     throw new Error('スクリプトプロパティ GITHUB_TOKEN が未設定です');
   }
   var res = UrlFetchApp.fetch(
-    'https://api.github.com/repos/' + OWNER + '/' + REPO + '/dispatches',
+    'https://api.github.com/repos/' + OWNER + '/' + REPO
+      + '/actions/workflows/' + WORKFLOW_FILE + '/dispatches',
     {
       method: 'post',
       contentType: 'application/json',
@@ -79,7 +86,7 @@ function dispatchBuild() {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'
       },
-      payload: JSON.stringify({ event_type: EVENT_TYPE }),
+      payload: JSON.stringify({ ref: REF }),
       muteHttpExceptions: true
     });
   var code = res.getResponseCode();
@@ -87,7 +94,7 @@ function dispatchBuild() {
   if (code !== 204) {
     // 204 No Content が成功。それ以外は例外にして落とす。
     // トリガー実行なら Google から失敗通知が届く。
-    throw new Error('repository_dispatch が ' + code + ' を返しました。'
+    throw new Error('workflow_dispatch が ' + code + ' を返しました。'
       + 'トークンの期限切れか、権限(Actions: Read and write)の不足が疑われます。 '
       + res.getContentText().slice(0, 300));
   }
