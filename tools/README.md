@@ -164,3 +164,94 @@ Register-ScheduledTask -TaskName "nk225-public-direction-2130" -Action $action -
 
 `check_freshness` と同じく「ユーザーがログオンしているときのみ実行する」(Interactive)にする。
 土日祝も動くが、新しいファイルが無い日は前日と同じ結果を上書きするだけなので放置してよい。
+
+---
+
+## 時刻どおりの自動更新(gas_trigger.gs)
+
+### なぜ必要か
+
+GitHub Actions の `schedule` は**落ちているのではなく、大幅に遅れている**。
+2026-10-08〜11-06 の全実行を確認した結果:
+
+| | 設定した最初のcron | 実際に走った時刻 |
+|---|---|---|
+| 2026-10-08〜10-23 | UTC 07:37 | UTC 12:40〜16:56 |
+| 2026-10-26〜11-06 | UTC 07:37 | UTC 13:30〜17:23 |
+
+**遅れは毎日5〜10時間**で、1日も欠けていなかった。JSTに直すと深夜0時〜翌朝6時の
+ビルドになるため、夕方にサイトを見ると前営業日のままになる。
+cronを8本から12本に増やしても、**12本ともまとめて遅れる**ので効果がなかった。
+
+GitHubのスケジューラ自体が遅いので、GitHubの中で対策しても直らない。
+時刻の正確な外部スケジューラから叩く。
+
+### 構成
+
+```
+Google Apps Script (1時間ごとのトリガー)
+        │  JSTの16/18/20/21/22時に
+        ▼
+GitHub API  POST /repos/.../dispatches  {"event_type":"build"}
+        ▼
+daily-update.yml の repository_dispatch が発火 → ビルド → デプロイ
+```
+
+Google のサーバーで動くので、**PCの電源が入っていなくても実行される**。
+新しいデータが無い回はワークフロー側が `NO_NEW_DATA` で即スキップするため、
+余分に叩いてもコストはない。既存の `schedule` は、遅れて届く保険として残してある。
+
+### 設置手順
+
+**1. GitHubのトークンを作る**
+
+<https://github.com/settings/personal-access-tokens> →「Generate new token」
+
+| 項目 | 値 |
+|---|---|
+| Repository access | Only select repositories → `nk225-option-site` |
+| Permissions | Repository permissions → **Actions: Read and write** のみ |
+| Expiration | 任意(切れると下の失敗メールが届く) |
+
+他の権限は付けない。表示されたトークンはこの画面でしか見られない。
+
+**2. Apps Script プロジェクトを作る**
+
+<https://script.google.com/> →「新しいプロジェクト」
+→ `tools/gas_trigger.gs` の中身をまるごと貼り付けて保存。
+
+**3. トークンを登録する**
+
+プロジェクトの設定(歯車)→「スクリプト プロパティ」→ プロパティを追加
+
+| プロパティ | 値 |
+|---|---|
+| `GITHUB_TOKEN` | 1で作ったトークン |
+
+コードには書かない。スクリプトプロパティはプロジェクトの所有者しか読めない。
+
+**4. 動作確認**
+
+関数 `testDispatch` を選んで実行。初回は Google の認可画面が出るので許可する。
+成功すると GitHub の Actions に `repository_dispatch` の実行が現れる。
+
+<https://github.com/matsutoushi/nk225-option-site/actions>
+
+**5. トリガーを作る**
+
+関数 `setupTrigger` を一度だけ実行する。1時間ごとのトリガーが登録される。
+以後は何もしなくてよい。
+
+### 監視
+
+- JSTの23時に、公開サイトの「データ基準日」を読む。当日でなければメールが届く
+- `repository_dispatch` が 204 以外を返した場合もメールが届く
+  (トークンの期限切れ・権限不足が主な原因)
+
+祝日やJPXの休場日は当日のデータが出ないので、23時のメールが届くことがある。
+平日なのに前営業日のままなら Actions の実行履歴を見る。
+
+### 叩く時刻を変える
+
+`gas_trigger.gs` の `DISPATCH_HOURS_JST` を書き換えて保存するだけでよい。
+トリガーの作り直しは不要(1時間ごとに起きて、その中で時刻を見ている)。
