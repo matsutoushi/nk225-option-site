@@ -30,6 +30,16 @@ on:
     - cron: "52 14 * * 1-5"
     - cron: "42 15 * * 1-5"
   workflow_dispatch: {}
+  # 外部スケジューラから叩くための入口。
+  #
+  # GitHubのschedule実行は「落ちる」のではなく「大幅に遅れる」。実測(2026-10-08〜11-06)
+  # では、最初のcron(UTC 07:37)に対して実際の実行は UTC 12:40〜17:23 で、
+  # 遅れは5〜10時間。JSTだと深夜〜翌朝にビルドされることになり、
+  # 夕方のうちにサイトが更新されない。
+  # そこで時刻の正確な外部スケジューラ(tools/gas_trigger.gs = Google Apps Script)から
+  # repository_dispatch を投げ、scheduleのほうは遅れて届く保険として残す。
+  repository_dispatch:
+    types: [build]
   push:
     branches: [main]
 
