@@ -43,18 +43,13 @@ on:
   push:
     branches: [main]
 
-# scheduleと外部トリガー(repository_dispatch)とpushが重なることがある。
-# 並走するとデータのコミットが競合するので、1本ずつ順番に流す。
-# 走っている回は殺さない(その回のデプロイまで終わらせる)。
-concurrency:
-  group: daily-update
-  cancel-in-progress: false
-
 permissions:
   contents: write
   pages: write
   id-token: write
 
+# run同士はこれで直列化される。重なるのはrunと人手のpushのほうなので、
+# データのコミットはリトライで吸収する(下の "Commit data history" を参照)。
 concurrency:
   group: pages
   cancel-in-progress: false
