@@ -43,6 +43,13 @@ on:
   push:
     branches: [main]
 
+# scheduleと外部トリガー(repository_dispatch)とpushが重なることがある。
+# 並走するとデータのコミットが競合するので、1本ずつ順番に流す。
+# 走っている回は殺さない(その回のデプロイまで終わらせる)。
+concurrency:
+  group: daily-update
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pages: write
@@ -137,14 +144,35 @@ jobs:
         timeout-minutes: 8
         run: python research/fetch_warsh.py
 
+      # データ履歴のコミットは記録用で、サイトの更新そのものではない。
+      # ここで落ちると以降のデプロイまでスキップされ、サイトが古いままになる
+      # (2026-11-09に実際に起きた)。continue-on-error で後続を止めない。
+      #
+      # 同時に走ったrunや、人手のpushと競合すると git push は弾かれる。
+      # リモートを取り込んでから数回やり直す。data/ はビルドの生成物なので、
+      # 衝突したらこちらの内容を採る。
       - name: Commit data history
         if: steps.build.outputs.updated == 'true'
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data research
-          git diff --cached --quiet || git commit -m "data: daily update"
-          git push
+          git diff --cached --quiet && exit 0
+          git commit -m "data: daily update"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "pushed (attempt $i)"; exit 0
+            fi
+            echo "push rejected (attempt $i), rebasing onto origin/main"
+            git fetch origin main
+            git -c rebase.autoStash=true rebase -X ours origin/main || {
+              git rebase --abort || true
+              sleep $((i * 5)); continue
+            }
+            sleep $((i * 5))
+          done
+          echo "::warning::data history could not be pushed; deploy continues"
 
       - name: Email post draft
         if: steps.build.outputs.updated == 'true' && env.MAIL_APP_PASSWORD != ''
