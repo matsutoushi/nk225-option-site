@@ -17,6 +17,15 @@
  *   Actions の Read and write だけ)。値はスクリプトプロパティに入れる。
  *   コードには書かない。
  *
+ * 権限について
+ *   使うのは「外部サービスへの接続」と「トリガーの管理」だけで、
+ *   メール送信の権限は要求しない。メール送信は Google が機密スコープとして
+ *   扱うため、承認のときに「このアプリは Google で確認されていません」という
+ *   警告画面を挟むことになる(2026-11-09にここで詰まった)。
+ *   そのかわり、異常はすべて例外にして落とす。トリガー実行が失敗すると
+ *   Google がプロジェクトの所有者あてに失敗通知を自動で送るので、
+ *   それを通知の代わりに使う。
+ *
  * 置き換える必要はない定数
  *   OWNER / REPO / EVENT_TYPE は daily-update.yml の repository_dispatch に対応する。
  */
@@ -34,7 +43,7 @@ var SITE_URL = 'https://nk225-option.com/';
 // 余分に叩いても実質コストはない。
 var DISPATCH_HOURS_JST = [16, 18, 20, 21, 22];
 
-// サイトが古いままなら知らせる時刻(JST)。1日1回。
+// サイトが古いままなら落として知らせる時刻(JST)。1日1回。
 var STALE_CHECK_HOUR_JST = 23;
 
 
@@ -74,40 +83,41 @@ function dispatchBuild() {
       muteHttpExceptions: true
     });
   var code = res.getResponseCode();
-  // 204 No Content が成功。それ以外はログに残す(トリガーの実行履歴から追える)。
   Logger.log('dispatch -> ' + code + ' ' + res.getContentText().slice(0, 200));
   if (code !== 204) {
-    MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
-      '[nk225] ビルド依頼が失敗しました (' + code + ')',
-      'repository_dispatch が ' + code + ' を返しました。\n\n'
-      + res.getContentText().slice(0, 500)
-      + '\n\nトークンの期限切れか、権限(Actions: Read and write)の不足が疑われます。');
+    // 204 No Content が成功。それ以外は例外にして落とす。
+    // トリガー実行なら Google から失敗通知が届く。
+    throw new Error('repository_dispatch が ' + code + ' を返しました。'
+      + 'トークンの期限切れか、権限(Actions: Read and write)の不足が疑われます。 '
+      + res.getContentText().slice(0, 300));
   }
 }
 
 
 /**
- * 公開中のサイトのデータ基準日を読み、当日ぶんが出ていなければメールで知らせる。
+ * 公開中のサイトのデータ基準日を読み、当日ぶんが出ていなければ例外で落とす。
  * ビルドが起きなかったことに気づけないのがいちばん困るので、最後の砦として置く。
+ *
+ * JPXが休場だった日や祝日は当日のデータが無いので、ここで落ちるのが正常。
+ * 平日なのに落ち続けるなら Actions の実行履歴を見る。
  */
 function warnIfStale() {
   var html = UrlFetchApp.fetch(SITE_URL, { muteHttpExceptions: true }).getContentText();
   var m = html.match(/データ基準日:\s*(\d{4})-(\d{2})-(\d{2})/);
   if (!m) {
-    Logger.log('データ基準日が読み取れませんでした');
-    return;
+    throw new Error('サイトから「データ基準日」を読み取れませんでした: ' + SITE_URL);
   }
   var siteDate = m[1] + m[2] + m[3];
   var today = Utilities.formatDate(nowJst(), 'Asia/Tokyo', 'yyyyMMdd');
-  if (siteDate === today) return;
-
-  MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
-    '[nk225] サイトが当日のデータになっていません',
-    'サイトのデータ基準日: ' + m[1] + '-' + m[2] + '-' + m[3] + '\n'
-    + '今日(JST): ' + today + '\n\n'
-    + 'JPXが休場だった日や、祝日の翌営業日は正常です。\n'
-    + '平日なのに前営業日のままなら、Actions の実行履歴を確認してください。\n'
-    + 'https://github.com/' + OWNER + '/' + REPO + '/actions');
+  if (siteDate === today) {
+    Logger.log('最新です: ' + siteDate);
+    return;
+  }
+  throw new Error('サイトが当日のデータになっていません。'
+    + 'サイトのデータ基準日 ' + m[1] + '-' + m[2] + '-' + m[3]
+    + ' / 今日(JST) ' + today
+    + ' — 休場日なら正常。平日なら https://github.com/'
+    + OWNER + '/' + REPO + '/actions を確認してください。');
 }
 
 
