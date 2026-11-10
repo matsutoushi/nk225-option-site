@@ -367,8 +367,8 @@ def render_tools(site_dir: str, lang: str, data_dir: str,
 <body>
 <header>
   <h1>{t['h1']}</h1>
-  {nav}
 </header>
+{nav}
 <p class="tagline">{t['lead']}</p>
 <p class="how">{t['intro']}</p>
 <main>

@@ -922,7 +922,9 @@ CSS_MAIN = """
   body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
          max-width: 1100px; margin: 0 auto; padding: 0 20px 56px; color: var(--ink);
          font-size: 16px; line-height: 1.85; }
-  header { position: sticky; top: 0; z-index: 10; background: rgba(246,247,249,0.94);
+  /* 固定するのはナビの行だけにする。ヘッダー全体を固定していたときは
+     スマホで203px(画面の25%)を占有し、しかもその中にリンクが無かった。 */
+  header { position: static; background: rgba(246,247,249,0.94);
             backdrop-filter: blur(6px); padding: 16px 0 12px; border-bottom: 1px solid var(--line); }
   h1 { font-size: 1.4em; margin: 0 0 3px; letter-spacing: 0.02em; }
   h1::before { content: "▮"; color: var(--aqua); margin-right: 8px; }
@@ -1002,6 +1004,9 @@ CSS_MAIN = """
   .tbl-pair { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
   .tbl-box { flex: 1 1 420px; min-width: 320px; }
   .tbl-scroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+  /* 文章まじりの表。us.html などが使っているが CSS_MAIN 側に定義が無く、
+     スマホで表がページごと横にはみ出していた(2026-11-10に発見)。 */
+  .tbl-wrap { overflow-x: auto; margin: 12px 0; }
   /* 建玉一覧は全限月を一覧したい表なので縦は切らない。
      狭い画面でははみ出すため、横方向だけスクロールさせる。 */
   .tbl-duo { display: flex; gap: 20px; overflow-x: auto; overflow-y: visible;
@@ -1039,6 +1044,21 @@ CSS_MAIN = """
   td.basis { text-align: left; color: var(--ink2); font-size: 11px; white-space: normal; min-width: 200px; }
   footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 10px;
             font-size: 0.78em; color: var(--ink2); }
+  /* 行き先の一覧。見出し+ピルを1行に流す(カードだと1枚3行で縦が伸びる) */
+  .dir-group { display: flex; gap: 10px; align-items: baseline; margin: 0 0 6px; }
+  .dir-head { flex: 0 0 7.5em; font-size: 0.82em; color: var(--ink2); font-weight: 700; }
+  .dir-pills { flex: 1 1 auto; }
+  .dir-pills a { display: inline-block; margin: 0 6px 6px 0; padding: 3px 11px;
+                 border: 1px solid var(--line); border-radius: 999px;
+                 background: var(--panel); color: #1f6fd0; text-decoration: none;
+                 font-size: 0.86em; line-height: 1.7; }
+  .dir-pills a:hover { border-color: var(--aqua); }
+  /* ナビの行。ページのどこにいてもここだけは画面上部に残す */
+  .navbar { display: flex; align-items: center; gap: 8px;
+            position: sticky; top: 0; z-index: 11; padding: 6px 0;
+            background: rgba(246,247,249,0.94);
+            backdrop-filter: saturate(1.4) blur(6px);
+            border-bottom: 1px solid var(--line); }
   /* 読み方ガイドの一覧。カード型だとスマホで3画面使うため1行ずつに畳む */
   ul.guide-list { margin: 8px 0 4px; padding-left: 1.1em; }
   ul.guide-list li { margin-bottom: 5px; font-size: 0.92em; color: var(--ink2);
@@ -1047,6 +1067,18 @@ CSS_MAIN = """
   @media (max-width: 600px) {
     body { padding: 0 10px 24px; }
     h1 { font-size: 1.05em; }
+    .navbar { padding: 5px 0; }
+    /* ☰ が行の右端に来たので、中身は右揃えで開く(left:0 のままだと
+       画面外へはみ出してページが横スクロールする) */
+    .menu-panel { left: auto; right: 0; min-width: 0; width: max-content;
+                  max-width: min(78vw, 260px); }
+    nav.pills { display: flex; flex: 1 1 auto; min-width: 0; gap: 5px;
+                overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+    nav.pills::-webkit-scrollbar { display: none; }
+    nav.pills a { flex: 0 0 auto; margin-right: 0; }
+    .menu { flex: 0 0 auto; margin-top: 0; }
+    .dir-group { display: block; }
+    .dir-head { display: block; margin-bottom: 3px; }
     .kpi div { padding: 8px 14px; }
     .kpi b { font-size: 1.3em; }
     table { font-size: 11px; }
@@ -1611,9 +1643,9 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
                         "過去24か月のSQ値、同じ日の始値との差、幻のSQの判定"))
         if hub:
             hub_section = (
-                '<h2 id="data">データを見る</h2>\n'
-                '  <p>毎営業日の数字は、分類ごとのページに載せています。'
-                'どのページも、その数字の読み方の解説と同じページにあります。</p>\n'
+                '<h2 id="data">今日の数字</h2>\n'
+                '  <p>毎営業日更新。どのページも、その数字の読み方の解説が'
+                '同じページにあります。</p>\n'
                 '  <div style="display:grid; gap:10px; '
                 'grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); '
                 'margin-bottom:8px;">\n'
@@ -1625,15 +1657,12 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
                     f'<br><span style="font-size:0.95em; color:var(--ink)">{num}</span>'
                     f'<br><span style="font-size:0.85em; color:var(--ink2)">{desc}</span>'
                     '</a>\n' for href, name, num, desc in hub)
-                + '  </div>')
-        # 読み方ガイドの一覧。カード型(17枚で3画面)からリストに畳む。
-        # リンク文と説明文は検索の入口として効いているので、文言は落とさない。
-        guide_section = (
-            f'<h2 id="guides">{P["sec_guides"]}</h2>\n'
-            f'  <p>{P["guides_lead"]}</p>\n  <ul class="guide-list">\n'
-            + "".join(f'    <li><a href="{href}">{title}</a> — {desc}</li>\n'
-                      for href, title, desc in P["guides"])
-            + '  </ul>')
+                + '  </div>\n\n  ' + directory_block())
+        # 読み方ガイドの一覧は出さない。17本のリンクはすべて上の
+        # 「サイトの案内」に入っており、同じ行き先を2か所に置くと
+        # どちらを見ればいいのか分からなくなる(スマホで1.8画面ぶんの重複だった)。
+        # P["guides"] は英語版トップがまだ使っているので残してある。
+        guide_section = ""
         BLOCKS.update({
             "oitable": oitable_section, "oi": oi_section, "mini": mini_section,
             "hedge": hedge_section, "iv": iv_section, "pv": pv_section,
@@ -1674,8 +1703,8 @@ def render_index(date: str, pcr: dict, charts: dict, tables: dict, lang: str = "
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(d=d, now=now)}</p>
   <p class="updated src-dates">{src_dates}</p>
-  {nav}
 </header>
+{nav}
 <p class="tagline">{P['tagline']}</p>
 <main>
   {summary_section}
@@ -1992,8 +2021,8 @@ def render_risk(risk: dict, lang: str, chart_rel: str | None,
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(now=now)}</p>
-  {site_nav(lang, P['lang_switch'])}
 </header>
+{site_nav(lang, P['lang_switch'])}
 <main>
   <p>{P['lead']}</p>
   <div class="kpi">
@@ -2578,8 +2607,8 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 <body>
 <header>
   <p class="updated">データ基準日: {ymd} | 最終更新: {now} JST(毎営業日 自動更新)</p>
-  {site_nav("ja", "")}
 </header>
+{site_nav("ja", "")}
 <main>
 {body}
 {adsense_unit("ja")}
@@ -2776,8 +2805,8 @@ SQ値はJPXが当日15時45分以降に公表します。当サイトはJPXのSQ
 <body>
 <header>
   <p class="updated">最終更新: {now} JST(毎営業日 自動更新)</p>
-  {site_nav("ja", "")}
 </header>
+{site_nav("ja", "")}
 <main>
 {body}
 {adsense_unit("ja")}
@@ -2824,8 +2853,8 @@ def write_data_page(fname: str, title: str, desc: str, body: str, updated: str) 
 <body>
 <header>
   <p class="updated">{updated}</p>
-  {site_nav("ja", "")}
 </header>
+{site_nav("ja", "")}
 <main>
 {body}
 </main>
@@ -2976,8 +3005,8 @@ def render_fedwatch(feeds: dict, lang: str) -> None:
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(now=now)}</p>
-  {site_nav(lang, P['lang_switch'])}
 </header>
+{site_nav(lang, P['lang_switch'])}
 <main>
   <p>{P['lead']}</p>
   {fedwatch_summary(feeds, lang)}
@@ -3527,6 +3556,12 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
     pcr_head = "".join(f"<th>{c}</th>" for c in P["pcr_cols"])
     pcr_rows = "".join(f"<tr><td class='name'>{label}</td><td>{pcr_us[k]:.2f}</td></tr>"
                        for k, label in P["pcr_rows"].items() if pcr_us.get(k) is not None)
+    # CBOEは項目ごとに欠けることがある。欠けた日はその枠だけ落とす
+    # (ここで例外にすると米国ページが丸ごと生成されなくなるため)。
+    kpi_tiles = "".join(
+        f"<div>{P['kpi'][i]}<br><b>{pcr_us[k]:.2f}</b></div>"
+        for i, k in enumerate(("total", "equity", "spx"))
+        if pcr_us.get(k) is not None) or "<div>-</div>" 
 
     spx_section = ""
     if spx_res and spx_chart:
@@ -3594,14 +3629,12 @@ def render_us(cot: dict, pcr_us: dict, lang: str, chart_rel: str,
 <header>
   <h1>{P['h1']}</h1>
   <p class="updated">{P['updated'].format(cot_date=cot['date'], pcr_date=pcr_us['date'], now=now)}</p>
-  {site_nav(lang, P['lang_switch'])}
 </header>
+{site_nav(lang, P['lang_switch'])}
 <main>
   <p>{P.get('lead', '')}</p>
   <div class="kpi">
-    <div>{P['kpi'][0]}<br><b>{pcr_us['total']:.2f}</b></div>
-    <div>{P['kpi'][1]}<br><b>{pcr_us['equity']:.2f}</b></div>
-    <div>{P['kpi'][2]}<br><b>{pcr_us['spx']:.2f}</b></div>
+    {kpi_tiles}
   </div>
 
   <h2>{P['sec_cot']}{dl_link("cot_history.csv", lang, P['prefix'])}</h2>
@@ -3651,6 +3684,10 @@ SUB_CSS = """
           padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-block; }
   nav a:hover { color: var(--ink); border-color: var(--aqua); }
   .site-header { padding-top: 14px; }
+  /* ナビの行。ページのどこにいてもここだけは画面上部に残す */
+  .navbar { display: flex; align-items: center; gap: 8px;
+            position: sticky; top: 0; z-index: 11; padding: 6px 0;
+            background: var(--bg); border-bottom: 1px solid var(--line); }
   .menu { display: none; position: relative; margin-top: 6px; }
   .menu summary { list-style: none; cursor: pointer; color: var(--ink2); font-size: 0.85em;
                   border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px;
@@ -3666,8 +3703,17 @@ SUB_CSS = """
   .menu-panel .sub { color: var(--ink2); font-size: 0.75em; padding: 8px 12px 2px;
                      border-top: 1px solid var(--line); margin-top: 6px; }
   @media (max-width: 600px) {
-    nav.pills { display: none; }
-    .menu { display: block; }
+    /* ピルは消さない。横スクロールで出したまま、☰ は全ページ一覧として残す */
+    nav.pills { display: flex; flex: 1 1 auto; min-width: 0; gap: 5px;
+                overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+    nav.pills::-webkit-scrollbar { display: none; }
+    nav.pills a { flex: 0 0 auto; margin-right: 0; }
+    .menu { display: block; flex: 0 0 auto; margin-top: 0; }
+    .navbar { padding: 5px 0; }
+    /* ☰ が行の右端に来たので、中身は右揃えで開く(left:0 のままだと
+       画面外へはみ出してページが横スクロールする) */
+    .menu-panel { left: auto; right: 0; min-width: 0; width: max-content;
+                  max-width: min(78vw, 260px); }
   }
   * { box-sizing: border-box; }
   body { font-family: "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif; background: var(--bg);
@@ -3833,9 +3879,10 @@ def site_nav(lang: str, lang_switch: str = "", anchors: list | None = None,
         menu_items += "".join(f'<a href="{h}">{t}</a>' for h, t in anchors)
     menu_items += lang_switch.replace("<a ", '<a class="lang" ')
     menu_label = "☰ メニュー" if lang == "ja" else "☰ Menu"
-    return (f'<nav class="pills">{pills}</nav>'
+    # スマホではこの div だけを画面上部に残すので、ピルと ☰ を1つに包む。
+    return (f'<div class="navbar"><nav class="pills">{pills}</nav>'
             f'<details class="menu"><summary>{menu_label}</summary>'
-            f'<div class="menu-panel">{menu_items}</div></details>')
+            f'<div class="menu-panel">{menu_items}</div></details></div>')
 
 
 def footer_sitemap(lang: str, prefix: str = "") -> str:
@@ -4051,8 +4098,8 @@ def _post_shell(title: str, desc: str, body: str, head_extra: str = "") -> str:
 <body>
 <header>
   <p class="updated"><a href="../" style="color:var(--ink2); text-decoration:none">日経225オプション データ分析</a> ｜ 解説記事</p>
-  {site_nav("ja", "", prefix="../")}
 </header>
+{site_nav("ja", "", prefix="../")}
 <main class="post">
 {body}
 </main>
@@ -4246,6 +4293,65 @@ def render_futures_positions(date: str) -> None:
                f"{datetime.now(JST).strftime('%Y-%m-%d %H:%M')} JST(毎営業日 自動更新)")
     write_data_page("futures-positions.html", FUTURES_POSITIONS_TITLE,
                     FUTURES_POSITIONS_DESC, body, updated)
+
+
+# トップに出すサイト全体の行き先。(見出し, [(href, 文言), ...])
+# 「今日の数字」のページは、その上のカード(live な数字つき)が受け持つので
+# ここには入れない。重複して縦を使うのを避ける。
+SITE_DIRECTORY = [
+    ("読み方を知る", [
+        ("guide-start.html", "始め方ガイド"),
+        ("guide-brokers.html", "手口に出てくる証券会社"),
+        ("guide-jpx-data.html", "公式データの入手先"),
+        ("guide-sq.html", "SQとは"),
+        ("option-strikes.html", "行使価格の刻みと限月"),
+        ("guide-lee-ready.html", "Lee-Readyとは"),
+        ("guide-cot.html", "COTの見方"),
+        ("glossary.html", "用語集"),
+    ]),
+    ("戦略で試す", [
+        ("strategies.html", "戦略一覧"),
+        ("strategy-vertical-spread.html", "コール/プットスプレッド"),
+        ("strategy-straddle-strangle.html", "ストラドル・ストラングル"),
+        ("strategy-covered-call.html", "カバードコール"),
+        ("strategy-iron-condor.html", "アイアンコンドル"),
+        ("strategy-butterfly.html", "バタフライ"),
+        ("strategy-collar.html", "カラー"),
+        ("strategy-ratio-spread.html", "レシオスプレッド"),
+        ("strategy-calendar-spread.html", "カレンダースプレッド"),
+        ("strategy-gamma-trading.html", "デルタヘッジ"),
+    ]),
+    ("口座とコスト", [
+        ("option-brokers.html", "取引できる証券会社11社"),
+        ("mini-option-brokers.html", "ミニを扱う6社"),
+        ("option-fees.html", "手数料を10社で比較"),
+        ("option-margin.html", "証拠金はいくら必要か"),
+        ("option-tax.html", "税金と確定申告"),
+    ]),
+    ("米国・マクロ", [
+        ("us.html", "米国市場データ"),
+        ("risk.html", "マクロリスクモニター"),
+        ("fedwatch.html", "FRB要人発言"),
+    ]),
+    ("読み物・道具", [
+        ("posts/", "解説記事の一覧"),
+        ("tools.html", "データ分析ツール"),
+        ("sq-values.html", "SQ値一覧"),
+    ]),
+]
+
+
+def directory_block() -> str:
+    """トップに置く行き先の一覧。見出しごとにピルを横に流す。"""
+    rows = []
+    for head, items in SITE_DIRECTORY:
+        pills = "".join(f'<a href="{href}">{text}</a>' for href, text in items)
+        rows.append(f'  <div class="dir-group"><span class="dir-head">{head}</span>'
+                    f'<span class="dir-pills">{pills}</span></div>')
+    return ('<h2 id="dir">サイトの案内</h2>\n'
+            '  <p>解説・戦略・証券会社の比較まで、ここから直接開けます。</p>\n'
+            + "\n".join(rows))
+
 
 
 def render_seo_files() -> None:
@@ -4478,7 +4584,7 @@ def render_static_pages() -> None:
 <style>{SUB_CSS}</style>{ad_head}
 </head>
 <body>
-<header class="site-header">{site_nav("ja")}</header>
+{site_nav("ja")}
 {body}{ad}
 <footer>
   {footer_sitemap("ja")}
@@ -4793,7 +4899,7 @@ Googleによる取り扱いについては
 <style>{SUB_CSS}</style>{ad_head}
 </head>
 <body>
-<header class="site-header">{site_nav("en")}</header>
+{site_nav("en")}
 {body}{ad}
 <footer>
   {footer_sitemap("en")}
@@ -5238,7 +5344,10 @@ def main() -> None:
             pw = w[w["type"] == "P"].nlargest(1, "oi").iloc[0]
             lines.append(f"コール最大壁 {cw['strike']:,.0f} / プット最大壁 {pw['strike']:,.0f}")
             lines.append("")
-        lines.append(f"CBOE Put/Callレシオ: {pcr_us['total']:.2f}(株式 {pcr_us['equity']:.2f})")
+        if pcr_us.get("total") is not None:
+            eq = (f"(株式 {pcr_us['equity']:.2f})"
+                  if pcr_us.get("equity") is not None else "")
+            lines.append(f"CBOE Put/Callレシオ: {pcr_us['total']:.2f}{eq}")
         if "es" in cot["markets"]:
             es = cot["markets"]["es"]
             es_net = int(es["net"].iloc[-1])

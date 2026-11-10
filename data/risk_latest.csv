@@ -7,7 +7,7 @@ recession,cp_prob,景気後退確率(Chauvet-Piger),0.4%,2026-09-01,green
 recession,nyfed_prob,NY連銀 12ヶ月先景気後退確率,12.4%,2027-10,green
 inflation,bei10,期待インフレ率(10年BEI),2.22%,2026-11-09,green
 inflation,f5y5y,期待インフレ率(5年先5年),2.19%,2026-11-09,green
-inflation,cpi,米CPI(前年比),4.0%,2026-09,red
+inflation,cpi,米CPI(前年比),4.1%,2026-10,red
 inflation,corepce,米コアPCE(前年比),3.1%,2026-09,yellow
 inflation,jpcpi,日本CPI(前年比),-0.4%,2021-06,green
 inflation,wti,WTI原油(前年比),$100 (+61%),2026-11-03,red
