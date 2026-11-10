@@ -1,1 +1,1 @@
-US market section failed: unsupported format string passed to NoneType.__format__
+none
