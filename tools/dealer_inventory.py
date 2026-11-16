@@ -158,21 +158,31 @@ def main() -> None:
     from strategies import bs
     iv_tbl = settle["data"] if settle else None
     rows = []
+    # 今日の清算値段に無い銘柄は、SQを通過して消滅した限月のもの。
+    # 以前は IV 0.25・残存30日 のダミーを当てていたため、失効した限月のガンマが
+    # 合計に残り続けていた(2026-11-16に発見。2610と2611で合計-18.6億円ぶん)。
+    # 存在しない建玉のガンマはゼロなので、合計から外す。
+    expired_skipped = 0
     for r in pos.itertuples():
-        iv, dd = 0.25, 30
+        iv, dd = None, None
         if iv_tbl is not None:
             g = iv_tbl[(iv_tbl["type"] == r.type) & (iv_tbl["strike"] == r.strike)
                        & (iv_tbl["expiry"] == r.expiry)]
             if len(g):
                 iv = float(g["iv"].iloc[0]) or 0.25
-                dd = int(g["days"].iloc[0]) or 30
-        if iv <= 0.02:
+                dd = int(g["days"].iloc[0]) or None
+        if dd is None or dd <= 0:
+            expired_skipped += 1
+            continue
+        if not iv or iv <= 0.02:
             iv = 0.25
         gam = float(bs(spot, r.strike, max(dd, 1) / 365, iv, r.type)["gamma"])
         rows.append({"expiry": r.expiry, "type": r.type, "strike": r.strike,
                      "dealer_net": r.dealer_net, "days_used": r.days_used,
                      "tick_vol": r.vol, "oi_moved": r.doi_abs, "iv": iv, "days": dd,
                      "gamma_yen": gam * r.dealer_net * MULT * spot * spot * 0.01})
+    if expired_skipped:
+        print(f"失効した限月など、今日の清算値段に無い {expired_skipped} 銘柄を集計から外しました")
     res = pd.DataFrame(rows).sort_values(["expiry", "type", "strike"])
 
     # 比較対象: サイトと同じ一律仮定(コール買い持ち・プット売り持ち)

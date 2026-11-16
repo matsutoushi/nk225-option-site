@@ -202,19 +202,24 @@ def dealer_gamma(agg: pd.DataFrame, spot: float, settle: dict | None) -> pd.Data
     from strategies import bs
     rows = []
     iv_tbl = settle["data"] if settle else None
+    # 今日の清算値段に無い銘柄は、SQを通過して消滅した限月のもの。
+    # 以前は限月違いの行で代用したり IV 0.25・残存30日 のダミーを当てていたため、
+    # 失効した限月のガンマが合計に残り続けていた(2026-11-16に発見)。
+    # 存在しない建玉のガンマはゼロなので、合計から外す。
+    skipped = 0
     for r in agg.itertuples():
         iv, days = None, None
         if iv_tbl is not None:
             g = iv_tbl[(iv_tbl["type"] == r.type) & (iv_tbl["strike"] == r.strike)]
             if r.expiry:
-                g2 = g[g["expiry"] == r.expiry]
-                g = g2 if len(g2) else g
+                g = g[g["expiry"] == r.expiry]
             if len(g):
                 iv, days = float(g["iv"].iloc[0]), int(g["days"].iloc[0])
+        if days is None or days <= 0:
+            skipped += 1
+            continue
         if not iv or iv <= 0.02:
             iv = 0.25
-        if not days or days <= 0:
-            days = 30
         gam = float(bs(spot, r.strike, days / 365, iv, r.type)["gamma"])
         dealer = -r.signed_size                       # 顧客の反対側
         rows.append({"expiry": r.expiry, "type": r.type, "strike": r.strike,
@@ -222,6 +227,8 @@ def dealer_gamma(agg: pd.DataFrame, spot: float, settle: dict | None) -> pd.Data
                      "volume": r.size, "classified": r.classified,
                      "iv": iv, "days": days,
                      "gamma_yen": gam * dealer * MULT * spot * spot * 0.01})
+    if skipped:
+        print(f"失効した限月など、今日の清算値段に無い {skipped} 銘柄を集計から外しました")
     return pd.DataFrame(rows)
 
 
