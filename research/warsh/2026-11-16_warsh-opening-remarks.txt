@@ -1,0 +1,104 @@
+# Warsh, Opening Remarks
+date: 2026-11-16
+role: chair
+source: https://www.federalreserve.gov/newsevents/speech/warsh20261116a.htm
+
+November 16, 2026
+
+ Opening Remarks 
+
+ Chairman Kevin Warsh 
+
+ At the Productivity and Jobs Task Force Conference, hosted by the Federal Reserve Board and the Federal Reserve Bank of San Francisco, San Francisco, California
+
+ Share 
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ -->
+
+ Watch Live 
+
+ Mary, thank you, and welcome.
+
+ I'm grateful to Mary and her colleagues for helping to arrange this gathering. This is my very first visit to a Reserve Bank as Chairman. I wouldn't call it a snap inspection, but I'm certainly impressed. Everything I see reflects high expectations and the inquiring, forward-looking spirit that we need in the Federal Reserve System.
+
+ It's good to have Fed colleagues with us from around the country. Central banking is a team sport, and I'm pleased you're here. This conference is an expression of the mission we all serve: One Fed. Fit for Purpose. Focused on the Future.
+
+ I also want to thank Marc, Chad, and Asha for leading our Productivity and Jobs Task Force. You're giving the scarcest of resources—your time and your commitment. It's a service to the Fed and to our nation, and I'm grateful.
+
+ This task force is one of five I have convened as Chairman. These groups are a way of broadening our thinking . . . of inviting robust discussions that take us further and deeper than fleeting data points or daily market moves. Our task forces are an intellectual investment to better equip us for the next policy conjuncture and beyond.
+
+ The common attributes of Asha, Marc, and Chad, the reason I asked them to lead, is not just their exceptional insight and experience. It's their battlefield bravery in the world of ideas . . . their intellect and their willingness to think hard about what might happen next. They, in turn, asked me to open the task force discussion to a wide cross section of stakeholders—and that's the purpose of this conference.
+
+ As for me, I always feel energized to be in this part of California. I arrived here way back in 1988 as a Stanford undergrad. I remember sitting in Green Library over Thanksgiving break during my freshman year, reading and wrestling with great works from a canon that I had scarcely known existed, beginning my initiation into the world of ideas. It was a special time to be in the Bay Area—neither boom nor bust, a quieter period between tech surges. And, today, just as I was then, I'm keen to listen to and learn from the great people and first-rate minds around me.
+
+ The current era may be the most transformational period in my adult lifetime, marked by the arrival of the general-purpose technology called "super intelligence." SI is an entirely new force in economic life and society. It demands our special attention.
+
+ Even a few years ago, the idea that we could have, in our pockets, instant access to genius-level intelligence on almost any subject would have seemed far fetched. Today, with the advances of SI, it's happening. The marginal cost of satisfying limitless curiosity—on questions large and small—is falling fast, perhaps even trending toward zero.
+
+ In the tradition of endogenous growth theory in economics, ideas are the ultimate resource. If living standards are to advance, conditions must be favorable to the generation of new ideas. It should be no surprise, then, that the United States is leading. Societies that bring forth the best ideas tend to prosper most. The implications for economic policy can hardly be overstated.
+
+ While an idea can be costly to discover, it's free to use. And because an idea is nonrival—that is, one person's use doesn't diminish anyone else's—its value grows with the number of people who use it. The Nobel laureate Paul Romer, among others, has shown that a doubling of ideas and other key inputs can more than double output, allowing increasing returns to scale. 1 
+
+ Even so, in the U.S. over the past several decades, breakthrough ideas have been harder to find. By some estimates, research efforts have increased more than 20 times since the 1930s. Yet, as Nick Bloom, Chad Jones, and their coauthors have pointed out, "Research productivity has fallen by an even larger amount." 2 The result: Productivity growth has fluctuated, and in recent quarters, it's been reasonably strong. But it hasn't yet broken out definitively and structurally to the upside.
+
+ Long-run growth, I should note, is also a function of the rate of increase in the number of people producing new ideas and setting them in motion. The conventional view holds that as population growth slows, there may be fewer new ideas to drive prosperity. 3 The increasing challenge of generating breakthrough ideas, combined with slower population growth, helps explain why many in the economics profession, in the post-crisis environment, returned to the theme of secular stagnation.
+
+ Does super intelligence dramatically change this picture? Well, there are certainly some indications that it does.
+
+ SI might be somewhat different from general-purpose technologies of the past, such as the internal combustion engine or electricity. Those inventions made for decades of follow-on innovation but did not themselves automate the creation of ideas. What might set SI apart, as an economic influence, is that it could supercharge idea generation. It appears to be changing the method—and the speed—of innovation. If idea generation broadens, growth could be sustained at a level substantially higher than the long-run average. 4 
+
+ For all of that, however, humans should not be underestimated. There is no replacing the minds and the hands of men and women. Machines that can amass or even exceed human knowledge are still machines. They do not take the place of human judgment, morality, or responsibility. Humans are the designers and the builders, and humans must be the deciders.
+
+ For our country in this era, consider how much is on the line. I remember Bob Mundell, another Nobel recipient, saying years ago that the most important fact of the twentieth century was the rise of the United States as a superpower. 5 For us today, that is more than a fact of history—it is a charge to keep. And so we must ask, can you be a superpower without super intelligence?
+
+ My Fed colleagues and I are not at this conference as futurists to speculate on each new turn technology might take. And we're certainly not here to make predictions. We can't know the future and ought not to pretend otherwise.
+
+ Our job is to prepare for whatever comes next. That means contingency planning, which becomes only more important when the world is changing this fast. Our aim today is a humble one: to ask the right questions.
+
+ As policymakers, we have to be mindful that great opportunities rarely come risk free. And the risks in this case, if overlooked, can be highly disruptive and economically costly. SI empowers all, including bad actors, so we are thinking especially of critical infrastructures and their potential vulnerabilities.
+
+ And, of course, I think of economic policy in the era of SI. At the Fed, our role in all this is neither advocacy nor opposition. Our responsibility is to recognize that the widespread adoption of this technology will have significant impact on the economy, with important implications for monetary policy down the road.
+
+ The big questions are about magnitude, scope, and timing. Will this new technology deliver a rise in total factor productivity? Will the democratization of specialized knowledge significantly raise standards of living? When will the surge start, and when will it taper? Will it happen sooner and faster here than in other countries? Will adversaries race to deploy SI, intending to do harm to our economy?
+
+ The answers will matter greatly—and that is why we're thinking about them now, in a sober and serious way. I expect much more clarity with the passing of time.
+
+ Still, it's worth considering the range of economic outcomes we could see over the next several years, depending on how SI progresses. The Board's staff has begun to evaluate various contingencies, applying stylized, model-based frameworks to generate scenarios.
+
+ These are illustrative scenarios, not forecasts. Moreover, many other outcomes—probably including one that will prove most accurate—could be drawn. Consider them a starting point for the very useful discussions we've got lined up for today.
+
+ At one end, SI leads to an increase in productivity and economic gains that are shared broadly across labor and the owners of capital. In that event, real GDP growth rises persistently above its long-run average, and the U.S. stays close to full employment.
+
+ Other outcomes, however, could be less positive. An SI-driven expansion could bring substantial labor market disruption as some jobs are displaced, rather than complemented, by technology. GDP growth would still rise above its long-term average. But widespread automation, combined with labor market frictions, could push the jobless rate above levels consistent with full employment.
+
+ Or SI could disappoint. After significant capital investment and stock market gains, expected returns could turn down and equity valuations could fall, leading to an economic slowdown and a more notable rise in unemployment. In time, the economy would recover, but without the productivity gains.
+
+ I stress that while I'm not here to offer predictions, I'm not exactly impartial about American leadership in a time so filled with both challenge and possibility.
+
+ I thought back recently to my days at the Hoover Institution and to a collaboration with my fine mentor and colleague John Cogan. As we wrote some years ago: "If we meet the challenges before us, America has a bright future with strong, durable economic growth, abundant economic opportunities, vibrant and secure communities, and a healthy environment. Future generations will inherit a dynamic economy capable of delivering technological advancements that will extend lives and promote human flourishing." 6 
+
+ That is the goal, the ultimate scenario, that all of us here hope to see. It's a privilege to be a policymaker at a time of such consequence—and it's an encouraging sign to be in the company of so many serious and capable men and women.
+
+ Thank you all very much.
+
+ 1. See Paul M. Romer (1990), "Endogenous Technological Change," Journal of Political Economy, vol. 98 (October), pp. S71–102. Return to text 
+
+ 2. See page 1110 in Nicholas Bloom, Charles I. Jones, John Van Reenen, and Michael Webb (2020), "Are Ideas Getting Harder to Find?" American Economic Review, vol. 110 (April), pp. 1104–44. Return to text 
+
+ 3. See Charles I. Jones (2022), "The End of Economic Growth? Unintended Consequences of a Declining Population," American Economic Review, vol. 112 (November), pp. 3489–527. Return to text 
+
+ 4. See Philippe Aghion, Benjamin F. Jones, and Charles I. Jones (2019), " Artificial Intelligence and Economic Growth ," in Ajay Agrawal, Joshua Gans, and Avi Goldfarb, eds., The Economics of Artificial Intelligence: An Agenda (Chicago: University of Chicago Press, May), pp. 237–82. Return to text 
+
+ 5. See page 339 in Robert A. Mundell (2000), "A Reconsideration of the Twentieth Century," American Economic Review, vol. 90 (June), pp. 327–40. Return to text 
+
+ 6. See page 18 in John F. Cogan and Kevin M. Warsh (2022), " Reinvigorating Economic Governance: Advancing a New Framework for American Prosperity ," Hoover Institution Essay (Stanford, Calif.: Hoover Institution Press, March). Return to text

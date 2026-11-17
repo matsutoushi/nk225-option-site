@@ -159,5 +159,12 @@
     "role": "chair",
     "source": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20261028.pdf",
     "file": "2026-10-28_fomc-press-conference-transcript-2026-10-28.txt"
+  },
+  {
+    "date": "2026-11-16",
+    "title": "Warsh, Opening Remarks",
+    "role": "chair",
+    "source": "https://www.federalreserve.gov/newsevents/speech/warsh20261116a.htm",
+    "file": "2026-11-16_warsh-opening-remarks.txt"
   }
 ]
