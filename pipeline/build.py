@@ -2342,12 +2342,129 @@ def vi_close_check(vi_df: pd.DataFrame) -> dict:
     return r
 
 
+# 日経VIの水準と直近2営業日の騰落で「今日と同じ形」を切り出すときの区切り。
+# 細かく切ると該当が減りすぎ、粗いと意味がなくなるので、よく使われる
+# 20/25/30/35 という目安に合わせた。
+VI_LEVEL_BINS = [(0, 20), (20, 25), (25, 30), (30, 35), (35, 1e9)]
+VI_MOVE_BINS = [(-1e9, -2.0), (-2.0, 2.0), (2.0, 1e9)]
+
+
+def vi_similar_episodes(vi: pd.Series, n225: pd.Series) -> dict | None:
+    """今日と同じ形が過去に何回あり、そのあと日経平均がどうなったかを数える。
+
+    【なぜ局面でまとめるか】
+    該当日をそのまま数えると、同じ相場局面が何日も該当して水増しになる。
+    2026年3月は1つの局面で7日が該当した。日ベースだと「翌営業日に上昇70%」に
+    見えた条件が、局面ベースでは58%(全体54%とほぼ同じ)まで落ちた。
+    連続する該当日(間が5営業日以内)は1つの局面にまとめ、初日だけを数える。
+    """
+    df = pd.concat([n225.rename("px"), vi.rename("vi")], axis=1).dropna()
+    if len(df) < 300:
+        return None
+    df["r1"] = df["px"].pct_change().shift(-1) * 100
+    df["r5"] = (df["px"].shift(-5) / df["px"] - 1) * 100
+    df["d2"] = df["px"].pct_change(2) * 100
+    cur = df.iloc[-1]
+    if pd.isna(cur["d2"]):
+        return None
+    vb = next(b for b in VI_LEVEL_BINS if b[0] <= cur["vi"] < b[1])
+    db = next(b for b in VI_MOVE_BINS if b[0] <= cur["d2"] < b[1])
+    m = ((df["vi"] >= vb[0]) & (df["vi"] < vb[1])
+         & (df["d2"] >= db[0]) & (df["d2"] < db[1]))
+    hits = list(df.index[m])
+    if len(hits) < 4:
+        return None
+    pos = {d: i for i, d in enumerate(df.index)}
+    eps, run = [], []
+    for d in hits:
+        if run and pos[d] - pos[run[-1]] <= 5:
+            run.append(d)
+        else:
+            if run:
+                eps.append(run)
+            run = [d]
+    eps.append(run)
+    today_in = eps[-1][-1] == df.index[-1]
+    firsts = df.loc[[e[0] for e in eps]]
+    past = firsts.iloc[:-1] if today_in else firsts
+    a = past[past["r1"].notna()]
+    b = past[past["r5"].notna()]
+    if len(b) < 3:
+        return None
+    b1 = df[df["r1"].notna()]
+    b5 = df[df["r5"].notna()]
+    return {
+        "vb": vb, "db": db, "vi": float(cur["vi"]), "d2": float(cur["d2"]),
+        "n_days": int(m.sum()), "n_eps": len(eps), "today_in": today_in,
+        "up1": int((a["r1"] > 0).sum()), "n1": len(a), "med1": float(a["r1"].median()),
+        "up5": int((b["r5"] > 0).sum()), "n5": len(b), "med5": float(b["r5"].median()),
+        "base1": float((b1["r1"] > 0).mean() * 100),
+        "base5": float((b5["r5"] > 0).mean() * 100),
+        "worst5": float(b["r5"].min()), "best5": float(b["r5"].max()),
+        "rows": past.tail(8),
+    }
+
+
+def vi_similar_block(sim: dict | None) -> str:
+    """上の集計をページ用のHTMLにする。該当が少ない日は何も出さない。"""
+    if not sim:
+        return ""
+    lo, hi = sim["vb"]
+    lvl = f"{lo:.0f}以上" if hi > 1e8 else f"{lo:.0f}以上{hi:.0f}未満"
+    dlo, dhi = sim["db"]
+    mv = ("2営業日で2%以上の下落" if dhi <= -2 else
+          "2営業日で2%以上の上昇" if dlo >= 2 else "2営業日の騰落が±2%以内")
+    rows = "".join(
+        f"<tr><td>{d.year}/{d.month}/{d.day}</td><td>{r['vi']:.2f}</td>"
+        f"<td>{r['d2']:+.2f}%</td>"
+        f"<td>{'' if pd.isna(r['r1']) else format(r['r1'], '+.2f') + '%'}</td>"
+        f"<td>{'' if pd.isna(r['r5']) else format(r['r5'], '+.2f') + '%'}</td></tr>"
+        for d, r in sim["rows"].iterrows())
+    nth = f"今日はその{sim['n_eps']}回目です。" if sim["today_in"] else ""
+    return f"""
+<h2 id="similar">今日と同じ形は、過去にどうなったか</h2>
+<p>今日は<b>日経VIが{lvl}</b>で、<b>{mv}</b>でした。
+同じ形が2023年以降に何回あり、そのあと日経平均がどう動いたかを数えます。{nth}</p>
+
+<h3>該当日をそのまま数えてはいけません</h3>
+<p>条件に当てはまる日は<b>{sim['n_days']}日</b>ありますが、これをそのまま分母にはできません。
+荒れた相場では何日も続けて当てはまるため、<b>同じ局面を何度も数えてしまう</b>からです。
+連続する該当日(間が5営業日以内)を1つの局面にまとめると<b>{sim['n_eps']}局面</b>になり、
+各局面の初日だけを数えます。</p>
+
+<div class="tbl-wrap"><table>
+<thead><tr><th>その後</th><th>上昇した回数</th><th>中央値</th><th>全体の平均</th></tr></thead>
+<tbody>
+<tr><td>翌営業日</td><td><b>{sim['n1']}回中{sim['up1']}回</b>({sim['up1'] / max(sim['n1'], 1) * 100:.0f}%)</td><td>{sim['med1']:+.2f}%</td><td>{sim['base1']:.0f}%</td></tr>
+<tr><td>5営業日後</td><td><b>{sim['n5']}回中{sim['up5']}回</b>({sim['up5'] / max(sim['n5'], 1) * 100:.0f}%)</td><td>{sim['med5']:+.2f}%</td><td>{sim['base5']:.0f}%</td></tr>
+</tbody></table></div>
+<p>5営業日後のばらつきは、いちばん良い局面で{sim['best5']:+.1f}%、いちばん悪い局面で{sim['worst5']:+.1f}%でした。</p>
+
+<h3>過去の局面(直近{len(sim['rows'])}件)</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>局面の初日</th><th>日経VI</th><th>2営業日の騰落</th><th>翌営業日</th><th>5営業日後</th></tr></thead>
+<tbody>{rows}</tbody></table></div>
+
+<p><b>読むときの注意。</b>これは<b>予想ではなく、過去に同じ形だったときの実績</b>です。
+局面の数は多くても十数回で、<b>この回数では確かなことは言えません</b>。
+対象の期間(2023年以降)はおおむね上昇基調だったため、
+どの条件で切っても「上がった回数のほうが多い」と出やすいことにも注意してください。
+上の表の<b>全体の平均</b>と比べて、差があるのかどうかを見るのが実際的です。</p>
+"""
+
+
 def render_vi_page(vi_df: pd.DataFrame, n225_hist: pd.DataFrame | None) -> None:
     """日経VIのページ。数字はすべて vi_stats() の結果から書く。"""
     vi = vi_df["Close"].dropna()
     n225 = n225_hist["Close"] if n225_hist is not None else None
     st = vi_stats(vi, n225)
     cc = vi_close_check(vi_df.dropna())
+    sim = None
+    try:
+        if n225 is not None:
+            sim = vi_similar_episodes(vi, n225)
+    except Exception as e:
+        warn(f"vi similar episodes failed: {e!r}")
     chart = chart_vi_long(vi)
     d = st["date"]
     md = f"{d.month}月{d.day}日"
@@ -2466,6 +2583,8 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 水準そのものが年によって大きく違うので、<b>30という固定の線より、直近の中での位置で見る</b>ほうが実態に合います。
 このページの冒頭で「高い順に何番目か」を出しているのはそのためです。
 公式CSVのある期間の最高値は、{top_txt}でした。</p>
+
+{vi_similar_block(sim)}
 
 <h2>急に跳ねたあと、どうなったか</h2>
 <p>日経VIが1日で<b>3ポイント以上</b>上がった日は、{st['since'].year}年以降で{len(jumps)}回ありました
