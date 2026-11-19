@@ -47,5 +47,12 @@
     "role": "fomc",
     "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm",
     "file": "2026-10-28_federal-reserve-issues-fomc-statement.txt"
+  },
+  {
+    "date": "2026-11-18",
+    "title": "Minutes of the Federal Open Market Committee, October 27-28, 2026",
+    "role": "fomc",
+    "source": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261118a.htm",
+    "file": "2026-11-18_minutes-of-the-federal-open-market-committee-october-27-28-2.txt"
   }
 ]
