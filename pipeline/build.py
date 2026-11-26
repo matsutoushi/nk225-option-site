@@ -2546,6 +2546,28 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 米国側の数字は<a href="us.html">米国市場データ</a>と<a href="risk.html">マクロリスクモニター</a>に載せています。</p>
 """
 
+    # Xの投稿のリンク先が #close なので、ここが実際の着地点になる。
+    # 方法論と2026年11月4日の実例より先に「今日はどうだったか」を置かないと、
+    # 投稿で見た数字がページ上で見つからないまま戻られる。
+    prev_close = None if st["delta"] is None else v - st["delta"]
+    if prev_close is None:
+        close_today = ""
+    elif cc["at_low_today"]:
+        close_today = (
+            f'<div class="latest"><h3 style="margin-top:8px">今日({md})がその日です</h3>'
+            f'<p>始値{cc["o"]:.2f}・高値{cc["h"]:.2f}で推移して、'
+            f'<b>終値{v:.2f}は当日の安値ちょうど</b>でした。'
+            f'前営業日の終値{prev_close:.2f}と比べると<b>{st["delta"]:+.2f}</b>ですが、'
+            f'<b>高値のまま引けていれば{cc["h"] - prev_close:+.2f}</b>です。'
+            f'同じ日について{cc["h"] - v:.2f}ポイント離れた2つの前日比が成り立ちます。</p></div>')
+    else:
+        close_today = (
+            f'<div class="latest"><h3 style="margin-top:8px">今日({md})はその日ではありません</h3>'
+            f'<p>終値{v:.2f}は当日の安値{cc["l"]:.2f}と一致していません'
+            f'(始値{cc["o"]:.2f}・高値{cc["h"]:.2f})。前営業日比は<b>{st["delta"]:+.2f}</b>で、'
+            f'高値のまま引けていれば{cc["h"] - prev_close:+.2f}、'
+            f'安値なら{cc["l"] - prev_close:+.2f}でした。</p></div>')
+
     body = f"""
 <h1>日経VI(日経平均ボラティリティー・インデックス) — 今日の値と、実測で見る読み方</h1>
 <div class="latest">
@@ -2605,6 +2627,7 @@ VIXの目安(20で警戒など)をそのまま日経VIに当てはめると、�
 """
     body += f"""
 <h2 id="close">終値には「引けの飛び」が混じる — {cc['n']:,}営業日の実測</h2>
+{close_today}
 <p>日経VIの終値は、<b>その日ザラ場で推移していた水準から大きく離れた値で出ることがあります。</b>
 当サイトは以前、終値どうしの前日比をそのまま「その日VIがどれだけ動いたか」として書いていましたが、
 これは正確ではありませんでした。公式CSVに入っている四本値で数え直した結果を置きます。</p>
